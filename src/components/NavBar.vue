@@ -66,11 +66,25 @@
         @click="handleNavClick('/calidad')"
       />
       <SidebarItem 
+        icon="📋" 
+        label="Revisión CQ" 
+        :active="isActive('/revision-cq')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/revision-cq')"
+      />
+      <SidebarItem 
         icon="⚠️" 
         label="Paradas" 
         :active="isActive('/paradas')" 
         :collapsed="isCollapsed"
         @click="handleNavClick('/paradas')"
+      />
+      <SidebarItem 
+        icon="📥" 
+        label="Importaciones" 
+        :active="isActive('/importaciones')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/importaciones')"
       />
     </nav>
   </aside>
@@ -164,7 +178,7 @@ function mobileToggle() {
 
 async function checkApiStatus() {
   try {
-    const response = await fetch('http://localhost:3001/api/status', {
+    const response = await fetch('http://localhost:3002/api/status', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     })

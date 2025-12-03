@@ -3,6 +3,8 @@ import Dashboard from '../components/Dashboard.vue'
 import FichaSearch from '../components/FichaSearch.vue'
 import CalidadTable from '../components/CalidadTable.vue'
 import ParadasTable from '../components/ParadasTable.vue'
+import ImportControl from '../components/ImportControl.vue'
+import RevisionCQ from '../components/RevisionCQ.vue'
 
 const routes = [
   {
@@ -24,10 +26,22 @@ const routes = [
     meta: { title: 'Control de Calidad - Análisis Producción STC' }
   },
   {
+    path: '/revision-cq',
+    name: 'RevisionCQ',
+    component: RevisionCQ,
+    meta: { title: 'Revisión CQ - Análisis Producción STC' }
+  },
+  {
     path: '/paradas',
     name: 'ParadasTable',
     component: ParadasTable,
     meta: { title: 'Paradas de Máquina - Análisis Producción STC' }
+  },
+  {
+    path: '/importaciones',
+    name: 'ImportControl',
+    component: ImportControl,
+    meta: { title: 'Control de Importaciones - Análisis Producción STC' }
   }
 ]
 

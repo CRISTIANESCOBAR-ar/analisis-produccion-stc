@@ -6,7 +6,7 @@
 
 import { ref, computed } from 'vue'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api'
 
 export function useDatabase() {
   const loading = ref(false)
@@ -68,6 +68,11 @@ export function useDatabase() {
     return await fetchApi(`/calidad?${queryString}`)
   }
 
+  const getRevisionCQ = async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString()
+    return await fetchApi(`/calidad/revision-cq?${queryString}`)
+  }
+
   // ===================================================================
   // PARADAS
   // ===================================================================
@@ -126,6 +131,7 @@ export function useDatabase() {
     getProduccion,
     getProduccionSummary,
     getCalidad,
+    getRevisionCQ,
     getParadas,
     getTopMotivosParada,
     getFichas,
