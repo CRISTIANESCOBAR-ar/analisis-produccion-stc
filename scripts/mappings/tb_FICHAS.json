@@ -1,0 +1,546 @@
+[
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "ARTIGO CODIGO",
+    "columna_excel": "ARTIGO CODIGO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "ARTIGO",
+    "columna_excel": "ARTIGO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "COR",
+    "columna_excel": "COR",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NCM",
+    "columna_excel": "NCM",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "BASE",
+    "columna_excel": "BASE",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "UnP",
+    "columna_excel": "UnP",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "VENDA",
+    "columna_excel": "VENDA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "PRODUÇÃO",
+    "columna_excel": "PRODUÇÃO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NOME REDUZIDO",
+    "columna_excel": "NOME REDUZIDO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NOME DE MERCADO",
+    "columna_excel": "NOME DE MERCADO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LINHA",
+    "columna_excel": "LINHA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "URDUME",
+    "columna_excel": "URDUME",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SARJA",
+    "columna_excel": "SARJA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "COD# RETALHO",
+    "columna_excel": "COD. RETALHO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SAP",
+    "columna_excel": "SAP",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "TRAMA REDUZIDO",
+    "columna_excel": "TRAMA REDUZIDO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SGS",
+    "columna_excel": "SGS",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SGS UN 1",
+    "columna_excel": "SGS UN 1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "DESCRIÇÃO",
+    "columna_excel": "DESCRIÇÃO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "BATIDAS/FIO",
+    "columna_excel": "BATIDAS/FIO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NE RESULTANTE",
+    "columna_excel": "NE RESULTANTE",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SAP1",
+    "columna_excel": "SAP_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "TRAMA REDUZIDO1",
+    "columna_excel": "TRAMA REDUZIDO_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SGS1",
+    "columna_excel": "SGS_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SGS UN 2",
+    "columna_excel": "SGS UN 2",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "DESCRIÇÃO1",
+    "columna_excel": "DESCRIÇÃO_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "BATIDAS/FIO1",
+    "columna_excel": "BATIDAS/FIO_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NE RESULTANTE1",
+    "columna_excel": "NE RESULTANTE_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "CONS#TR/m",
+    "columna_excel": "CONS.TR/m",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SGS2",
+    "columna_excel": "SGS_2",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "QT#FIOS",
+    "columna_excel": "QT.FIOS",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NE RESULTANTE2",
+    "columna_excel": "NE RESULTANTE_2",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SGS3",
+    "columna_excel": "SGS_3",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "QT#FIOS1",
+    "columna_excel": "QT.FIOS_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "NE RESULTANTE3",
+    "columna_excel": "NE RESULTANTE_3",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "F36",
+    "columna_excel": "NE RESULTANTE_4",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "CONS#URD/m",
+    "columna_excel": "CONS.URD/m",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "BATIDA",
+    "columna_excel": "BATIDA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LARG#PENTE",
+    "columna_excel": "LARG.PENTE",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LARG#CRU",
+    "columna_excel": "LARG.CRU",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "PESO/m CRU",
+    "columna_excel": "PESO/m CRU",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "Oz/jd2",
+    "columna_excel": "Oz/jd2",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "Peso/m2",
+    "columna_excel": "Peso/m2",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LARGURA MIN",
+    "columna_excel": "LARGURA MIN",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LARGURA",
+    "columna_excel": "LARGURA ",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LARGURA MAX",
+    "columna_excel": "LARGURA MAX",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SKEW MIN",
+    "columna_excel": "SKEW MIN",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "SKEW MAX",
+    "columna_excel": "SKEW MAX",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "URD#MIN",
+    "columna_excel": "URD.MIN",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "URD#MAX",
+    "columna_excel": "URD.MAX",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "TRAMA MIN",
+    "columna_excel": "TRAMA MIN",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "TRAMA MAX",
+    "columna_excel": "TRAMA MAX",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "VAR STR#MIN TRAMA",
+    "columna_excel": "VAR STR.MIN TRAMA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "VAR STR#MAX TRAMA",
+    "columna_excel": "VAR STR.MAX TRAMA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "VAR STR#MIN URD",
+    "columna_excel": "VAR STR.MIN URD",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "VAR STR#MAX URD",
+    "columna_excel": "VAR STR.MAX URD",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "PONTOS",
+    "columna_excel": "PONTOS",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "ENC#TEC#URDUME",
+    "columna_excel": "ENC.TEC.URDUME",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "ENC# TEC#TRAMA",
+    "columna_excel": "ENC. TEC.TRAMA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "ENC#ACAB URD",
+    "columna_excel": "ENC.ACAB URD",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "ENC#ACAB TRAMA",
+    "columna_excel": "ENC.ACAB TRAMA",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LAV#AMAC#URD",
+    "columna_excel": "LAV.AMAC.URD",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LAV#AMAC#TRM",
+    "columna_excel": "LAV.AMAC.TRM",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LAV STONE",
+    "columna_excel": "LAV STONE ",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": "trim"
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "LAV STONE 1",
+    "columna_excel": "LAV STONE _1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "STRET LAV STONE",
+    "columna_excel": "STRET LAV STONE",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "COMPOSIÇÃO",
+    "columna_excel": "COMPOSIÇÃO",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  },
+  {
+    "tabla_destino": "tb_FICHAS",
+    "columna_destino": "TRAMA",
+    "columna_excel": "TRAMA_1",
+    "es_requerida": false,
+    "valor_default": null,
+    "transformacion": null
+  }
+]

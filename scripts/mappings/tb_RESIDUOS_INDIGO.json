@@ -1,0 +1,6 @@
+[
+  {"tabla_destino": "tb_RESIDUOS_INDIGO", "columna_destino": "DT_MOV", "columna_excel": "DT_MOV", "es_requerida": 1, "valor_default": null, "transformacion": "date_iso"},
+  {"tabla_destino": "tb_RESIDUOS_INDIGO", "columna_destino": "SETOR", "columna_excel": "SETOR", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_INDIGO", "columna_destino": "DESCRICAO", "columna_excel": "RESIDUO", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_INDIGO", "columna_destino": "PESO LIQUIDO (KG)", "columna_excel": "QUANT", "es_requerida": 0, "valor_default": null, "transformacion": "decimal_comma"}
+]

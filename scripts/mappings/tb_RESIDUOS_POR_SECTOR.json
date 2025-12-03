@@ -1,0 +1,15 @@
+[
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "FILIAL", "columna_excel": "FILIAL", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "SETOR", "columna_excel": "SETOR", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "DESC_SETOR", "columna_excel": "DESC_SETOR", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "DT_MOV", "columna_excel": "DT_MOV", "es_requerida": 1, "valor_default": null, "transformacion": "date_iso"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "TURNO", "columna_excel": "TURNO", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "SUBPRODUTO", "columna_excel": "SUBPRODUTO", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "DESCRICAO", "columna_excel": "DESCRICAO", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "ID", "columna_excel": "ID", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "PESO LIQUIDO (KG)", "columna_excel": "PESO LIQUIDO (KG)", "es_requerida": 0, "valor_default": null, "transformacion": "decimal_comma"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "LOTE", "columna_excel": "LOTE", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "OPERADOR", "columna_excel": "OPERADOR", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "NOME_OPER", "columna_excel": "NOME_OPER", "es_requerida": 0, "valor_default": null, "transformacion": "trim"},
+  {"tabla_destino": "tb_RESIDUOS_POR_SECTOR", "columna_destino": "OBS", "columna_excel": "OBS", "es_requerida": 0, "valor_default": null, "transformacion": "trim"}
+]

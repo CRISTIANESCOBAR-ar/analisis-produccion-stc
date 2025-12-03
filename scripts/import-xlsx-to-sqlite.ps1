@@ -1,0 +1,273 @@
+# =====================================================================
+# IMPORTACIÓN DIRECTA DE XLSX A SQLITE CON MAPEO FLEXIBLE
+# =====================================================================
+# Requisitos:
+# - PowerShell 5+
+# - Módulo ImportExcel: Install-Module ImportExcel -Scope CurrentUser
+# - sqlite3 CLI instalado (winget install SQLite.SQLite)
+#
+# Uso:
+#   .\scripts\import-xlsx-to-sqlite.ps1 -XlsxPath "C:\ruta\archivo.xlsx" -Sheet "Hoja1" -SqlitePath "C:\analisis-stock-stc\database\produccion.db" -Table "tb_PRODUCCION"
+#   (Opcional) -MappingSource sqlite|json -MappingJson "C:\ruta\mapping.json"
+# =====================================================================
+
+param(
+  [Parameter(Mandatory=$true)][string]$XlsxPath,
+  [Parameter(Mandatory=$true)][string]$Sheet,
+  [Parameter(Mandatory=$true)][string]$SqlitePath,
+  [Parameter(Mandatory=$true)][string]$Table,
+  [Parameter(Mandatory=$false)][string]$DateColumn,
+  [Parameter(Mandatory=$false)][switch]$ClearTable,
+  [Parameter(Mandatory=$false)][ValidateSet('sqlite','json')][string]$MappingSource = 'json',
+  [Parameter(Mandatory=$false)][string]$MappingJson
+)
+
+$ErrorActionPreference = 'Stop'
+
+# Dependencias
+if (-not (Get-Command sqlite3 -ErrorAction SilentlyContinue)) {
+  throw "sqlite3 no encontrado. Instala con: winget install SQLite.SQLite"
+}
+if (-not (Get-Module -ListAvailable -Name ImportExcel)) {
+  Write-Host "Instalando módulo ImportExcel..." -ForegroundColor Yellow
+  Install-Module ImportExcel -Scope CurrentUser -Force
+}
+Import-Module ImportExcel
+
+# Cargar mapeos
+function Get-MappingsFromSqlite {
+  param([string]$dbPath, [string]$table)
+  $sql = "SELECT tabla_destino, columna_destino, columna_excel, es_requerida, valor_default, transformacion FROM column_mappings WHERE tabla_destino = '$table';"
+  $rows = & sqlite3 $dbPath -header -separator '|' $sql
+  $mappings = @()
+  foreach ($r in $rows) {
+    if ($r -match '^(?<tabla>[^|]+)\|(?<dest>[^|]+)\|(?<excel>[^|]+)\|(?<req>\d+)\|(?<def>.*)\|(?<tran>.*)$') {
+      $mappings += [pscustomobject]@{
+        tabla_destino   = $Matches['tabla']
+        columna_destino = $Matches['dest']
+        columna_excel   = $Matches['excel']
+        es_requerida    = [int]$Matches['req']
+        valor_default   = $Matches['def']
+        transformacion  = $Matches['tran']
+      }
+    }
+  }
+  return $mappings
+}
+
+function Get-MappingsFromJson {
+  param([string]$jsonPath)
+  if (-not (Test-Path $jsonPath)) { throw "Mapping JSON no encontrado: $jsonPath" }
+  return Get-Content $jsonPath | ConvertFrom-Json
+}
+
+$mappings = if ($MappingSource -eq 'json') { Get-MappingsFromJson $MappingJson } else { Get-MappingsFromSqlite $SqlitePath $Table }
+if ($mappings.Count -eq 0) {
+  throw "No se encontraron mapeos para la tabla '$Table'. Define registros en 'column_mappings' o provee JSON."
+}
+
+Write-Host "📚 Mapeos cargados: $($mappings.Count) columnas" -ForegroundColor Green
+
+# Leer Excel
+Write-Host "📖 Leyendo XLSX: $XlsxPath (Hoja: $Sheet)" -ForegroundColor Cyan
+try {
+  $rows = Import-Excel -Path $XlsxPath -WorksheetName $Sheet
+} catch {
+  if ($_.Exception.Message -match 'Duplicate column') {
+    Write-Host "⚠ Encabezados duplicados detectados; usando -HeaderName con sufijos únicos." -ForegroundColor Yellow
+    # Leer primera fila para obtener headers y crear nombres únicos
+    $tempData = Import-Excel -Path $XlsxPath -WorksheetName $Sheet -NoHeader -StartRow 1 -EndRow 1
+    $origHeaders = @()
+    foreach ($prop in $tempData.PSObject.Properties) {
+      $origHeaders += $prop.Value
+    }
+    # Generar nombres únicos agregando sufijo incremental a duplicados
+    $seenHeaders = @{}
+    $uniqueHeaders = @()
+    $colIndex = 0
+    foreach ($h in $origHeaders) {
+      # Manejar headers nulos o vacíos (columnas combinadas/vacías)
+      if ([string]::IsNullOrWhiteSpace($h)) {
+        $h = "COL_$colIndex"
+      }
+      if ($seenHeaders.ContainsKey($h)) {
+        $seenHeaders[$h]++
+        $uniqueHeaders += "$h`_$($seenHeaders[$h])"
+      } else {
+        $seenHeaders[$h] = 0
+        $uniqueHeaders += $h
+      }
+      $colIndex++
+    }
+    # Leer con HeaderName
+    $rows = Import-Excel -Path $XlsxPath -WorksheetName $Sheet -HeaderName $uniqueHeaders -StartRow 2
+  } else {
+    throw
+  }
+}
+if ($rows.Count -eq 0) { throw "Hoja vacía o nombre incorrecto: $Sheet" }
+
+# Filtrar filas que son encabezados repetidos o totalizadores
+# Detectar por la primera columna: si contiene el nombre del header o está vacía/numérica sin contexto
+$firstColName = ($rows[0].PSObject.Properties | Select-Object -First 1).Name
+$rowsFiltered = $rows | Where-Object {
+  $firstVal = $_.$firstColName
+  # Excluir si primera columna es el nombre del encabezado o está vacía con resto de fila vacía
+  if ($null -eq $firstVal -or $firstVal -eq '' -or $firstVal -eq $firstColName) {
+    $false
+  } else {
+    $true
+  }
+}
+$skipped = $rows.Count - $rowsFiltered.Count
+if ($skipped -gt 0) {
+  Write-Host "🧹 Filtradas $skipped filas (encabezados repetidos o totalizadores)" -ForegroundColor Yellow
+}
+$rows = $rowsFiltered
+
+# Validar columnas requeridas
+$excelCols = ($rows | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)
+
+# Validar columna de fecha si se solicita borrado por fecha
+if ($DateColumn) {
+  if (-not ($excelCols -contains $DateColumn)) {
+    throw "La columna de fecha '$DateColumn' no existe en el XLSX."
+  }
+}
+$missing = @()
+foreach ($m in $mappings) {
+  if ($m.es_requerida -eq 1 -and -not ($excelCols -contains $m.columna_excel)) {
+    $missing += $m.columna_excel
+  }
+}
+if ($missing.Count -gt 0) {
+  throw "Faltan columnas requeridas en Excel: $($missing -join ', ')"
+}
+
+# Transformaciones simples
+function Invoke-ValueTransform {
+  param([string]$val, [string]$tran)
+  if ($null -eq $val) { return $val }
+  switch -Regex ($tran) {
+    '^trim$'        { return ($val -as [string]).Trim() }
+    '^uppercase$'   { return ($val -as [string]).ToUpper() }
+    '^lowercase$'   { return ($val -as [string]).ToLower() }
+    '^date_iso$'    { try { $d = [datetime]::Parse($val); return $d.ToString('yyyy-MM-dd HH:mm:ss') } catch { return $val } }
+    '^decimal_comma$' { # Convierte "1.234,56" o "179,00" a "1234.56" / "179.00"
+      try {
+        $s = ($val -as [string]).Trim()
+        # quitar puntos de miles y cambiar coma decimal a punto
+        $s = $s -replace '\.', ''
+        $s = $s -replace ',', '.'
+        # validar número
+        [void][double]::Parse($s, [Globalization.CultureInfo]::InvariantCulture)
+        return $s
+      } catch { return $val }
+    }
+    default         { return $val }
+  }
+}
+
+# Preparar inserciones
+$destCols = $mappings | Select-Object -ExpandProperty columna_destino
+$insertColsSql = ($destCols | ForEach-Object { '[' + $_ + ']' }) -join ', '
+$insertBase = "INSERT INTO [$Table] ($insertColsSql) VALUES "
+
+# Iniciar transacción para performance
+& sqlite3 $SqlitePath "BEGIN;" | Out-Null
+
+# Estrategia de borrado previo
+$deletedRows = 0
+
+if ($ClearTable) {
+  # Borrar TODA la tabla antes de importar (para tablas sin fecha o carga completa)
+  Write-Host "🗑️  Borrando todos los registros de '$Table'..." -ForegroundColor Yellow
+  & sqlite3 $SqlitePath "DELETE FROM [$Table];" | Out-Null
+  Write-Host "✅ Tabla '$Table' vaciada completamente" -ForegroundColor Green
+} elseif ($DateColumn) {
+  # Borrar solo las fechas presentes en el XLSX (para tablas con fecha)
+  # Obtener fechas distintas desde el XLSX ya formateadas a ISO si hay transformación en el mapeo
+  $dateMap = $mappings | Where-Object { $_.columna_destino -eq $DateColumn }
+  if ($null -eq $dateMap) {
+    Write-Host "⚠ La columna '$DateColumn' no está en los mapeos; se intentará borrar usando el valor XLSX sin transformación." -ForegroundColor Yellow
+  }
+  $distinctDates = New-Object System.Collections.Generic.HashSet[string]
+  foreach ($row in $rows) {
+    $rawDate = $row.$DateColumn
+    $dateVal = $rawDate
+    if ($dateMap) { $dateVal = Invoke-ValueTransform $rawDate $dateMap.transformacion }
+    if ($null -ne $dateVal -and $dateVal -ne '') { [void]$distinctDates.Add(($dateVal -as [string])) }
+  }
+  if ($distinctDates.Count -gt 0) {
+    # Borrado en lotes para evitar SQL demasiado largo
+    $batch = @()
+    foreach ($d in $distinctDates) {
+      $safe = ($d -as [string]).Replace("'","''")
+      $batch += "'" + $safe + "'"
+      if ($batch.Count -ge 500) {
+        $delSql = "DELETE FROM [$Table] WHERE [$DateColumn] IN (" + ($batch -join ',') + ");";
+        & sqlite3 $SqlitePath $delSql | Out-Null
+        $batch = @()
+      }
+    }
+    if ($batch.Count -gt 0) {
+      $delSql = "DELETE FROM [$Table] WHERE [$DateColumn] IN (" + ($batch -join ',') + ");";
+      & sqlite3 $SqlitePath $delSql | Out-Null
+    }
+    Write-Host "🧹 Borrado previo por fecha en '$Table': $($distinctDates.Count) fechas distintas" -ForegroundColor Yellow
+  } else {
+    Write-Host "ℹ No se detectaron fechas distintas en XLSX para borrar." -ForegroundColor Yellow
+  }
+}
+
+# Determinar tamaño de lote basado en número de columnas (evitar límites de comando)
+$colCount = $destCols.Count
+if ($colCount -gt 80) {
+  $batchSize = 5
+} elseif ($colCount -gt 60) {
+  $batchSize = 10
+} elseif ($colCount -gt 40) {
+  $batchSize = 20
+} else {
+  $batchSize = 50
+}
+Write-Host "📦 Tamaño de lote: $batchSize filas ($colCount columnas)" -ForegroundColor Cyan
+
+$buffer = @()
+$processed = 0
+
+foreach ($row in $rows) {
+  $vals = @()
+  foreach ($m in $mappings) {
+    $excelVal = $null
+    if ($excelCols -contains $m.columna_excel) { $excelVal = $row.$($m.columna_excel) }
+    if ($null -eq $excelVal -or $excelVal -eq '') { $excelVal = $m.valor_default }
+    $excelVal = Invoke-ValueTransform $excelVal $m.transformacion
+    # Escapar comillas simples para SQL
+    $safe = ($excelVal -as [string]).Replace("'","''")
+    if ($null -eq $safe -or $safe -eq '') { $vals += "NULL" } else { $vals += "'" + $safe + "'" }
+  }
+  $buffer += "(" + ($vals -join ', ') + ")"
+  $processed++
+
+  if ($buffer.Count -ge $batchSize) {
+    $sql = $insertBase + ($buffer -join ', ') + ";";
+    & sqlite3 $SqlitePath $sql | Out-Null
+    $buffer = @()
+    Write-Host "   → Insertadas $processed filas" -ForegroundColor Gray
+  }
+}
+
+# Flush restante
+if ($buffer.Count -gt 0) {
+  $sql = $insertBase + ($buffer -join ', ') + ";";
+  & sqlite3 $SqlitePath $sql | Out-Null
+}
+
+& sqlite3 $SqlitePath "COMMIT;" | Out-Null
+
+# Conteos de verificación
+$xlsxCount = $rows.Count
+$sqliteCountAfter = (& sqlite3 $SqlitePath "SELECT COUNT(*) FROM [$Table];")
+Write-Host "✅ Importación XLSX completada: $processed filas en '$Table'" -ForegroundColor Green
+Write-Host "📈 Verificación: XLSX=$xlsxCount filas, SQLite ahora=$sqliteCountAfter filas" -ForegroundColor Cyan
