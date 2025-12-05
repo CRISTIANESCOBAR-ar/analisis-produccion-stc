@@ -190,8 +190,6 @@ $tempSqlFile = [System.IO.Path]::GetTempFileName() + ".sql"
 "BEGIN TRANSACTION;" | Out-File $tempSqlFile -Encoding UTF8
 
 # Estrategia de borrado previo
-$deletedRows = 0
-
 if ($ClearTable) {
   # Borrar TODA la tabla antes de importar (para tablas sin fecha o carga completa)
   Write-Host "Borrando todos los registros de '$Table'..." -ForegroundColor Yellow
@@ -293,5 +291,6 @@ Remove-Item $tempSqlFile -ErrorAction SilentlyContinue
 # Conteos de verificacion
 $xlsxCount = $rows.Count
 $sqliteCountAfter = (& sqlite3 $SqlitePath "SELECT COUNT(*) FROM [$Table];")
+Write-Output "Importacion XLSX completada: $processed filas en '$Table'"
 Write-Host "Importacion XLSX completada: $processed filas en '$Table'" -ForegroundColor Green
 Write-Host "Verificacion: XLSX=$xlsxCount filas, SQLite ahora=$sqliteCountAfter filas" -ForegroundColor Cyan

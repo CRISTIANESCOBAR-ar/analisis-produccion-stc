@@ -1,5 +1,5 @@
 <template>
-  <div class="calidad-container">
+  <div class="calidad-container" @keydown="handleKeydown" tabindex="0" ref="containerRef">
     <div class="header">
       <h1 class="title">📋 REVISIÓN - CQ</h1>
       <p class="subtitle">Informe detallado de revisión de calidad</p>
@@ -8,17 +8,40 @@
     <!-- Filtros -->
     <div class="filters-card">
       <div class="filters-grid">
-        <div class="filter-group">
-          <label>Fecha Desde:</label>
-          <input v-model="filters.startDate" type="date" class="filter-input" />
-        </div>
-        <div class="filter-group">
-          <label>Fecha Hasta:</label>
-          <input v-model="filters.endDate" type="date" class="filter-input" />
+        <div class="filter-group fecha-nav">
+          <label>Fecha:</label>
+          <div class="fecha-controls">
+            <button 
+              class="nav-btn" 
+              @click="cambiarFecha(-1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              title="Día anterior (←)"
+              :disabled="loading"
+            >&lt;</button>
+            <input 
+              type="date" 
+              v-model="filters.fecha" 
+              class="filter-input date-input"
+              required
+              @change="onDateChange"
+              @keydown.left.prevent="cambiarFecha(-1)"
+              @keydown.right.prevent="cambiarFecha(1)"
+            />
+            <button 
+              class="nav-btn" 
+              @click="cambiarFecha(1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              title="Día siguiente (→)"
+              :disabled="loading"
+            >&gt;</button>
+          </div>
+          <span class="hint-text">Usa ← → para navegar</span>
         </div>
         <div class="filter-group">
           <label>Tramas:</label>
-          <select v-model="filters.tramas" class="filter-input">
+          <select v-model="filters.tramas" class="filter-input" @change="loadData">
             <option value="Todas">Todas</option>
             <option value="ALG 100%">ALG 100%</option>
             <option value="P + E">P + E</option>
@@ -26,56 +49,128 @@
           </select>
         </div>
       </div>
-      <div class="filters-actions">
-        <button @click="applyFilters" class="btn-primary">
-          🔍 Generar Informe
-        </button>
-      </div>
     </div>
 
-    <!-- Tabla de resultados -->
-    <div class="table-card">
-      <div class="table-header">
-        <div class="results-info">
-          <span class="results-count">{{ calidadData.length }} revisores</span>
+    <!-- Layout de dos tablas lado a lado -->
+    <div class="tables-layout-wrapper">
+      <!-- Tabla Izquierda: Resumen por Revisor -->
+      <div class="table-card table-left">
+        <div class="table-header">
+          <div class="results-info">
+            <span class="results-count">{{ calidadData.length }} revisores</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table tabla-resumen">
+            <thead>
+              <tr>
+                <th class="col-revisor">Revisor</th>
+                <th class="col-metros text-center">Metros Día</th>
+                <th class="col-calidad text-center">Calidad %</th>
+                <th class="col-pts text-center">Pts 100 m²</th>
+                <th class="col-rollos text-center">Rollos 1era</th>
+                <th class="col-sin-pts-un text-center">Sin Pts [un]</th>
+                <th class="col-sin-pts-perc text-center">Sin Pts [%]</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="row in calidadData" 
+                :key="row.Revisor"
+                @click="selectRevisor(row)"
+                :class="{ 'selected-row': selectedRevisor?.Revisor === row.Revisor }"
+                class="clickable-row"
+              >
+                <td class="col-revisor font-medium">{{ row.Revisor }}</td>
+                <td class="col-metros text-center font-bold">{{ formatInteger(row.Mts_Total) }}</td>
+                <td class="col-calidad text-center">{{ formatNumber(row.Calidad_Perc) }}</td>
+                <td class="col-pts text-center">{{ formatNumber(row.Pts_100m2) }}</td>
+                <td class="col-rollos text-center">{{ row.Rollos_1era }}</td>
+                <td class="col-sin-pts-un text-center">{{ row.Rollos_Sin_Pts }}</td>
+                <td class="col-sin-pts-perc text-center">{{ formatNumber(row.Perc_Sin_Pts) }}</td>
+              </tr>
+              <!-- Fila de Totales -->
+              <tr v-if="calidadData.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
+                <td class="col-revisor">Total</td>
+                <td class="col-metros text-center">{{ formatInteger(totals.Mts_Total) }}</td>
+                <td class="col-calidad text-center">{{ formatNumber(totals.Calidad_Perc) }}</td>
+                <td class="col-pts text-center">{{ formatNumber(totals.Pts_100m2) }}</td>
+                <td class="col-rollos text-center">{{ totals.Rollos_1era }}</td>
+                <td class="col-sin-pts-un text-center">{{ totals.Rollos_Sin_Pts }}</td>
+                <td class="col-sin-pts-perc text-center">{{ formatNumber(totals.Perc_Sin_Pts) }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="table-responsive">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Revisor</th>
-              <th class="text-right">Metros Día</th>
-              <th class="text-right">Calidad %</th>
-              <th class="text-right">Pts 100m²</th>
-              <th class="text-right">Rollos 1era</th>
-              <th class="text-right">Sin Pts [un]</th>
-              <th class="text-right">Sin Pts [%]</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in calidadData" :key="row.Revisor">
-              <td class="font-medium">{{ row.Revisor }}</td>
-              <td class="text-right font-bold">{{ formatNumber(row.Mts_Total) }}</td>
-              <td class="text-right">{{ formatNumber(row.Calidad_Perc) }}%</td>
-              <td class="text-right">{{ formatNumber(row.Pts_100m2) }}</td>
-              <td class="text-right">{{ row.Rollos_1era }}</td>
-              <td class="text-right">{{ row.Rollos_Sin_Pts }}</td>
-              <td class="text-right">{{ formatNumber(row.Perc_Sin_Pts) }}%</td>
-            </tr>
-            <!-- Fila de Totales -->
-            <tr v-if="calidadData.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
-              <td>TOTAL</td>
-              <td class="text-right">{{ formatNumber(totals.Mts_Total) }}</td>
-              <td class="text-right">{{ formatNumber(totals.Calidad_Perc) }}%</td>
-              <td class="text-right">{{ formatNumber(totals.Pts_100m2) }}</td>
-              <td class="text-right">{{ totals.Rollos_1era }}</td>
-              <td class="text-right">{{ totals.Rollos_Sin_Pts }}</td>
-              <td class="text-right">{{ formatNumber(totals.Perc_Sin_Pts) }}%</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Tabla Derecha: Detalle del Revisor Seleccionado -->
+      <div class="table-card table-right">
+        <div class="table-header">
+          <div class="results-info">
+            <span class="results-count">
+              {{ selectedRevisor ? `Detalle - ${selectedRevisor.Revisor}` : 'Seleccione un revisor' }}
+            </span>
+          </div>
+        </div>
+
+        <div v-if="selectedRevisor && detalleRevisor.length > 0" class="table-responsive">
+          <table class="data-table tabla-detalle">
+            <thead>
+              <tr>
+                <th class="text-center">Hora</th>
+                <th>Nombre Artículo</th>
+                <th>Partidas</th>
+                <th class="text-center">Metros Revisados</th>
+                <th class="text-center">Cal. %</th>
+                <th class="text-center">Pts 100m²</th>
+                <th class="text-center">Total [un]</th>
+                <th class="text-center">Sin Pts [un]</th>
+                <th class="text-center">Sin Pts [%]</th>
+                <th class="text-center">Telar</th>
+                <th class="text-center">Efic. %</th>
+                <th class="text-center">RU 105</th>
+                <th class="text-center">RT 105</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(detalle, index) in detalleRevisor" :key="index">
+                <td class="text-center">{{ formatHora(detalle.HoraInicio) }}</td>
+                <td>{{ detalle.NombreArticulo }}</td>
+                <td>{{ formatPartida(detalle.Partidas) }}</td>
+                <td class="text-center">{{ formatInteger(detalle.MetrosRevisados) }}</td>
+                <td class="text-center">{{ formatNumber(detalle.CalidadPct) }}</td>
+                <td class="text-center">{{ formatNumber(detalle.Pts100m2) }}</td>
+                <td class="text-center">{{ detalle.TotalRollos }}</td>
+                <td class="text-center">{{ detalle.SinPuntos }}</td>
+                <td class="text-center">{{ formatNumber(detalle.SinPuntosPct) }}</td>
+                <td class="text-center">{{ detalle.Telar }}</td>
+                <td class="text-center">{{ formatNumber(detalle.EficienciaPct) }}</td>
+                <td class="text-center">{{ formatNumber(detalle.RU105) }}</td>
+                <td class="text-center">{{ formatNumber(detalle.RT105) }}</td>
+              </tr>
+              <!-- Fila Total del Detalle -->
+              <tr v-if="detalleRevisor.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
+                <td></td>
+                <td colspan="2">Total</td>
+                <td class="text-center">{{ formatInteger(totalesDetalle.MetrosRevisados) }}</td>
+                <td class="text-center">{{ formatNumber(totalesDetalle.CalidadPct) }}</td>
+                <td class="text-center">{{ formatNumber(totalesDetalle.Pts100m2) }}</td>
+                <td class="text-center">{{ totalesDetalle.TotalRollos }}</td>
+                <td class="text-center">{{ totalesDetalle.SinPuntos }}</td>
+                <td class="text-center">{{ formatNumber(totalesDetalle.SinPuntosPct) }}</td>
+                <td class="text-center">{{ totalesDetalle.Telar }}</td>
+                <td class="text-center">{{ formatNumber(totalesDetalle.EficienciaPct) }}</td>
+                <td class="text-center">{{ formatNumber(totalesDetalle.RU105) }}</td>
+                <td class="text-center">{{ formatNumber(totalesDetalle.RT105) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="empty-state-detail">
+          <p>👆 Haz clic en un revisor para ver el detalle de su producción</p>
+        </div>
       </div>
     </div>
 
@@ -115,32 +210,125 @@ const totals = ref({
   Perc_Sin_Pts: 0
 })
 
+// Variables para la segunda tabla (detalle)
+const selectedRevisor = ref(null)
+const detalleRevisor = ref([])
+
+// Totales del detalle
+const totalesDetalle = computed(() => {
+  if (detalleRevisor.value.length === 0) {
+    return {
+      MetrosRevisados: 0,
+      CalidadPct: 0,
+      Pts100m2: 0,
+      TotalRollos: 0,
+      SinPuntos: 0,
+      SinPuntosPct: 0,
+      Telar: 0,
+      EficienciaPct: 0,
+      RU105: 0,
+      RT105: 0
+    }
+  }
+  
+  const totalMetros = detalleRevisor.value.reduce((sum, d) => sum + d.MetrosRevisados, 0)
+  const totalRollos = detalleRevisor.value.reduce((sum, d) => sum + d.TotalRollos, 0)
+  const totalSinPuntos = detalleRevisor.value.reduce((sum, d) => sum + d.SinPuntos, 0)
+  
+  // Contar telares únicos (no sumar)
+  const telaresUnicos = new Set(detalleRevisor.value.map(d => d.Telar).filter(t => t > 0))
+  const totalTelar = telaresUnicos.size
+  
+  // Promedios ponderados
+  const calidadPonderada = detalleRevisor.value.reduce((sum, d) => sum + (d.CalidadPct * d.MetrosRevisados), 0) / totalMetros
+  const ptsPonderado = detalleRevisor.value.reduce((sum, d) => sum + (d.Pts100m2 * d.MetrosRevisados), 0) / totalMetros
+  const eficienciaPonderada = detalleRevisor.value.reduce((sum, d) => sum + (d.EficienciaPct * d.MetrosRevisados), 0) / totalMetros
+  const ru105Ponderado = detalleRevisor.value.reduce((sum, d) => sum + (d.RU105 * d.MetrosRevisados), 0) / totalMetros
+  const rt105Ponderado = detalleRevisor.value.reduce((sum, d) => sum + (d.RT105 * d.MetrosRevisados), 0) / totalMetros
+  
+  return {
+    MetrosRevisados: totalMetros,
+    CalidadPct: calidadPonderada,
+    Pts100m2: ptsPonderado,
+    TotalRollos: totalRollos,
+    SinPuntos: totalSinPuntos,
+    SinPuntosPct: totalRollos > 0 ? (totalSinPuntos / totalRollos) * 100 : 0,
+    Telar: totalTelar,
+    EficienciaPct: eficienciaPonderada,
+    RU105: ru105Ponderado,
+    RT105: rt105Ponderado
+  }
+})
+
 const filters = ref({
-  startDate: '',
-  endDate: '',
+  fecha: '',
   tramas: 'Todas'
 })
+
+const containerRef = ref(null)
 
 const loading = computed(() => db.loading.value)
 const error = computed(() => db.error.value)
 
-onMounted(() => {
-  // Cargar últimos 7 días por defecto
+const canGenerateReport = computed(() => {
+  return filters.value.fecha
+})
+
+// Cambiar fecha por días (-1 = ayer, +1 = mañana)
+function cambiarFecha(dias) {
+  if (!filters.value.fecha) return
+  const fecha = new Date(filters.value.fecha)
+  fecha.setDate(fecha.getDate() + dias)
+  filters.value.fecha = fecha.toISOString().split('T')[0]
+  loadData()
+}
+
+// Manejar teclas de flecha
+function handleKeydown(event) {
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    cambiarFecha(-1)
+  } else if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    cambiarFecha(1)
+  }
+}
+
+onMounted(async () => {
+  // Pre-seleccionar el día de ayer
   const today = new Date()
-  const weekAgo = new Date(today)
-  weekAgo.setDate(weekAgo.getDate() - 7)
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
   
-  filters.value.endDate = today.toISOString().split('T')[0]
-  filters.value.startDate = weekAgo.toISOString().split('T')[0]
+  filters.value.fecha = yesterdayStr
+  
+  // Enfocar el contenedor para capturar teclas
+  if (containerRef.value) {
+    containerRef.value.focus()
+  }
   
   loadData()
 })
 
+function onDateChange() {
+  // Cargar datos automáticamente si la fecha está seleccionada
+  if (canGenerateReport.value) {
+    loadData()
+  }
+}
+
 async function loadData() {
+  if (!canGenerateReport.value) return
+  
+  // Limpiar selección de revisor al cambiar fecha
+  selectedRevisor.value = null
+  detalleRevisor.value = []
+  
   try {
     const params = {
-      startDate: filters.value.startDate,
-      endDate: filters.value.endDate,
+      startDate: filters.value.fecha,
+      endDate: filters.value.fecha,
       tramas: filters.value.tramas
     }
 
@@ -150,6 +338,30 @@ async function loadData() {
   } catch (err) {
     console.error('Error cargando reporte Revision CQ:', err)
     calidadData.value = []
+  }
+}
+
+function applyFilters() {
+  loadData()
+}
+
+// Función para seleccionar un revisor y cargar su detalle
+async function selectRevisor(revisor) {
+  selectedRevisor.value = revisor
+  
+  try {
+    const params = {
+      startDate: filters.value.fecha,
+      endDate: filters.value.fecha,
+      revisor: revisor.Revisor,
+      tramas: filters.value.tramas
+    }
+    
+    const result = await db.getRevisorDetalle(params)
+    detalleRevisor.value = result || []
+  } catch (err) {
+    console.error('Error cargando detalle del revisor:', err)
+    detalleRevisor.value = []
   }
 }
 
@@ -196,22 +408,46 @@ function calculateTotals() {
   }
 }
 
-function applyFilters() {
-  loadData()
-}
-
 function formatNumber(num) {
   if (num === null || num === undefined) return '-'
-  return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(num)
+  const n = Number(num)
+  if (Number.isNaN(n)) return '-'
+  return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n)
+}
+
+function formatInteger(num) {
+  if (num === null || num === undefined) return '-'
+  const n = Number(num)
+  if (Number.isNaN(n)) return '-'
+  // Separador de miles manual para garantizar formato #.### en >= 1.000
+  const intStr = Math.round(n).toString()
+  const parts = intStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return n < 0 ? `-${parts.replace('-', '')}` : parts
+}
+
+// Formatea hora de "0650" a "06:50"
+function formatHora(hora) {
+  if (!hora) return '-'
+  const str = hora.toString().padStart(4, '0')
+  return str.slice(0, 2) + ':' + str.slice(2, 4)
+}
+
+// Formatea partida de "0540919" a "0-5409.19" (formato #-####.##)
+function formatPartida(partida) {
+  if (!partida) return '-'
+  const str = partida.toString().padStart(7, '0')
+  return str.slice(0, 1) + '-' + str.slice(1, 5) + '.' + str.slice(5, 7)
 }
 </script>
 
 <style scoped>
 .calidad-container {
-  max-width: 1600px;
+  max-width: 100%;
+  padding: 16px;
   margin: 0 auto;
   background: transparent;
   min-height: 100vh;
+  outline: none;
 }
 
 .header {
@@ -244,16 +480,59 @@ function formatNumber(num) {
 }
 
 .filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.filter-group.fecha-nav {
+  min-width: 280px;
+}
+
+.fecha-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 18px;
+  font-weight: bold;
+  color: #0078d4;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #0078d4;
+  color: white;
+  border-color: #0078d4;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint-text {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
 }
 
 .filter-group label {
@@ -273,6 +552,24 @@ function formatNumber(num) {
 .filter-input:focus {
   outline: none;
   border-color: #0078d4;
+}
+
+.filter-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filter-input option.year-header {
+  font-weight: bold;
+  color: #0078d4;
+  background: #f0f8ff;
+}
+
+.filter-input option.month-header {
+  font-weight: 600;
+  color: #005a9e;
+  background: #f8f9fa;
 }
 
 .filters-actions {
@@ -295,8 +592,14 @@ function formatNumber(num) {
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #005a9e;
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .btn-secondary {
@@ -359,28 +662,77 @@ function formatNumber(num) {
 }
 
 .data-table {
-  width: 100%;
+  width: auto;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.tabla-resumen {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.col-revisor {
+  width: 72px; /* 20% narrower than before (90px -> 72px) */
+  min-width: 72px;
+  padding-left: 6px; /* evita que quede pegado al borde */
+}
+
+.col-metros {
+  width: 50px;
+  min-width: 50px;
+}
+
+.col-calidad {
+  width: 45px;
+  min-width: 45px;
+}
+
+.col-pts {
+  width: 40px;
+  min-width: 40px;
+}
+
+.col-rollos {
+  width: 40px;
+  min-width: 40px;
+}
+
+.col-sin-pts-un {
+  width: 38px;
+  min-width: 38px;
+}
+
+.col-sin-pts-perc {
+  width: 38px;
+  min-width: 38px;
 }
 
 .data-table th {
   background: #f8f9fa;
-  padding: 14px 16px;
-  text-align: left;
+  padding: 6px 4px;
+  text-align: center;
   font-weight: 600;
   color: #333;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 11px;
+  letter-spacing: 0.2px;
   border-bottom: 2px solid #dee2e6;
-  white-space: nowrap;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  font-family: 'Ubuntu', 'Noto Sans', 'Roboto', 'Open Sans', 'Source Sans 3', sans-serif;
 }
 
 .data-table td {
-  padding: 12px 16px;
+  padding: 6px 4px;
   border-bottom: 1px solid #dee2e6;
   color: #666;
-  font-size: 14px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Ubuntu', 'Noto Sans', 'Roboto', 'Open Sans', 'Source Sans 3', sans-serif;
 }
 
 .data-table tbody tr:hover {
@@ -514,5 +866,134 @@ function formatNumber(num) {
 .empty-hint {
   color: #666;
   margin: 0;
+}
+
+/* Layout de dos tablas lado a lado */
+.tables-layout-wrapper {
+  display: grid;
+  grid-template-columns: 450px 1fr;
+  gap: 16px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+.table-left,
+.table-right {
+  min-height: 400px;
+}
+
+.table-left {
+  max-width: 450px;
+}
+
+.table-right {
+  overflow-x: auto;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.clickable-row:hover {
+  background: #f0f7ff !important;
+}
+
+.selected-row {
+  background: #e3f2fd !important;
+  font-weight: 600;
+}
+
+.selected-row:hover {
+  background: #e3f2fd !important;
+}
+
+.empty-state-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #999;
+  font-size: 14px;
+  font-style: italic;
+  min-height: 300px;
+}
+
+.tabla-detalle {
+  font-size: 11px;
+  width: 100%;
+  table-layout: auto;
+}
+
+.tabla-detalle th,
+.tabla-detalle td {
+  padding: 6px 4px;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.tabla-detalle th:first-child,
+.tabla-detalle td:first-child {
+  min-width: 90px;
+  max-width: 120px;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.tabla-detalle th:nth-child(2),
+.tabla-detalle td:nth-child(2) {
+  min-width: 70px;
+  font-size: 10px;
+}
+
+@media (max-width: 1200px) {
+  .tables-layout-wrapper {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-left {
+    max-width: 100%;
+  }
+  
+  .table-right {
+    margin-top: 20px;
+  }
+}
+
+/* Estilos para datepicker */
+.date-input {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  padding-right: 10px;
+  background-color: white;
+  color: #2c3e50;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  background: transparent;
+  font-size: 18px;
+  padding: 5px;
+  margin-left: 5px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-color: rgba(74, 144, 226, 0.1);
+  border-radius: 4px;
+}
+
+.date-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.date-input:focus {
+  outline: 2px solid #4a90e2;
+  outline-offset: 2px;
 }
 </style>

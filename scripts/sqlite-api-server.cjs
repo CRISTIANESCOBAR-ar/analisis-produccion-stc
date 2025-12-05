@@ -341,7 +341,7 @@ app.get('/api/calidad', async (req, res) => {
   }
 });
 
-// GET /api/calidad/revision-cq - Reporte agrupado por Revisor (Lógica VBA)
+// GET /api/calidad/revision-cq - Reporte agrupado por Revisor (Lógica VBA exacta)
 app.get('/api/calidad/revision-cq', async (req, res) => {
   try {
     const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
@@ -360,17 +360,17 @@ app.get('/api/calidad/revision-cq', async (req, res) => {
       tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'P'";
     }
 
-    // 1. CTE para de-duplicar rollos (agrupar defectos)
-    // Se asume que METRAGEM, PONTUACAO, LARGURA son datos del rollo y se repiten por defecto.
-    // Usamos MAX para obtener el valor único del rollo.
+    // Lógica VBA exacta: subconsulta agrupa por PEÇA/ETIQUETA con SUM(METRAGEM) y AVG(PONTUACAO/LARGURA)
     const sql = `
-      WITH RollosUnicos AS (
+      WITH CAL AS (
         SELECT
-          "REVISOR FINAL" as Revisor,
-          SUM(CAST(REPLACE(METRAGEM, ',', '.') as REAL)) as Metros,
-          MAX(CAST(REPLACE(PONTUACAO, ',', '.') as REAL)) as Puntos,
-          MAX(CAST(REPLACE(LARGURA, ',', '.') as REAL)) as Ancho,
-          TRIM(QUALIDADE) as QualidadeLimpa
+          DAT_PROD,
+          ARTIGO,
+          SUM(CAST(REPLACE(METRAGEM, ',', '.') AS REAL)) AS METRAGEM,
+          AVG(CAST(REPLACE(PONTUACAO, ',', '.') AS REAL)) AS PONTUACAO,
+          AVG(CAST(REPLACE(LARGURA, ',', '.') AS REAL)) AS LARGURA,
+          "REVISOR FINAL",
+          TRIM(QUALIDADE) AS QUALIDADE
         FROM tb_CALIDAD
         WHERE
           EMP = 'STC'
@@ -378,55 +378,312 @@ app.get('/api/calidad/revision-cq', async (req, res) => {
           AND QUALIDADE NOT LIKE '%RETALHO%'
           ${tramasFilter}
         GROUP BY
-          "REVISOR FINAL",
           DAT_PROD,
+          ARTIGO,
+          "REVISOR FINAL",
           PEÇA,
-          ETIQUETA,
           QUALIDADE,
-          ARTIGO
+          ETIQUETA
       )
       SELECT
-        Revisor,
-        SUM(Metros) as Mts_Total,
+        "REVISOR FINAL" AS Revisor,
+        CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
         
         -- Calidad %: (Metros 1era / Total Metros) * 100
         ROUND(
-          SUM(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' THEN Metros ELSE 0 END) 
-          / NULLIF(SUM(Metros), 0) 
-          * 100
-        , 1) as Calidad_Perc,
+          SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
+          / NULLIF(SUM(METRAGEM), 0) * 100
+        , 1) AS Calidad_Perc,
         
-        -- Pts 100m2: (Puntos 1era * 100) / Area 1era m2
-        -- Area = (Metros * Ancho_cm) / 100
+        -- Pts 100m²: Fórmula VBA exacta
         ROUND(
-          (SUM(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' THEN IFNULL(Puntos, 0) ELSE 0 END) * 100.0) 
-          / 
+          (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN PONTUACAO ELSE 0 END) * 100)
+          /
           NULLIF(
-            (SUM(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' THEN (Metros * IFNULL(Ancho,0)) ELSE 0 END) / 100.0)
+            (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM * LARGURA ELSE 0 END))
+            / NULLIF(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END), 0)
+            / 100
+            * SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END)
           , 0)
-        , 1) as Pts_100m2,
+        , 1) AS Pts_100m2,
         
         -- Rollos 1era
-        COUNT(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' THEN 1 END) as Rollos_1era,
+        COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END) AS Rollos_1era,
         
-        -- Sin Pts (1era con Puntos 0 o Null)
-        COUNT(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' AND (Puntos IS NULL OR Puntos = 0) THEN 1 END) as Rollos_Sin_Pts,
+        -- Sin Pts (1era con Puntos NULL o 0)
+        COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS Rollos_Sin_Pts,
         
         -- % Sin Pts
         ROUND(
-          CAST(COUNT(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' AND (Puntos IS NULL OR Puntos = 0) THEN 1 END) AS REAL)
-          / NULLIF(COUNT(CASE WHEN QualidadeLimpa LIKE 'PRIMEIRA%' THEN 1 END), 0)
-          * 100
-        , 1) as Perc_Sin_Pts
+          CAST(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS REAL)
+          / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
+        , 1) AS Perc_Sin_Pts
 
-      FROM RollosUnicos
-      GROUP BY Revisor
+      FROM CAL
+      GROUP BY "REVISOR FINAL"
       ORDER BY Mts_Total DESC
     `;
 
     const rows = await dbAll(sql, [dateRange.start, dateRange.end]);
     res.json(rows);
 
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/available-dates - Obtener fechas disponibles en tb_CALIDAD
+app.get('/api/calidad/available-dates', async (req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT 
+        DAT_PROD as fecha,
+        strftime('%Y', DAT_PROD) as year,
+        strftime('%m', DAT_PROD) as month,
+        strftime('%d', DAT_PROD) as day
+      FROM tb_CALIDAD
+      WHERE DAT_PROD IS NOT NULL 
+        AND DAT_PROD != ''
+      ORDER BY DAT_PROD DESC
+    `;
+    
+    const rows = await dbAll(sql);
+    
+    // Agrupar por año y mes
+    const dateStructure = {
+      years: {},
+      minDate: null,
+      maxDate: null
+    };
+    
+    if (rows.length > 0) {
+      dateStructure.minDate = rows[rows.length - 1].fecha;
+      dateStructure.maxDate = rows[0].fecha;
+      
+      rows.forEach(row => {
+        const { year, month, day, fecha } = row;
+        
+        if (!dateStructure.years[year]) {
+          dateStructure.years[year] = {};
+        }
+        
+        if (!dateStructure.years[year][month]) {
+          dateStructure.years[year][month] = [];
+        }
+        
+        dateStructure.years[year][month].push({ day, fecha });
+      });
+    }
+    
+    res.json(dateStructure);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/revisor-detalle - Detalle de producción por revisor (con partidas)
+app.get('/api/calidad/revisor-detalle', async (req, res) => {
+  try {
+    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
+    const revisor = req.query.revisor;
+    const tramas = req.query.tramas || 'Todas';
+
+    if (!dateRange || !revisor) {
+      return res.status(400).json({ error: 'Se requieren startDate, endDate y revisor' });
+    }
+
+    let tramasFilter = '';
+    if (tramas === 'ALG 100%') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'A'";
+    } else if (tramas === 'P + E') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'Y'";
+    } else if (tramas === 'POL 100%') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'P'";
+    }
+
+    // Lógica VBA exacta: subconsulta con SUM(METRAGEM), AVG(PONTUACAO), AVG(LARGURA)
+    // HORA NO debe estar en el GROUP BY de CAL, solo se usa para ordenar
+    const sql = `
+      WITH CAL AS (
+        SELECT
+          "NM MERC" as NombreArticulo,
+          PARTIDA,
+          DAT_PROD,
+          ARTIGO,
+          SUM(CAST(REPLACE(METRAGEM, ',', '.') AS REAL)) AS METRAGEM,
+          AVG(CAST(REPLACE(PONTUACAO, ',', '.') AS REAL)) AS PONTUACAO,
+          AVG(CAST(REPLACE(LARGURA, ',', '.') AS REAL)) AS LARGURA,
+          TRIM(QUALIDADE) AS QUALIDADE
+        FROM tb_CALIDAD
+        WHERE
+          EMP = 'STC'
+          AND DAT_PROD BETWEEN ? AND ?
+          AND "REVISOR FINAL" = ?
+          AND QUALIDADE NOT LIKE '%RETALHO%'
+          ${tramasFilter}
+        GROUP BY
+          "NM MERC",
+          PARTIDA,
+          DAT_PROD,
+          ARTIGO,
+          PEÇA,
+          QUALIDADE,
+          ETIQUETA
+      ),
+      HorasPartida AS (
+        SELECT 
+          PARTIDA,
+          MIN(HORA) as HoraInicio
+        FROM tb_CALIDAD
+        WHERE
+          EMP = 'STC'
+          AND DAT_PROD BETWEEN ? AND ?
+          AND "REVISOR FINAL" = ?
+          AND QUALIDADE NOT LIKE '%RETALHO%'
+          ${tramasFilter}
+        GROUP BY PARTIDA
+      ),
+      CalidadPorPartida AS (
+        SELECT
+          NombreArticulo,
+          PARTIDA,
+          CAST(CAST(PARTIDA AS INTEGER) AS TEXT) as Partidas,
+          CAST(SUM(METRAGEM) AS INTEGER) as MetrosRevisados,
+          
+          -- Calidad %
+          ROUND(
+            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
+            / NULLIF(SUM(METRAGEM), 0) * 100
+          , 1) as CalidadPct,
+          
+          -- Pts 100m² (fórmula VBA exacta)
+          ROUND(
+            (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN PONTUACAO ELSE 0 END) * 100)
+            /
+            NULLIF(
+              (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM * LARGURA ELSE 0 END))
+              / NULLIF(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END), 0)
+              / 100
+              * SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END)
+            , 0)
+          , 1) as Pts100m2,
+          
+          -- Total Rollos 1era
+          COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END) as TotalRollos,
+          
+          -- Sin Puntos
+          COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) as SinPuntos,
+          
+          -- % Sin Puntos
+          ROUND(
+            CAST(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS REAL)
+            / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
+          , 1) as SinPuntosPct
+          
+        FROM CAL
+        GROUP BY NombreArticulo, PARTIDA
+      ),
+      ProduccionTelares AS (
+        SELECT
+          PARTIDA,
+          MAX(CAST(SUBSTR(MAQUINA, -2) AS INTEGER)) as Telar,
+          SUM(COALESCE(PONTOS_LIDOS, 0)) as PtsLei,
+          SUM(COALESCE("PONTOS_100%", 0)) as Pts100,
+          SUM(COALESCE("PARADA TEC TRAMA", 0)) as ParTra,
+          SUM(COALESCE("PARADA TEC URDUME", 0)) as ParUrd
+        FROM tb_PRODUCCION
+        WHERE
+          FILIAL = '05'
+          AND SELETOR = 'TECELAGEM'
+          AND PARTIDA IS NOT NULL
+          AND PARTIDA != ''
+        GROUP BY PARTIDA
+      )
+      SELECT
+        HP.HoraInicio,
+        CAL.NombreArticulo,
+        CAL.Partidas,
+        CAL.MetrosRevisados,
+        CAL.CalidadPct,
+        CAL.Pts100m2,
+        CAL.TotalRollos,
+        CAL.SinPuntos,
+        CAL.SinPuntosPct,
+        COALESCE(TEJ.Telar, 0) as Telar,
+        CASE 
+          WHEN TEJ.PtsLei IS NULL OR TEJ.PtsLei = 0 THEN NULL
+          ELSE ROUND((CAST(TEJ.PtsLei AS REAL) / NULLIF(TEJ.Pts100, 0)) * 100, 1)
+        END as EficienciaPct,
+        CASE 
+          WHEN TEJ.PtsLei IS NULL OR TEJ.PtsLei = 0 THEN NULL
+          ELSE ROUND((CAST(TEJ.ParUrd AS REAL) * 100000.0) / NULLIF((TEJ.PtsLei * 1000.0), 0), 1)
+        END as RU105,
+        CASE 
+          WHEN TEJ.PtsLei IS NULL OR TEJ.PtsLei = 0 THEN NULL
+          ELSE ROUND((CAST(TEJ.ParTra AS REAL) * 100000.0) / NULLIF((TEJ.PtsLei * 1000.0), 0), 1)
+        END as RT105
+      FROM CalidadPorPartida CAL
+      LEFT JOIN HorasPartida HP ON CAL.PARTIDA = HP.PARTIDA
+      LEFT JOIN ProduccionTelares TEJ ON CAL.PARTIDA = TEJ.PARTIDA
+      ORDER BY HP.HoraInicio ASC
+    `;
+
+    // Parámetros duplicados: CAL y HorasPartida usan los mismos filtros
+    const rows = await dbAll(sql, [dateRange.start, dateRange.end, revisor, dateRange.start, dateRange.end, revisor]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/test/produccion-partida - TEST: Ver datos raw de producción para una partida
+app.get('/api/test/produccion-partida', async (req, res) => {
+  try {
+    const partida = req.query.partida || '1541315';
+    
+    // Ver registros con PONTOS_LIDOS no nulo
+    const sqlWithData = `
+      SELECT 
+        PARTIDA,
+        MAQUINA,
+        SELETOR,
+        PONTOS_LIDOS,
+        "PONTOS_100%",
+        "PARADA TEC TRAMA",
+        "PARADA TEC URDUME",
+        DT_BASE_PRODUCAO
+      FROM tb_PRODUCCION
+      WHERE PONTOS_LIDOS IS NOT NULL
+        AND FILIAL = '05'
+        AND SELETOR = 'TECELAGEM'
+      LIMIT 10
+    `;
+    
+    const withData = await dbAll(sqlWithData);
+    
+    // Contar registros con y sin datos
+    const sqlCount = `
+      SELECT 
+        COUNT(*) as Total,
+        COUNT(PONTOS_LIDOS) as ConPontosLidos,
+        COUNT("PONTOS_100%") as ConPontos100
+      FROM tb_PRODUCCION
+      WHERE FILIAL = '05'
+        AND SELETOR = 'TECELAGEM'
+    `;
+    
+    const counts = await dbGet(sqlCount);
+    
+    res.json({
+      examplesWithData: withData,
+      counts: counts,
+      message: "Si examplesWithData está vacío, PONTOS_LIDOS nunca tiene datos"
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
