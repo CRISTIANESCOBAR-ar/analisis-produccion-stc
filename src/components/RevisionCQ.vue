@@ -11,18 +11,45 @@
         <div class="filter-group fecha-nav">
           <label>Fecha:</label>
           <div class="fecha-controls">
-            <div class="date-wrapper">
+            <div class="custom-datepicker" ref="datepickerRef">
               <input 
-                type="date" 
-                v-model="filters.fecha" 
-                class="filter-input date-input"
-                :class="{ 'date-has-value': !!filters.fecha }"
-                required
-                @change="onDateChange"
+                type="text" 
+                v-model="displayDate" 
+                class="filter-input datepicker-input"
+                placeholder="Selecciona una fecha"
+                @click="toggleCalendar"
                 @keydown.left.prevent="cambiarFecha(-1)"
                 @keydown.right.prevent="cambiarFecha(1)"
+                @blur="handleBlur"
+                readonly
               />
-              <span v-if="filters.fecha" class="date-overlay">{{ formattedFecha }}</span>
+              <span class="calendar-icon" @click="toggleCalendar">📅</span>
+              
+              <div v-if="showCalendar" class="calendar-dropdown">
+                <div class="calendar-header">
+                  <button class="calendar-nav-btn" @click.stop="changeMonth(-1)">&lt;</button>
+                  <span class="calendar-title">{{ calendarTitle }}</span>
+                  <button class="calendar-nav-btn" @click.stop="changeMonth(1)">&gt;</button>
+                </div>
+                <div class="calendar-weekdays">
+                  <span v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">{{ day }}</span>
+                </div>
+                <div class="calendar-days">
+                  <button 
+                    v-for="day in calendarDays" 
+                    :key="day.key"
+                    :class="['calendar-day', {
+                      'other-month': day.otherMonth,
+                      'selected': day.selected,
+                      'today': day.today
+                    }]"
+                    @click.stop="selectDate(day)"
+                    :disabled="day.otherMonth"
+                  >
+                    {{ day.day }}
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="nav-btn-group">
               <button 
@@ -270,6 +297,124 @@ const filters = ref({
   fecha: '',
   tramas: 'Todas'
 })
+
+// Estado del datepicker
+const showCalendar = ref(false)
+const calendarMonth = ref(new Date().getMonth())
+const calendarYear = ref(new Date().getFullYear())
+const datepickerRef = ref(null)
+
+const displayDate = computed(() => {
+  if (!filters.value.fecha) return ''
+  const [year, month, day] = filters.value.fecha.split('-').map(Number)
+  const fecha = new Date(year, month - 1, day)
+  const dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+  const dia = dias[fecha.getDay()]
+  const diaNum = fecha.getDate().toString().padStart(2, '0')
+  const mes = (fecha.getMonth() + 1).toString().padStart(2, '0')
+  const anio = fecha.getFullYear()
+  return `${dia} ${diaNum}/${mes}/${anio}`
+})
+
+const calendarTitle = computed(() => {
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+  return `${meses[calendarMonth.value]} ${calendarYear.value}`
+})
+
+const calendarDays = computed(() => {
+  const days = []
+  const firstDay = new Date(calendarYear.value, calendarMonth.value, 1)
+  const lastDay = new Date(calendarYear.value, calendarMonth.value + 1, 0)
+  const prevLastDay = new Date(calendarYear.value, calendarMonth.value, 0)
+  
+  const startDayOfWeek = firstDay.getDay()
+  const daysInMonth = lastDay.getDate()
+  const prevDaysInMonth = prevLastDay.getDate()
+  
+  // Días del mes anterior
+  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+    days.push({
+      day: prevDaysInMonth - i,
+      otherMonth: true,
+      key: `prev-${prevDaysInMonth - i}`
+    })
+  }
+  
+  // Días del mes actual
+  const today = new Date()
+  const selectedDate = filters.value.fecha ? new Date(filters.value.fecha + 'T00:00:00') : null
+  
+  for (let i = 1; i <= daysInMonth; i++) {
+    const currentDate = new Date(calendarYear.value, calendarMonth.value, i)
+    days.push({
+      day: i,
+      otherMonth: false,
+      selected: selectedDate && 
+                selectedDate.getDate() === i && 
+                selectedDate.getMonth() === calendarMonth.value && 
+                selectedDate.getFullYear() === calendarYear.value,
+      today: today.getDate() === i && 
+             today.getMonth() === calendarMonth.value && 
+             today.getFullYear() === calendarYear.value,
+      key: `current-${i}`,
+      date: currentDate
+    })
+  }
+  
+  // Días del mes siguiente para completar la grilla
+  const remainingDays = 42 - days.length
+  for (let i = 1; i <= remainingDays; i++) {
+    days.push({
+      day: i,
+      otherMonth: true,
+      key: `next-${i}`
+    })
+  }
+  
+  return days
+})
+
+function toggleCalendar() {
+  showCalendar.value = !showCalendar.value
+  if (showCalendar.value && filters.value.fecha) {
+    const [year, month] = filters.value.fecha.split('-').map(Number)
+    calendarMonth.value = month - 1
+    calendarYear.value = year
+  }
+}
+
+function changeMonth(offset) {
+  calendarMonth.value += offset
+  if (calendarMonth.value > 11) {
+    calendarMonth.value = 0
+    calendarYear.value++
+  } else if (calendarMonth.value < 0) {
+    calendarMonth.value = 11
+    calendarYear.value--
+  }
+}
+
+function selectDate(day) {
+  if (day.otherMonth) return
+  
+  const y = calendarYear.value
+  const m = (calendarMonth.value + 1).toString().padStart(2, '0')
+  const d = day.day.toString().padStart(2, '0')
+  filters.value.fecha = `${y}-${m}-${d}`
+  
+  showCalendar.value = false
+  loadData()
+}
+
+function handleBlur(event) {
+  // Cerrar calendario si se hace clic fuera
+  setTimeout(() => {
+    if (!datepickerRef.value?.contains(document.activeElement)) {
+      showCalendar.value = false
+    }
+  }, 200)
+}
 
 const formattedFecha = computed(() => {
   if (!filters.value.fecha) return ''
@@ -527,6 +672,142 @@ function formatPartida(partida) {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.custom-datepicker {
+  position: relative;
+  display: inline-block;
+}
+
+.datepicker-input {
+  padding: 10px 40px 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 220px;
+  cursor: pointer;
+  background: white;
+  transition: border-color 0.2s;
+}
+
+.datepicker-input:focus {
+  outline: none;
+  border-color: #0078d4;
+}
+
+.calendar-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.calendar-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  z-index: 1000;
+  min-width: 280px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.calendar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.calendar-nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 16px;
+  color: #0078d4;
+  transition: all 0.2s;
+}
+
+.calendar-nav-btn:hover {
+  background: #0078d4;
+  color: white;
+  border-color: #0078d4;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.calendar-weekdays span {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  padding: 4px;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day:hover:not(:disabled) {
+  background: #f0f7ff;
+  border-color: #0078d4;
+}
+
+.calendar-day.other-month {
+  color: #ccc;
+  background: #fafafa;
+  cursor: default;
+}
+
+.calendar-day.selected {
+  background: #0078d4;
+  color: white;
+  border-color: #0078d4;
+  font-weight: 600;
+}
+
+.calendar-day.today {
+  border: 2px solid #0078d4;
+  font-weight: 600;
+}
+
+.calendar-day.selected.today {
+  border: 2px solid #005a9e;
 }
 
 .date-wrapper {

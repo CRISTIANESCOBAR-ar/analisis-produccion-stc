@@ -13,6 +13,15 @@
           Refrescar
         </button>
         <button 
+          @click="forceImportAll" 
+          class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors shadow-sm"
+          :disabled="importing || loading"
+        >
+          <span v-if="importing" class="animate-spin">⚡</span>
+          <span v-else>⚡</span>
+          {{ importing ? 'Importando...' : 'Forzar Importación' }}
+        </button>
+        <button 
           @click="triggerImport" 
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm"
           :disabled="importing || loading"
@@ -60,14 +69,15 @@
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Modif. (Archivo)</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Importación</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filas</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="loading && statusList.length === 0">
-              <td colspan="6" class="px-6 py-10 text-center text-gray-500">Cargando estado...</td>
+              <td colspan="7" class="px-6 py-10 text-center text-gray-500">Cargando estado...</td>
             </tr>
             <tr v-else-if="statusList.length === 0">
-              <td colspan="6" class="px-6 py-10 text-center text-gray-500">No hay configuraciones de importación disponibles.</td>
+              <td colspan="7" class="px-6 py-10 text-center text-gray-500">No hay configuraciones de importación disponibles.</td>
             </tr>
             <tr v-for="item in statusList" :key="item.table" class="hover:bg-gray-50 transition-colors">
               <td class="px-6 py-4 whitespace-nowrap">
@@ -102,6 +112,16 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {{ item.lastImportedRows !== null ? item.lastImportedRows.toLocaleString() : '-' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button 
+                  @click="forceImportTable(item)" 
+                  class="px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md text-xs font-medium transition-colors flex items-center gap-1"
+                  :disabled="importing || loading"
+                >
+                  <span>⚡</span>
+                  Forzar
+                </button>
               </td>
             </tr>
           </tbody>
@@ -240,6 +260,109 @@ function getStatusLabel(status) {
     case 'MISSING_FILE': return 'Archivo No Encontrado'
     case 'ERROR_READING_FILE': return 'Error Lectura'
     default: return status
+  }
+}
+
+async function forceImportAll() {
+  const result = await Swal.fire({
+    title: '¿Forzar importación completa?',
+    html: "Se re-importarán <strong>todas las tablas</strong>, incluso las marcadas como actualizadas.<br><br><em>Esto puede tomar varios minutos.</em>",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ea580c',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, forzar todas',
+    cancelButtonText: 'Cancelar'
+  })
+
+  if (result.isConfirmed) {
+    importing.value = true
+    importOutput.value = null
+    
+    const pollInterval = setInterval(async () => {
+      if (!importing.value) {
+        clearInterval(pollInterval)
+        return
+      }
+      await fetchStatus()
+    }, 1000)
+    
+    try {
+      const res = await fetch(`${API_URL}/import/force-all`, { method: 'POST' })
+      const data = await res.json()
+      
+      clearInterval(pollInterval)
+      currentImportTable.value = null
+      
+      if (data.success) {
+        importOutput.value = data.output
+        Swal.fire('Completado', 'La importación forzada ha finalizado.', 'success')
+        fetchStatus()
+      } else {
+        throw new Error(data.error || 'Error desconocido')
+      }
+    } catch (err) {
+      clearInterval(pollInterval)
+      currentImportTable.value = null
+      console.error(err)
+      Swal.fire('Error', err.message || 'Falló la ejecución del script', 'error')
+    } finally {
+      importing.value = false
+    }
+  }
+}
+
+async function forceImportTable(item) {
+  const result = await Swal.fire({
+    title: `¿Forzar ${item.table}?`,
+    html: `Se re-importará la tabla <strong>${item.table}</strong> desde:<br><code>${getFileName(item.file)}</code>`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#ea580c',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Sí, forzar',
+    cancelButtonText: 'Cancelar'
+  })
+
+  if (result.isConfirmed) {
+    importing.value = true
+    importOutput.value = null
+    currentImportTable.value = item.table
+    
+    const pollInterval = setInterval(async () => {
+      if (!importing.value) {
+        clearInterval(pollInterval)
+        return
+      }
+      await fetchStatus()
+    }, 1000)
+    
+    try {
+      const res = await fetch(`${API_URL}/import/force-table`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: item.table })
+      })
+      const data = await res.json()
+      
+      clearInterval(pollInterval)
+      currentImportTable.value = null
+      
+      if (data.success) {
+        importOutput.value = data.output
+        Swal.fire('Completado', `La tabla ${item.table} fue importada correctamente.`, 'success')
+        fetchStatus()
+      } else {
+        throw new Error(data.error || 'Error desconocido')
+      }
+    } catch (err) {
+      clearInterval(pollInterval)
+      currentImportTable.value = null
+      console.error(err)
+      Swal.fire('Error', err.message || 'Falló la importación', 'error')
+    } finally {
+      importing.value = false
+    }
   }
 }
 

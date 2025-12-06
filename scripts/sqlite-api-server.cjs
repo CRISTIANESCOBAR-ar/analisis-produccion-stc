@@ -167,6 +167,58 @@ app.post('/api/import/trigger', (req, res) => {
   });
 });
 
+// POST /api/import/force-all - Forzar importación de todas las tablas
+app.post('/api/import/force-all', (req, res) => {
+  const scriptPath = path.join(__dirname, 'update-all-tables.ps1');
+  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -Force`;
+
+  console.log('⚡ Forzando importación completa...');
+  
+  exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`❌ Error ejecutando script: ${error.message}`);
+      return res.status(500).json({ error: error.message, details: stderr });
+    }
+    if (stderr) {
+      console.warn(`⚠️ Stderr del script: ${stderr}`);
+    }
+    console.log(`✅ Importación forzada finalizada`);
+    res.json({ success: true, output: stdout });
+  });
+});
+
+// POST /api/import/force-table - Forzar importación de una tabla específica
+app.post('/api/import/force-table', (req, res) => {
+  const { table } = req.body;
+  
+  if (!table) {
+    return res.status(400).json({ error: 'Debe especificar una tabla' });
+  }
+
+  const config = TABLE_CONFIGS.find(c => c.table === table);
+  if (!config) {
+    return res.status(404).json({ error: `Tabla ${table} no encontrada en configuración` });
+  }
+
+  const scriptPath = path.join(__dirname, 'import-xlsx-to-sqlite.ps1');
+  const mappingJson = path.join(__dirname, 'mappings', `${config.table}.json`);
+  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
+
+  console.log(`⚡ Forzando importación de ${table}...`);
+  
+  exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`❌ Error ejecutando script: ${error.message}`);
+      return res.status(500).json({ error: error.message, details: stderr });
+    }
+    if (stderr && !stderr.includes('VERBOSE:')) {
+      console.warn(`⚠️ Stderr del script: ${stderr}`);
+    }
+    console.log(`✅ ${table} importada correctamente`);
+    res.json({ success: true, output: stdout, table: table });
+  });
+});
+
 // GET /api/status - Estado general de la base de datos
 app.get('/api/status', async (req, res) => {
   try {
