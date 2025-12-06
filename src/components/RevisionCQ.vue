@@ -11,31 +11,37 @@
         <div class="filter-group fecha-nav">
           <label>Fecha:</label>
           <div class="fecha-controls">
-            <button 
-              class="nav-btn" 
-              @click="cambiarFecha(-1)" 
-              @mousedown.prevent
-              tabindex="-1"
-              title="Día anterior (←)"
-              :disabled="loading"
-            >&lt;</button>
-            <input 
-              type="date" 
-              v-model="filters.fecha" 
-              class="filter-input date-input"
-              required
-              @change="onDateChange"
-              @keydown.left.prevent="cambiarFecha(-1)"
-              @keydown.right.prevent="cambiarFecha(1)"
-            />
-            <button 
-              class="nav-btn" 
-              @click="cambiarFecha(1)" 
-              @mousedown.prevent
-              tabindex="-1"
-              title="Día siguiente (→)"
-              :disabled="loading"
-            >&gt;</button>
+            <div class="date-wrapper">
+              <input 
+                type="date" 
+                v-model="filters.fecha" 
+                class="filter-input date-input"
+                :class="{ 'date-has-value': !!filters.fecha }"
+                required
+                @change="onDateChange"
+                @keydown.left.prevent="cambiarFecha(-1)"
+                @keydown.right.prevent="cambiarFecha(1)"
+              />
+              <span v-if="filters.fecha" class="date-overlay">{{ formattedFecha }}</span>
+            </div>
+            <div class="nav-btn-group">
+              <button 
+                class="nav-btn" 
+                @click="cambiarFecha(-1)" 
+                @mousedown.prevent
+                tabindex="-1"
+                title="Día anterior (←)"
+                :disabled="loading"
+              >&lt;</button>
+              <button 
+                class="nav-btn" 
+                @click="cambiarFecha(1)" 
+                @mousedown.prevent
+                tabindex="-1"
+                title="Día siguiente (→)"
+                :disabled="loading"
+              >&gt;</button>
+            </div>
           </div>
           <span class="hint-text">Usa ← → para navegar</span>
         </div>
@@ -263,6 +269,17 @@ const totalesDetalle = computed(() => {
 const filters = ref({
   fecha: '',
   tramas: 'Todas'
+})
+
+const formattedFecha = computed(() => {
+  if (!filters.value.fecha) return ''
+  const fecha = new Date(filters.value.fecha)
+  const dias = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab']
+  const dia = dias[fecha.getDay()]
+  const diaNum = fecha.getDate().toString().padStart(2, '0')
+  const mes = (fecha.getMonth() + 1).toString().padStart(2, '0')
+  const anio = fecha.getFullYear()
+  return `${dia} ${diaNum}/${mes}/${anio}`
 })
 
 const containerRef = ref(null)
@@ -499,7 +516,30 @@ function formatPartida(partida) {
 .fecha-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.date-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.date-overlay {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #1f2937;
+  font-size: 13px;
+  pointer-events: none;
+  user-select: none;
+  text-transform: lowercase;
+}
+
+.nav-btn-group {
+  display: flex;
+  gap: 6px;
 }
 
 .nav-btn {
@@ -963,11 +1003,30 @@ function formatPartida(partida) {
 /* Estilos para datepicker */
 .date-input {
   cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  padding-right: 10px;
-  background-color: white;
-  color: #2c3e50;
+  font-family: 'Segoe UI', 'Ubuntu', 'Noto Sans', 'Roboto', sans-serif;
+  font-size: 13px;
+  height: 40px;
+  min-width: 190px;
+  padding: 0 38px 0 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  color: #1f2937;
+  border: 1px solid #cfd6e4;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%2362778b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5.5' width='13' height='11' rx='1.5'/%3E%3Cpath d='M7 3.5v3M13 3.5v3M3.5 9h13'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+}
+
+.date-input.date-has-value {
+  color: transparent;
+  caret-color: transparent;
+}
+
+.date-input.date-has-value::-webkit-datetime-edit {
+  color: transparent;
 }
 
 .date-input::-webkit-calendar-picker-indicator {
@@ -975,8 +1034,8 @@ function formatPartida(partida) {
   background: transparent;
   font-size: 18px;
   padding: 5px;
-  margin-left: 5px;
-  opacity: 0.7;
+  margin-left: 6px;
+  opacity: 0.75;
   transition: opacity 0.2s;
 }
 
@@ -993,7 +1052,8 @@ function formatPartida(partida) {
 }
 
 .date-input:focus {
-  outline: 2px solid #4a90e2;
-  outline-offset: 2px;
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
 }
 </style>
