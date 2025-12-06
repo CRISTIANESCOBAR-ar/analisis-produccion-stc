@@ -273,7 +273,9 @@ const filters = ref({
 
 const formattedFecha = computed(() => {
   if (!filters.value.fecha) return ''
-  const fecha = new Date(filters.value.fecha)
+  // Parsear fecha en zona horaria local (evita problema UTC)
+  const [year, month, day] = filters.value.fecha.split('-').map(Number)
+  const fecha = new Date(year, month - 1, day)
   const dias = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab']
   const dia = dias[fecha.getDay()]
   const diaNum = fecha.getDate().toString().padStart(2, '0')
@@ -294,9 +296,15 @@ const canGenerateReport = computed(() => {
 // Cambiar fecha por días (-1 = ayer, +1 = mañana)
 function cambiarFecha(dias) {
   if (!filters.value.fecha) return
-  const fecha = new Date(filters.value.fecha)
+  // Parsear fecha en zona horaria local (evita problema UTC)
+  const [year, month, day] = filters.value.fecha.split('-').map(Number)
+  const fecha = new Date(year, month - 1, day)
   fecha.setDate(fecha.getDate() + dias)
-  filters.value.fecha = fecha.toISOString().split('T')[0]
+  // Formatear como YYYY-MM-DD en zona local
+  const y = fecha.getFullYear()
+  const m = (fecha.getMonth() + 1).toString().padStart(2, '0')
+  const d = fecha.getDate().toString().padStart(2, '0')
+  filters.value.fecha = `${y}-${m}-${d}`
   loadData()
 }
 
@@ -312,11 +320,13 @@ function handleKeydown(event) {
 }
 
 onMounted(async () => {
-  // Pre-seleccionar el día de ayer
+  // Pre-seleccionar el día de ayer (en zona horaria local)
   const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
+  const y = yesterday.getFullYear()
+  const m = (yesterday.getMonth() + 1).toString().padStart(2, '0')
+  const d = yesterday.getDate().toString().padStart(2, '0')
+  const yesterdayStr = `${y}-${m}-${d}`
   
   filters.value.fecha = yesterdayStr
   
