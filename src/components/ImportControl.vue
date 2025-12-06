@@ -352,17 +352,24 @@ async function forceImportTable(item) {
           title: 'Importación iniciada',
           text: `La tabla ${item.table} se está importando. Verifica el estado en unos momentos.`,
           icon: 'info',
-          timer: 3000,
+          timer: 2000,
           showConfirmButton: false
         })
         
-        // Esperar 10 segundos y luego verificar
-        setTimeout(async () => {
-          clearInterval(pollInterval)
-          currentImportTable.value = null
-          importing.value = false
+        // Esperar 5 segundos y luego verificar varias veces
+        let attempts = 0
+        const checkInterval = setInterval(async () => {
+          attempts++
           await fetchStatus()
-        }, 10000)
+          
+          if (attempts >= 6) { // 6 intentos = 12 segundos
+            clearInterval(checkInterval)
+            clearInterval(pollInterval)
+            currentImportTable.value = null
+            importing.value = false
+            Swal.fire('Completado', `Verifica el estado actualizado de ${item.table}`, 'success')
+          }
+        }, 2000)
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
