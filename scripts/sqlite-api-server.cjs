@@ -251,23 +251,18 @@ app.post('/api/import/force-table', (req, res) => {
   console.log(`⚡ Forzando importación de ${table}...`);
   console.log(`Comando: ${command}`);
   
-  exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 300000 }, (error, stdout, stderr) => {
+  // Responder inmediatamente y ejecutar en segundo plano
+  res.json({ success: true, message: `Importación de ${table} iniciada`, table: table });
+  
+  // Ejecutar en segundo plano
+  exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
     if (error) {
       console.error(`❌ Error ejecutando script para ${table}:`, error.message);
       console.error(`Stderr:`, stderr);
-      return res.status(500).json({ 
-        error: error.message, 
-        details: stderr,
-        table: table,
-        success: false
-      });
+    } else {
+      console.log(`✅ ${table} importada correctamente`);
+      console.log(`Stdout:`, stdout);
     }
-    if (stderr && !stderr.includes('VERBOSE:')) {
-      console.warn(`⚠️ Stderr del script ${table}:`, stderr);
-    }
-    console.log(`✅ ${table} importada correctamente`);
-    console.log(`Stdout:`, stdout);
-    res.json({ success: true, output: stdout, table: table });
   });
 });
 

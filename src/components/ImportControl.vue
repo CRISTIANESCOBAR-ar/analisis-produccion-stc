@@ -329,13 +329,14 @@ async function forceImportTable(item) {
     importOutput.value = null
     currentImportTable.value = item.table
     
+    // Polling cada 2 segundos
     const pollInterval = setInterval(async () => {
       if (!importing.value) {
         clearInterval(pollInterval)
         return
       }
       await fetchStatus()
-    }, 1000)
+    }, 2000)
     
     try {
       const res = await fetch(`${API_URL}/import/force-table`, {
@@ -345,23 +346,32 @@ async function forceImportTable(item) {
       })
       const data = await res.json()
       
-      clearInterval(pollInterval)
-      currentImportTable.value = null
-      
       if (data.success) {
-        importOutput.value = data.output
-        Swal.fire('Completado', `La tabla ${item.table} fue importada correctamente.`, 'success')
-        fetchStatus()
+        // Iniciar importación en background, mostrar mensaje inmediato
+        Swal.fire({
+          title: 'Importación iniciada',
+          text: `La tabla ${item.table} se está importando. Verifica el estado en unos momentos.`,
+          icon: 'info',
+          timer: 3000,
+          showConfirmButton: false
+        })
+        
+        // Esperar 10 segundos y luego verificar
+        setTimeout(async () => {
+          clearInterval(pollInterval)
+          currentImportTable.value = null
+          importing.value = false
+          await fetchStatus()
+        }, 10000)
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
     } catch (err) {
       clearInterval(pollInterval)
       currentImportTable.value = null
+      importing.value = false
       console.error(err)
       Swal.fire('Error', err.message || 'Falló la importación', 'error')
-    } finally {
-      importing.value = false
     }
   }
 }

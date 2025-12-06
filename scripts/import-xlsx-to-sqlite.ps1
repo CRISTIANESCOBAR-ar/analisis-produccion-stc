@@ -299,15 +299,19 @@ Write-Host "Verificacion: XLSX=$xlsxCount filas, SQLite ahora=$sqliteCountAfter 
 try {
   $xlsxLastModified = (Get-Item $XlsxPath).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
   $importDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+  $xlsxHash = (Get-FileHash -Path $XlsxPath -Algorithm MD5).Hash
   
   $controlSql = @"
-INSERT INTO import_control (tabla_destino, xlsx_path, xlsx_last_modified, last_import_date, rows_imported)
-VALUES ('$Table', '$($XlsxPath.Replace("'", "''"))', '$xlsxLastModified', '$importDate', $processed)
+INSERT INTO import_control (tabla_destino, xlsx_path, xlsx_sheet, last_import_date, xlsx_last_modified, xlsx_hash, rows_imported, import_strategy)
+VALUES ('$Table', '$($XlsxPath.Replace("'", "''"))', '$Sheet', '$importDate', '$xlsxLastModified', '$xlsxHash', $processed, 'date_delete')
 ON CONFLICT(tabla_destino) DO UPDATE SET
   xlsx_path = excluded.xlsx_path,
-  xlsx_last_modified = excluded.xlsx_last_modified,
+  xlsx_sheet = excluded.xlsx_sheet,
   last_import_date = excluded.last_import_date,
-  rows_imported = excluded.rows_imported;
+  xlsx_last_modified = excluded.xlsx_last_modified,
+  xlsx_hash = excluded.xlsx_hash,
+  rows_imported = excluded.rows_imported,
+  import_strategy = excluded.import_strategy;
 "@
   
   $controlSql | & sqlite3 $SqlitePath
