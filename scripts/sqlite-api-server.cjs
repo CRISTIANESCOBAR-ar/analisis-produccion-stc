@@ -106,16 +106,60 @@ app.get('/api/import-status', async (req, res) => {
           lastImport = dbRecord;
           
           if (fileStatus !== 'MISSING_FILE' && fileStatus !== 'ERROR_READING_FILE') {
-            // Comparar fechas (usando timestamps para precisión)
-            // Nota: import_control.xlsx_last_modified se guarda como string ISO en el script PS
-            const dbFileDate = new Date(dbRecord.xlsx_last_modified).getTime();
-            const diskFileDate = new Date(fileModified).getTime();
-
-            // Permitimos una pequeña diferencia de segundos por conversiones
-            if (diskFileDate > dbFileDate + 1000) {
-              fileStatus = 'OUTDATED'; // Archivo es más nuevo que la importación
-            } else {
-              fileStatus = 'UP_TO_DATE';
+            // Estrategia mejorada: comparar contenido del XLSX vs DB
+            try {
+              // Para tb_CALIDAD, verificar si hay fechas en el XLSX que no están en SQLite
+              if (config.table === 'tb_CALIDAD') {
+                const ExcelJS = require('exceljs');
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.readFile(config.xlsxPath);
+                const worksheet = workbook.getWorksheet(config.sheet);
+                
+                // Leer fechas del XLSX (columna P2 = columna 2)
+                const xlsxDates = new Set();
+                let rowCount = 0;
+                worksheet.eachRow((row, rowNumber) => {
+                  if (rowNumber > 1) { // Saltar encabezados
+                    rowCount++;
+                    const dateVal = row.getCell(2).value;
+                    if (dateVal && typeof dateVal === 'object' && dateVal instanceof Date) {
+                      const dateStr = dateVal.toISOString().split('T')[0];
+                      xlsxDates.add(dateStr);
+                    }
+                  }
+                });
+                
+                // Verificar si hay fechas en XLSX que no están en SQLite
+                let hasNewData = false;
+                for (const date of xlsxDates) {
+                  const existsInDB = await dbGet(
+                    `SELECT COUNT(*) as count FROM tb_CALIDAD WHERE DATE(DAT_PROD) = ?`,
+                    [date]
+                  );
+                  if (!existsInDB || existsInDB.count === 0) {
+                    hasNewData = true;
+                    break;
+                  }
+                }
+                
+                fileStatus = hasNewData ? 'OUTDATED' : 'UP_TO_DATE';
+              } else {
+                // Para otras tablas, usar comparación de fecha de archivo (método anterior)
+                const dbFileDate = new Date(dbRecord.xlsx_last_modified).getTime();
+                const diskFileDate = new Date(fileModified).getTime();
+                
+                if (diskFileDate > dbFileDate + 1000) {
+                  fileStatus = 'OUTDATED';
+                } else {
+                  fileStatus = 'UP_TO_DATE';
+                }
+              }
+            } catch (contentError) {
+              console.error(`Error comparando contenido de ${config.table}:`, contentError);
+              // Fallback: usar comparación de fechas
+              const dbFileDate = new Date(dbRecord.xlsx_last_modified).getTime();
+              const diskFileDate = new Date(fileModified).getTime();
+              fileStatus = (diskFileDate > dbFileDate + 1000) ? 'OUTDATED' : 'UP_TO_DATE';
             }
           }
         } else {
@@ -205,16 +249,24 @@ app.post('/api/import/force-table', (req, res) => {
   const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
 
   console.log(`⚡ Forzando importación de ${table}...`);
+  console.log(`Comando: ${command}`);
   
-  exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+  exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 300000 }, (error, stdout, stderr) => {
     if (error) {
-      console.error(`❌ Error ejecutando script: ${error.message}`);
-      return res.status(500).json({ error: error.message, details: stderr });
+      console.error(`❌ Error ejecutando script para ${table}:`, error.message);
+      console.error(`Stderr:`, stderr);
+      return res.status(500).json({ 
+        error: error.message, 
+        details: stderr,
+        table: table,
+        success: false
+      });
     }
     if (stderr && !stderr.includes('VERBOSE:')) {
-      console.warn(`⚠️ Stderr del script: ${stderr}`);
+      console.warn(`⚠️ Stderr del script ${table}:`, stderr);
     }
     console.log(`✅ ${table} importada correctamente`);
+    console.log(`Stdout:`, stdout);
     res.json({ success: true, output: stdout, table: table });
   });
 });

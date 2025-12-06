@@ -294,3 +294,25 @@ $sqliteCountAfter = (& sqlite3 $SqlitePath "SELECT COUNT(*) FROM [$Table];")
 Write-Output "Importacion XLSX completada: $processed filas en '$Table'"
 Write-Host "Importacion XLSX completada: $processed filas en '$Table'" -ForegroundColor Green
 Write-Host "Verificacion: XLSX=$xlsxCount filas, SQLite ahora=$sqliteCountAfter filas" -ForegroundColor Cyan
+
+# Actualizar registro de control de importaciones
+try {
+  $xlsxLastModified = (Get-Item $XlsxPath).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
+  $importDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+  
+  $controlSql = @"
+INSERT INTO import_control (tabla_destino, xlsx_path, xlsx_last_modified, last_import_date, rows_imported)
+VALUES ('$Table', '$($XlsxPath.Replace("'", "''"))', '$xlsxLastModified', '$importDate', $processed)
+ON CONFLICT(tabla_destino) DO UPDATE SET
+  xlsx_path = excluded.xlsx_path,
+  xlsx_last_modified = excluded.xlsx_last_modified,
+  last_import_date = excluded.last_import_date,
+  rows_imported = excluded.rows_imported;
+"@
+  
+  $controlSql | & sqlite3 $SqlitePath
+  Write-Host "Registro de control actualizado" -ForegroundColor Green
+} catch {
+  Write-Warning "No se pudo actualizar import_control: $_"
+}
+
