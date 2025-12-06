@@ -78,7 +78,16 @@
                 <div class="text-xs text-gray-400">Hoja: {{ item.sheet }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="getStatusClass(item.status)" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
+                <div v-if="importing && currentImportTable === item.table" class="space-y-2">
+                  <div class="flex items-center gap-2">
+                    <span class="animate-spin">⚙️</span>
+                    <span class="text-sm font-medium text-blue-600">Importando...</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 100%"></div>
+                  </div>
+                </div>
+                <span v-else :class="getStatusClass(item.status)" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
                   {{ getStatusLabel(item.status) }}
                 </span>
               </td>
@@ -120,6 +129,7 @@ const dbInfo = ref(null)
 const loading = ref(false)
 const importing = ref(false)
 const importOutput = ref(null)
+const currentImportTable = ref(null)
 
 const API_URL = 'http://localhost:3002/api'
 
@@ -163,18 +173,38 @@ async function triggerImport() {
   if (result.isConfirmed) {
     importing.value = true
     importOutput.value = null
+    
+    // Iniciar polling del estado cada 1 segundo
+    const pollInterval = setInterval(async () => {
+      if (!importing.value) {
+        clearInterval(pollInterval)
+        return
+      }
+      await fetchStatus()
+      // Detectar qué tabla está siendo actualizada
+      const outdated = statusList.value.find(s => s.status === 'OUTDATED')
+      if (outdated) {
+        currentImportTable.value = outdated.table
+      }
+    }, 1000)
+    
     try {
       const res = await fetch(`${API_URL}/import/trigger`, { method: 'POST' })
       const data = await res.json()
       
+      clearInterval(pollInterval)
+      currentImportTable.value = null
+      
       if (data.success) {
         importOutput.value = data.output
         Swal.fire('Completado', 'El proceso de importación ha finalizado.', 'success')
-        fetchStatus() // Recargar estado
+        fetchStatus() // Recargar estado final
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
     } catch (err) {
+      clearInterval(pollInterval)
+      currentImportTable.value = null
       console.error(err)
       Swal.fire('Error', 'Falló la ejecución del script de importación', 'error')
     } finally {
