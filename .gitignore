@@ -28,5 +28,4 @@ database/*.db
 database/*.db-shm
 database/*.db-wal
 database/backups/
-database/exports/
 
