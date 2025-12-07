@@ -60,23 +60,23 @@
     <div class="flex-1 min-h-0 overflow-y-auto bg-white rounded-lg shadow-sm border border-gray-200">
       <table class="min-w-full divide-y divide-gray-200 table-fixed">
         <colgroup>
+          <col style="width: 12%;">
           <col style="width: 14%;">
-          <col style="width: 16%;">
+          <col style="width: 11%;">
+          <col style="width: 13%;">
+          <col style="width: 13%;">
+          <col style="width: 8%;">
           <col style="width: 14%;">
-          <col style="width: 15%;">
-          <col style="width: 15%;">
-          <col style="width: 10%;">
-          <col style="width: 16%;">
         </colgroup>
         <thead class="bg-gray-50 sticky top-0 z-10">
           <tr>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tabla Destino</th>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo Origen</th>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Modif. (Archivo)</th>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Importación</th>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filas</th>
-              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tabla Destino</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo Origen</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Modif.</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Import.</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filas</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -87,14 +87,14 @@
               <td colspan="7" class="px-6 py-10 text-center text-gray-500">No hay configuraciones de importación disponibles.</td>
             </tr>
             <tr v-for="item in statusList" :key="item.table" class="hover:bg-gray-50 transition-colors">
-              <td class="px-6 py-2 whitespace-nowrap">
+              <td class="px-3 py-2 whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900">{{ item.table }}</div>
               </td>
-              <td class="px-6 py-2 whitespace-nowrap">
+              <td class="px-3 py-2 whitespace-nowrap">
                 <div class="text-sm text-gray-500" :title="item.file">{{ getFileName(item.file) }}</div>
                 <div class="text-xs text-gray-400">Hoja: {{ item.sheet }}</div>
               </td>
-              <td class="px-6 py-2 whitespace-nowrap">
+              <td class="px-3 py-2 whitespace-nowrap">
                 <div v-if="importing && currentImportTable === item.table" class="space-y-2">
                   <div class="flex items-center gap-2">
                     <span class="animate-spin">⚙️</span>
@@ -117,19 +117,19 @@
                   {{ getStatusLabel(item.status) }}
                 </span>
               </td>
-              <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                 {{ formatDate(item.xlsx_last_modified) }}
               </td>
-              <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                 <div v-if="item.last_import_date">
                   {{ formatDate(item.last_import_date) }}
                 </div>
                 <div v-else class="text-gray-400">-</div>
               </td>
-              <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                 {{ item.rows_imported !== null ? item.rows_imported.toLocaleString() : '-' }}
               </td>
-              <td class="px-6 py-2 whitespace-nowrap text-sm">
+              <td class="px-3 py-2 whitespace-nowrap text-sm">
                 <button 
                   @click="forceImportTable(item)" 
                   class="px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"

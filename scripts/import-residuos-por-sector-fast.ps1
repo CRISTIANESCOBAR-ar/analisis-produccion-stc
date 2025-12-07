@@ -13,10 +13,10 @@ try {
   python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
 
   $cmds = @(
-    "DROP TABLE IF EXISTS temp_residuos_por_sector;",
-    "CREATE TEMP TABLE temp_residuos_por_sector AS SELECT * FROM tb_RESIDUOS_POR_SECTOR WHERE 1=0;",
+    "DROP TABLE IF EXISTS temp_residuos_sector;",
+    "CREATE TEMP TABLE temp_residuos_sector AS SELECT * FROM tb_RESIDUOS_POR_SECTOR WHERE 1=0;",
     ".mode csv",
-    ".import $csvPath temp_residuos_por_sector",
+    ".import $csvPath temp_residuos_sector",
     "BEGIN;",
     "DELETE FROM tb_RESIDUOS_POR_SECTOR WHERE DATE(DT_MOV) IN (SELECT DISTINCT DATE(DT_MOV) FROM temp_residuos_por_sector);",
     "INSERT INTO tb_RESIDUOS_POR_SECTOR SELECT * FROM temp_residuos_por_sector;",

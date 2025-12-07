@@ -177,6 +177,7 @@ app.post('/api/import/trigger', (req, res) => {
 
 // POST /api/import/force-all - Forzar importación de todas las tablas (sincrónico)
 app.post('/api/import/force-all', async (req, res) => {
+  // Usar script secuencial optimizado (paralelo no mejora por limitaciones SQLite)
   const scriptPath = path.join(__dirname, 'import-all-fast.ps1');
   const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`;
 
@@ -496,7 +497,7 @@ app.get('/api/calidad/revision-cq', async (req, res) => {
       tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'P'";
     }
 
-    // Lógica VBA exacta: subconsulta agrupa por PEÇA/ETIQUETA con SUM(METRAGEM) y AVG(PONTUACAO/LARGURA)
+    // Lógica: Revisores individuales sin RETALHO + fila RETALHO separada
     const sql = `
       WITH CAL AS (
         SELECT
@@ -520,47 +521,71 @@ app.get('/api/calidad/revision-cq', async (req, res) => {
           PEÇA,
           QUALIDADE,
           ETIQUETA
-      )
-      SELECT
-        "REVISOR FINAL" AS Revisor,
-        CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
-        
-        -- Calidad %: (Metros 1era / Total Metros) * 100
-        ROUND(
-          SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
-          / NULLIF(SUM(METRAGEM), 0) * 100
-        , 1) AS Calidad_Perc,
-        
-        -- Pts 100m²: Fórmula VBA exacta
-        ROUND(
-          (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN PONTUACAO ELSE 0 END) * 100)
-          /
-          NULLIF(
-            (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM * LARGURA ELSE 0 END))
-            / NULLIF(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END), 0)
-            / 100
-            * SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END)
-          , 0)
-        , 1) AS Pts_100m2,
-        
-        -- Rollos 1era
-        COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END) AS Rollos_1era,
-        
-        -- Sin Pts (1era con Puntos NULL o 0)
-        COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS Rollos_Sin_Pts,
-        
-        -- % Sin Pts
-        ROUND(
-          CAST(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS REAL)
-          / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
-        , 1) AS Perc_Sin_Pts
+      ),
+      RETALHO_METROS AS (
+        SELECT
+          SUM(CAST(REPLACE(METRAGEM, ',', '.') AS REAL)) AS METRAGEM_RETALHO
+        FROM tb_CALIDAD
+        WHERE
+          EMP = 'STC'
+          AND DAT_PROD BETWEEN ? AND ?
+          AND QUALIDADE LIKE '%RETALHO%'
+          ${tramasFilter}
+      ),
+      REVISORES AS (
+        SELECT
+          "REVISOR FINAL" AS Revisor,
+          CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
+          
+          -- Calidad %: (Metros 1era / Total Metros) * 100
+          ROUND(
+            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
+            / NULLIF(SUM(METRAGEM), 0) * 100
+          , 1) AS Calidad_Perc,
+          
+          -- Pts 100m²: Fórmula VBA exacta
+          ROUND(
+            (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN PONTUACAO ELSE 0 END) * 100)
+            /
+            NULLIF(
+              (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM * LARGURA ELSE 0 END))
+              / NULLIF(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END), 0)
+              / 100
+              * SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END)
+            , 0)
+          , 1) AS Pts_100m2,
+          
+          -- Rollos 1era
+          COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END) AS Rollos_1era,
+          
+          -- Sin Pts (1era con Puntos NULL o 0)
+          COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS Rollos_Sin_Pts,
+          
+          -- % Sin Pts
+          ROUND(
+            CAST(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS REAL)
+            / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
+          , 1) AS Perc_Sin_Pts
 
-      FROM CAL
-      GROUP BY "REVISOR FINAL"
+        FROM CAL
+        GROUP BY "REVISOR FINAL"
+      )
+      SELECT * FROM REVISORES
+      UNION ALL
+      SELECT
+        'RETALHO' AS Revisor,
+        ROUND(METRAGEM_RETALHO) AS Mts_Total,
+        0 AS Calidad_Perc,
+        0 AS Pts_100m2,
+        0 AS Rollos_1era,
+        0 AS Rollos_Sin_Pts,
+        0 AS Perc_Sin_Pts
+      FROM RETALHO_METROS
+      WHERE METRAGEM_RETALHO > 0
       ORDER BY Mts_Total DESC
     `;
 
-    const rows = await dbAll(sql, [dateRange.start, dateRange.end]);
+    const rows = await dbAll(sql, [dateRange.start, dateRange.end, dateRange.start, dateRange.end]);
     res.json(rows);
 
   } catch (error) {

@@ -13,13 +13,15 @@ try {
   python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
 
   # Importar a tabla temporal y hacer date_delete usando DT_BASE_PRODUCAO
+  # PROTECCIÓN: Solo borra/actualiza datos del mes ACTUAL (diciembre 2025), NO históricos
+  # Las fechas están en formato DD/MM/YYYY, así que comparamos con substr()
   $cmds = @(
     "DROP TABLE IF EXISTS temp_produccion;",
     "CREATE TEMP TABLE temp_produccion AS SELECT * FROM tb_PRODUCCION WHERE 1=0;",
     ".mode csv",
     ".import $csvPath temp_produccion",
     "BEGIN;",
-    "DELETE FROM tb_PRODUCCION WHERE DATE(DT_BASE_PRODUCAO) IN (SELECT DISTINCT DATE(DT_BASE_PRODUCAO) FROM temp_produccion);",
+    "DELETE FROM tb_PRODUCCION WHERE substr(DT_BASE_PRODUCAO, 7, 4) || '-' || substr(DT_BASE_PRODUCAO, 4, 2) = '2025-12' AND DT_BASE_PRODUCAO IN (SELECT DISTINCT DT_BASE_PRODUCAO FROM temp_produccion);",
     "INSERT INTO tb_PRODUCCION SELECT * FROM temp_produccion;",
     "COMMIT;",
     "DROP TABLE temp_produccion;"

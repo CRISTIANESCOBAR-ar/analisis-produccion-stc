@@ -12,16 +12,13 @@ try {
   # Usar Python (100x más rápido que Import-Excel para XLSX)
   python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
 
-  # Importación ultra-rápida (sin restaurar PRAGMAs, el WAL mode ya está activo)
+  # Importación ultra-rápida
   $sqlCmd = @"
-PRAGMA synchronous=OFF;
-PRAGMA locking_mode=EXCLUSIVE;
 BEGIN IMMEDIATE;
 DELETE FROM tb_FICHAS;
 .mode csv
 .import $csvPath tb_FICHAS
 COMMIT;
-PRAGMA locking_mode=NORMAL;
 "@
   
   $sqlCmd | & sqlite3 $SqlitePath
