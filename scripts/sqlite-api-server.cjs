@@ -1071,7 +1071,101 @@ app.listen(PORT, () => {
   console.log('   GET  /api/testes                  - Listar testes');
   console.log('   GET  /api/residuos/indigo         - Residuos índigo');
   console.log('   GET  /api/residuos/sector         - Residuos sector');
+  console.log('   GET  /api/calidad/revisores       - Lista de revisores');
+  console.log('   GET  /api/calidad/historico-revisor - Análisis histórico por revisor');
   console.log('');
+});
+
+// GET /api/calidad/revisores - Lista de revisores únicos
+app.get('/api/calidad/revisores', async (req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT "REVISOR FINAL" AS revisor
+      FROM tb_CALIDAD
+      WHERE "REVISOR FINAL" IS NOT NULL 
+        AND "REVISOR FINAL" != ''
+        AND "REVISOR FINAL" != 'RETALHO'
+      ORDER BY "REVISOR FINAL"
+    `;
+    
+    const rows = await dbAll(sql);
+    res.json(rows.map(r => r.revisor));
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/historico-revisor - Análisis histórico mensual por revisor
+app.get('/api/calidad/historico-revisor', async (req, res) => {
+  try {
+    const { startDate, endDate, revisor, tramas } = req.query;
+
+    if (!startDate || !endDate || !revisor) {
+      return res.status(400).json({ error: 'Se requieren startDate, endDate y revisor' });
+    }
+
+    // Filtro de tramas
+    let tramasFilter = '';
+    if (tramas && tramas !== 'Todas') {
+      tramasFilter = `AND TRAMA_1 = '${tramas}'`;
+    }
+
+    const sql = `
+      WITH MENSUAL AS (
+        SELECT
+          strftime('%Y-%m', DAT_PROD) AS MesAno,
+          CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
+          
+          -- Calidad %: (Metros 1era / Total Metros) * 100
+          ROUND(
+            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
+            / NULLIF(SUM(METRAGEM), 0) * 100
+          , 1) AS Calidad_Perc,
+          
+          -- Pts 100m²: Fórmula exacta de revision-cq
+          ROUND(
+            (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN PONTUACAO ELSE 0 END) * 100)
+            /
+            NULLIF(
+              (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM * LARGURA ELSE 0 END))
+              / NULLIF(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END), 0)
+              / 100
+              * SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END)
+            , 0)
+          , 1) AS Pts_100m2,
+          
+          -- Rollos 1era
+          COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END) AS Rollos_1era,
+          
+          -- Sin Pts (1era con Puntos NULL o 0)
+          COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS Rollos_Sin_Pts,
+          
+          -- % Sin Pts
+          ROUND(
+            CAST(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS REAL)
+            / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
+          , 1) AS Perc_Sin_Pts
+
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND DAT_PROD BETWEEN ? AND ?
+          AND "REVISOR FINAL" = ?
+          ${tramasFilter}
+        GROUP BY strftime('%Y-%m', DAT_PROD)
+      )
+      SELECT * FROM MENSUAL
+      ORDER BY MesAno
+    `;
+
+    const rows = await dbAll(sql, [startDate, endDate, revisor]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Manejo de cierre graceful

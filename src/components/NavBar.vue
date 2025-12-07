@@ -73,6 +73,13 @@
         @click="handleNavClick('/revision-cq')"
       />
       <SidebarItem 
+        icon="📊" 
+        label="Histórico Revisores" 
+        :active="isActive('/analisis-historico-revisores')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/analisis-historico-revisores')"
+      />
+      <SidebarItem 
         icon="⚠️" 
         label="Paradas" 
         :active="isActive('/paradas')" 
