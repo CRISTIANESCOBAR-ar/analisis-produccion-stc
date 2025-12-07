@@ -1120,8 +1120,8 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
           
           -- Calidad %: (Metros 1era / Total Metros) * 100
           ROUND(
-            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
-            / NULLIF(SUM(METRAGEM), 0) * 100
+            CAST(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) AS REAL)
+            / CAST(SUM(METRAGEM) AS REAL) * 100
           , 1) AS Calidad_Perc,
           
           -- Pts 100m²: Fórmula exacta de revision-cq
