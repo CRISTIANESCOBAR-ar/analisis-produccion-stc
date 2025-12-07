@@ -2,7 +2,7 @@
  <div class="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
     <NavBar />
    <main 
-     class="flex-1 px-2 md:px-4 pt-2 md:pt-4 transition-all duration-500 ease-in-out"
+     class="flex-1 px-2 md:px-0 pt-2 md:pt-0 transition-all duration-500 ease-in-out overflow-x-hidden"
      :style="{ marginLeft: mainMargin }"
    >
       <router-view />

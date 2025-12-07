@@ -1,6 +1,7 @@
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
+  <div class="w-full h-screen flex flex-col p-1">
+    <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
+      <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold text-gray-800">Control de Importaciones</h1>
       <div class="flex gap-3">
         <button 
@@ -32,31 +33,31 @@
     </div>
 
     <!-- Resumen de Estado -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-sm text-gray-500 mb-1">Total Archivos</div>
-        <div class="text-2xl font-bold text-gray-800">{{ statusList.length }}</div>
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
+      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
+        <div class="text-xs text-gray-500 mb-1">Total Archivos</div>
+        <div class="text-xl font-bold text-gray-800">{{ statusList.length }}</div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-sm text-gray-500 mb-1">Actualizados</div>
-        <div class="text-2xl font-bold text-green-600">{{ countStatus('UP_TO_DATE') }}</div>
+      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
+        <div class="text-xs text-gray-500 mb-1">Actualizados</div>
+        <div class="text-xl font-bold text-green-600">{{ countStatus('UP_TO_DATE') }}</div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-sm text-gray-500 mb-1">Desactualizados</div>
-        <div class="text-2xl font-bold text-yellow-600">{{ countStatus('OUTDATED') }}</div>
+      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
+        <div class="text-xs text-gray-500 mb-1">Desactualizados</div>
+        <div class="text-xl font-bold text-yellow-600">{{ countStatus('OUTDATED') }}</div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-sm text-gray-500 mb-1">Faltantes / Error</div>
-        <div class="text-2xl font-bold text-red-600">{{ countStatus('MISSING_FILE') + countStatus('NOT_IMPORTED') }}</div>
+      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
+        <div class="text-xs text-gray-500 mb-1">Faltantes / Error</div>
+        <div class="text-xl font-bold text-red-600">{{ countStatus('MISSING_FILE') + countStatus('NOT_IMPORTED') }}</div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-sm text-gray-500 mb-1">Tamaño DB</div>
-        <div class="text-2xl font-bold text-purple-600">{{ dbInfo ? dbInfo.sizeMB + ' MB' : '-' }}</div>
+      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
+        <div class="text-xs text-gray-500 mb-1">Tamaño DB</div>
+        <div class="text-xl font-bold text-purple-600">{{ dbInfo ? dbInfo.sizeMB + ' MB' : '-' }}</div>
       </div>
     </div>
 
     <!-- Tabla de Estado -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
@@ -138,13 +139,14 @@
     </div>
 
     <!-- Log de Importación -->
-    <div v-if="importOutput" class="mt-8 bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+    <div v-if="importOutput" class="mt-4 bg-gray-900 rounded-lg shadow-lg overflow-hidden">
       <div class="px-4 py-2 bg-gray-800 border-b border-gray-700 flex justify-between items-center">
         <h3 class="text-sm font-mono text-gray-300">Log de Ejecución</h3>
         <button @click="importOutput = null" class="text-gray-400 hover:text-white">✕</button>
       </div>
       <pre class="p-4 text-xs font-mono text-green-400 overflow-auto max-h-96 whitespace-pre-wrap">{{ importOutput }}</pre>
     </div>
+    </main>
   </div>
 </template>
 
