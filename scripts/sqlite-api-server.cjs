@@ -1113,9 +1113,32 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
     }
 
     const sql = `
-      WITH MENSUAL AS (
+      WITH CAL AS (
         SELECT
           strftime('%Y-%m', DAT_PROD) AS MesAno,
+          DAT_PROD,
+          ARTIGO,
+          SUM(CAST(REPLACE(METRAGEM, ',', '.') AS REAL)) AS METRAGEM,
+          AVG(CAST(REPLACE(PONTUACAO, ',', '.') AS REAL)) AS PONTUACAO,
+          AVG(CAST(REPLACE(LARGURA, ',', '.') AS REAL)) AS LARGURA,
+          TRIM(QUALIDADE) AS QUALIDADE
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND DAT_PROD BETWEEN ? AND ?
+          AND "REVISOR FINAL" = ?
+          AND QUALIDADE NOT LIKE '%RETALHO%'
+          ${tramasFilter}
+        GROUP BY
+          strftime('%Y-%m', DAT_PROD),
+          DAT_PROD,
+          ARTIGO,
+          PEÇA,
+          QUALIDADE,
+          ETIQUETA
+      ),
+      MENSUAL AS (
+        SELECT
+          MesAno,
           CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
           
           -- Calidad %: (Metros 1era / Total Metros) * 100
@@ -1148,12 +1171,8 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
             / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
           , 1) AS Perc_Sin_Pts
 
-        FROM tb_CALIDAD
-        WHERE EMP = 'STC'
-          AND DAT_PROD BETWEEN ? AND ?
-          AND "REVISOR FINAL" = ?
-          ${tramasFilter}
-        GROUP BY strftime('%Y-%m', DAT_PROD)
+        FROM CAL
+        GROUP BY MesAno
       )
       SELECT * FROM MENSUAL
       ORDER BY MesAno
