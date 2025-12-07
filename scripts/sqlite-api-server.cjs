@@ -1106,10 +1106,14 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
       return res.status(400).json({ error: 'Se requieren startDate, endDate y revisor' });
     }
 
-    // Filtro de tramas
+    // Filtro de tramas (misma lógica que revision-cq)
     let tramasFilter = '';
-    if (tramas && tramas !== 'Todas') {
-      tramasFilter = `AND TRAMA_1 = '${tramas}'`;
+    if (tramas === 'ALG 100%') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'A'";
+    } else if (tramas === 'P + E') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'Y'";
+    } else if (tramas === 'POL 100%') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'P'";
     }
 
     const sql = `
@@ -1141,10 +1145,10 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
           MesAno,
           CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
           
-          -- Calidad %: (Metros 1era / Total Metros) * 100
+          -- Calidad %: (Metros 1era / Total Metros) * 100 - MISMA FÓRMULA que revision-cq
           ROUND(
-            CAST(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) AS REAL)
-            / CAST(SUM(METRAGEM) AS REAL) * 100
+            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
+            / NULLIF(SUM(METRAGEM), 0) * 100
           , 1) AS Calidad_Perc,
           
           -- Pts 100m²: Fórmula exacta de revision-cq
