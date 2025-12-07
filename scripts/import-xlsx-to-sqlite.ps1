@@ -24,6 +24,26 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Función para calcular MD5 (compatible con PowerShell antiguo)
+function Get-MD5Hash {
+  param([string]$FilePath)
+  try {
+    if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) {
+      return (Get-FileHash -Path $FilePath -Algorithm MD5).Hash
+    } else {
+      # Fallback para PowerShell antiguo
+      $md5 = [System.Security.Cryptography.MD5]::Create()
+      $stream = [System.IO.File]::OpenRead($FilePath)
+      $hash = [System.BitConverter]::ToString($md5.ComputeHash($stream)).Replace('-', '')
+      $stream.Close()
+      return $hash
+    }
+  } catch {
+    Write-Warning "No se pudo calcular hash MD5: $_"
+    return "UNKNOWN"
+  }
+}
+
 # Dependencias
 if (-not (Get-Command sqlite3 -ErrorAction SilentlyContinue)) {
   throw "sqlite3 no encontrado. Instala con: winget install SQLite.SQLite"
@@ -299,7 +319,7 @@ Write-Host "Verificacion: XLSX=$xlsxCount filas, SQLite ahora=$sqliteCountAfter 
 try {
   $xlsxLastModified = (Get-Item $XlsxPath).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
   $importDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-  $xlsxHash = (Get-FileHash -Path $XlsxPath -Algorithm MD5).Hash
+  $xlsxHash = Get-MD5Hash -FilePath $XlsxPath
   
   $controlSql = @"
 INSERT INTO import_control (tabla_destino, xlsx_path, xlsx_sheet, last_import_date, xlsx_last_modified, xlsx_hash, rows_imported, import_strategy)

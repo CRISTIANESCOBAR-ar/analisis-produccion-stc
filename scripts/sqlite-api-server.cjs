@@ -38,6 +38,11 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
     process.exit(1);
   }
   console.log('✅ Conectado a SQLite:', DB_PATH);
+  
+  // Configurar para leer datos frescos del WAL
+  db.run('PRAGMA journal_mode=WAL;');
+  db.run('PRAGMA wal_checkpoint(PASSIVE);');
+  db.run('PRAGMA query_only=0;');
 });
 
 // Helper para ejecutar queries con promesas
@@ -83,11 +88,15 @@ app.get('/api/import-status', async (req, res) => {
       let fileModified = null;
       let lastImport = null;
 
-      // 1. Verificar archivo en disco
+      // 1. Verificar archivo en disco - usar AMBAS fechas (mtime Y birthtime/ctime)
       try {
         if (fs.existsSync(config.xlsxPath)) {
           const stats = fs.statSync(config.xlsxPath);
-          fileModified = stats.mtime.toISOString(); // Fecha modificación archivo
+          // Usar la fecha más reciente entre mtime (modificación) y ctime (cambio de atributos/descarga)
+          const mtime = stats.mtime.getTime();
+          const ctime = stats.ctime.getTime();
+          const mostRecent = new Date(Math.max(mtime, ctime));
+          fileModified = mostRecent.toISOString(); // Fecha más reciente
         } else {
           fileStatus = 'MISSING_FILE';
         }
@@ -106,60 +115,15 @@ app.get('/api/import-status', async (req, res) => {
           lastImport = dbRecord;
           
           if (fileStatus !== 'MISSING_FILE' && fileStatus !== 'ERROR_READING_FILE') {
-            // Estrategia mejorada: comparar contenido del XLSX vs DB
-            try {
-              // Para tb_CALIDAD, verificar si hay fechas en el XLSX que no están en SQLite
-              if (config.table === 'tb_CALIDAD') {
-                const ExcelJS = require('exceljs');
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.readFile(config.xlsxPath);
-                const worksheet = workbook.getWorksheet(config.sheet);
-                
-                // Leer fechas del XLSX (columna P2 = columna 2)
-                const xlsxDates = new Set();
-                let rowCount = 0;
-                worksheet.eachRow((row, rowNumber) => {
-                  if (rowNumber > 1) { // Saltar encabezados
-                    rowCount++;
-                    const dateVal = row.getCell(2).value;
-                    if (dateVal && typeof dateVal === 'object' && dateVal instanceof Date) {
-                      const dateStr = dateVal.toISOString().split('T')[0];
-                      xlsxDates.add(dateStr);
-                    }
-                  }
-                });
-                
-                // Verificar si hay fechas en XLSX que no están en SQLite
-                let hasNewData = false;
-                for (const date of xlsxDates) {
-                  const existsInDB = await dbGet(
-                    `SELECT COUNT(*) as count FROM tb_CALIDAD WHERE DATE(DAT_PROD) = ?`,
-                    [date]
-                  );
-                  if (!existsInDB || existsInDB.count === 0) {
-                    hasNewData = true;
-                    break;
-                  }
-                }
-                
-                fileStatus = hasNewData ? 'OUTDATED' : 'UP_TO_DATE';
-              } else {
-                // Para otras tablas, usar comparación de fecha de archivo (método anterior)
-                const dbFileDate = new Date(dbRecord.xlsx_last_modified).getTime();
-                const diskFileDate = new Date(fileModified).getTime();
-                
-                if (diskFileDate > dbFileDate + 1000) {
-                  fileStatus = 'OUTDATED';
-                } else {
-                  fileStatus = 'UP_TO_DATE';
-                }
-              }
-            } catch (contentError) {
-              console.error(`Error comparando contenido de ${config.table}:`, contentError);
-              // Fallback: usar comparación de fechas
-              const dbFileDate = new Date(dbRecord.xlsx_last_modified).getTime();
-              const diskFileDate = new Date(fileModified).getTime();
-              fileStatus = (diskFileDate > dbFileDate + 1000) ? 'OUTDATED' : 'UP_TO_DATE';
+            // Comparar la última importación con la fecha actual del archivo
+            const lastImportDate = new Date(dbRecord.last_import_date).getTime();
+            const diskFileDate = new Date(fileModified).getTime();
+            
+            // Si el archivo en disco es más nuevo que la última importación, está desactualizado
+            if (diskFileDate > lastImportDate + 2000) {
+              fileStatus = 'OUTDATED';
+            } else {
+              fileStatus = 'UP_TO_DATE';
             }
           }
         } else {
@@ -177,10 +141,10 @@ app.get('/api/import-status', async (req, res) => {
         file: config.xlsxPath,
         sheet: config.sheet,
         status: fileStatus,
-        fileModified: fileModified,
-        lastImportDate: lastImport ? lastImport.last_import_date : null,
-        lastImportedRows: lastImport ? lastImport.rows_imported : null,
-        lastImportFileDate: lastImport ? lastImport.xlsx_last_modified : null
+        file_modified: fileModified,
+        last_import_date: lastImport ? lastImport.last_import_date : null,
+        rows_imported: lastImport ? lastImport.rows_imported : null,
+        xlsx_last_modified: lastImport ? lastImport.xlsx_last_modified : null
       });
     }
 
@@ -211,28 +175,56 @@ app.post('/api/import/trigger', (req, res) => {
   });
 });
 
-// POST /api/import/force-all - Forzar importación de todas las tablas
-app.post('/api/import/force-all', (req, res) => {
-  const scriptPath = path.join(__dirname, 'update-all-tables.ps1');
-  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -Force`;
+// POST /api/import/force-all - Forzar importación de todas las tablas (sincrónico)
+app.post('/api/import/force-all', async (req, res) => {
+  const scriptPath = path.join(__dirname, 'import-all-fast.ps1');
+  const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`;
 
   console.log('⚡ Forzando importación completa...');
-  
-  exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`❌ Error ejecutando script: ${error.message}`);
-      return res.status(500).json({ error: error.message, details: stderr });
-    }
+
+  try {
+    const tStart = Date.now();
+    // Ejecutar script y esperar resultado
+    const { stdout, stderr } = await new Promise((resolve, reject) => {
+      exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 180000 }, (error, stdout, stderr) => {
+        if (error) {
+          reject({ error, stderr });
+        } else {
+          resolve({ stdout, stderr });
+        }
+      });
+    });
+    const tExecDone = Date.now();
+
     if (stderr) {
       console.warn(`⚠️ Stderr del script: ${stderr}`);
     }
+
     console.log(`✅ Importación forzada finalizada`);
-    res.json({ success: true, output: stdout });
-  });
+
+    // Checkpoint para asegurar que el frontend vea los datos frescos
+    await new Promise((resolve) => {
+      db.run('PRAGMA wal_checkpoint(FULL);', () => resolve());
+    });
+    const tCheckpointDone = Date.now();
+
+    res.setHeader('Connection', 'close');
+    const timings = {
+      totalMs: tCheckpointDone - tStart,
+      execMs: tExecDone - tStart,
+      checkpointMs: tCheckpointDone - tExecDone
+    };
+    console.log(`⏱️  force-all timings:`, timings);
+    res.json({ success: true, output: stdout, timings });
+  } catch (err) {
+    console.error(`❌ Error ejecutando script: ${err.error?.message || err}`);
+    console.error(`Stderr: ${err.stderr || ''}`);
+    res.status(500).json({ error: err.error?.message || 'Error en importación', details: err.stderr });
+  }
 });
 
 // POST /api/import/force-table - Forzar importación de una tabla específica
-app.post('/api/import/force-table', (req, res) => {
+app.post('/api/import/force-table', async (req, res) => {
   const { table } = req.body;
   
   if (!table) {
@@ -244,26 +236,71 @@ app.post('/api/import/force-table', (req, res) => {
     return res.status(404).json({ error: `Tabla ${table} no encontrada en configuración` });
   }
 
-  const scriptPath = path.join(__dirname, 'import-xlsx-to-sqlite.ps1');
-  const mappingJson = path.join(__dirname, 'mappings', `${config.table}.json`);
-  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
+  const fastScripts = {
+    'tb_FICHAS': 'import-fichas-fast.ps1',
+    'tb_RESIDUOS_INDIGO': 'import-residuos-indig-fast.ps1',
+    'tb_RESIDUOS_POR_SECTOR': 'import-residuos-por-sector-fast.ps1',
+    'tb_TESTES': 'import-testes-fast.ps1',
+    'tb_PARADAS': 'import-paradas-fast.ps1',
+    'tb_PRODUCCION': 'import-produccion-fast.ps1',
+    'tb_CALIDAD': 'import-calidad-fast.ps1'
+  };
+
+  const scriptFile = fastScripts[table] || 'import-xlsx-to-sqlite.ps1';
+  const scriptPath = path.join(__dirname, scriptFile);
+  const command = (scriptFile === 'import-xlsx-to-sqlite.ps1')
+    ? (() => {
+        const mappingJson = path.join(__dirname, 'mappings', `${config.table}.json`);
+        return `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
+      })()
+    : `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
 
   console.log(`⚡ Forzando importación de ${table}...`);
   console.log(`Comando: ${command}`);
   
-  // Responder inmediatamente y ejecutar en segundo plano
-  res.json({ success: true, message: `Importación de ${table} iniciada`, table: table });
-  
-  // Ejecutar en segundo plano
-  exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`❌ Error ejecutando script para ${table}:`, error.message);
-      console.error(`Stderr:`, stderr);
-    } else {
-      console.log(`✅ ${table} importada correctamente`);
-      console.log(`Stdout:`, stdout);
-    }
-  });
+  try {
+    // Convertir exec a Promise
+    const { stdout, stderr } = await new Promise((resolve, reject) => {
+      exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
+        if (error) {
+          reject({ error, stderr });
+        } else {
+          resolve({ stdout, stderr });
+        }
+      });
+    });
+    
+    console.log(`✅ ${table} importada correctamente`);
+    console.log(`Stdout:`, stdout);
+    
+    // Forzar checkpoint para sincronizar WAL
+    await new Promise((resolve) => {
+      db.run('PRAGMA wal_checkpoint(FULL);', () => resolve());
+    });
+    
+    // Obtener datos actualizados
+    const dbRecord = await dbGet(
+      `SELECT * FROM import_control WHERE tabla_destino = ?`,
+      [config.table]
+    );
+    
+    const response = { 
+      success: true, 
+      message: `${table} importado correctamente`,
+      table: table,
+      rows: dbRecord ? dbRecord.rows_imported : null,
+      timestamp: dbRecord ? dbRecord.last_import_date : null
+    };
+    
+    console.log(`📤 Respondiendo al frontend:`, response);
+    res.setHeader('Connection', 'close');
+    res.json(response);
+    
+  } catch (err) {
+    console.error(`❌ Error ejecutando script para ${table}:`, err.error?.message || err);
+    console.error(`Stderr:`, err.stderr);
+    res.status(500).json({ error: err.error?.message || 'Error en importación', stderr: err.stderr });
+  }
 });
 
 // GET /api/status - Estado general de la base de datos

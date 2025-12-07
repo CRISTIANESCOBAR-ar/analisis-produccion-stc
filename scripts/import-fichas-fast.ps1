@@ -1,0 +1,55 @@
+param(
+  [Parameter(Mandatory=$true)][string]$XlsxPath,
+  [Parameter(Mandatory=$true)][string]$SqlitePath,
+  [Parameter(Mandatory=$false)][string]$Sheet = 'lista de tecidos'
+)
+
+$ErrorActionPreference = 'Stop'
+$tmpCsv = [System.IO.Path]::GetTempFileName()
+$csvPath = $tmpCsv -replace '\\','/'
+
+try {
+  # Usar Python (100x más rápido que Import-Excel para XLSX)
+  python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+
+  # Importación ultra-rápida (sin restaurar PRAGMAs, el WAL mode ya está activo)
+  $sqlCmd = @"
+PRAGMA synchronous=OFF;
+PRAGMA locking_mode=EXCLUSIVE;
+BEGIN IMMEDIATE;
+DELETE FROM tb_FICHAS;
+.mode csv
+.import $csvPath tb_FICHAS
+COMMIT;
+PRAGMA locking_mode=NORMAL;
+"@
+  
+  $sqlCmd | & sqlite3 $SqlitePath
+  Write-Host "Importacion FICHAS completada (fast csv, reemplazo total)." -ForegroundColor Green
+
+  # Actualizar control de importación
+  try {
+    $xlsxLastModified = (Get-Item $XlsxPath).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
+    $importDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    $rows = (& sqlite3 $SqlitePath "SELECT COUNT(*) FROM tb_FICHAS;").Trim()
+    $safePath = $XlsxPath.Replace("'", "''")
+    $sql = @"
+INSERT INTO import_control (tabla_destino, xlsx_path, xlsx_sheet, last_import_date, xlsx_last_modified, xlsx_hash, rows_imported, import_strategy)
+VALUES ('tb_FICHAS', '$safePath', '$Sheet', '$importDate', '$xlsxLastModified', 'NA', $rows, 'fast_csv')
+ON CONFLICT(tabla_destino) DO UPDATE SET
+  xlsx_path = excluded.xlsx_path,
+  xlsx_sheet = excluded.xlsx_sheet,
+  last_import_date = excluded.last_import_date,
+  xlsx_last_modified = excluded.xlsx_last_modified,
+  xlsx_hash = excluded.xlsx_hash,
+  rows_imported = excluded.rows_imported,
+  import_strategy = excluded.import_strategy;
+"@
+    $sql | & sqlite3 $SqlitePath
+  } catch {
+    Write-Warning "No se pudo actualizar import_control para tb_FICHAS: $_"
+  }
+}
+finally {
+  Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue
+}

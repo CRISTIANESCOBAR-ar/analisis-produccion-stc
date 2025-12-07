@@ -5,8 +5,8 @@
       <div class="flex gap-3">
         <button 
           @click="fetchStatus" 
-          class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
-          :disabled="loading"
+          class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="loading || importing"
         >
           <span v-if="loading" class="animate-spin">↻</span>
           <span v-else>↻</span>
@@ -14,21 +14,19 @@
         </button>
         <button 
           @click="forceImportAll" 
-          class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors shadow-sm"
+          class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="importing || loading"
         >
-          <span v-if="importing" class="animate-spin">⚡</span>
-          <span v-else>⚡</span>
-          {{ importing ? 'Importando...' : 'Forzar Importación' }}
+          <span>⚡</span>
+          Forzar Importación
         </button>
         <button 
           @click="triggerImport" 
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="importing || loading"
         >
-          <span v-if="importing" class="animate-spin">⚙️</span>
-          <span v-else>🚀</span>
-          {{ importing ? 'Importando...' : 'Ejecutar Actualización' }}
+          <span>🚀</span>
+          Ejecutar Actualización
         </button>
       </div>
     </div>
@@ -94,7 +92,16 @@
                     <span class="text-sm font-medium text-blue-600">Importando...</span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                    <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 100%"></div>
+                    <div class="bg-blue-400 h-2 rounded-full animate-pulse" style="width: 100%"></div>
+                  </div>
+                </div>
+                <div v-else-if="importing && forceAllRunning && hasTableCompleted(item.table)" class="space-y-2">
+                  <div class="flex items-center gap-2">
+                    <span>✓</span>
+                    <span class="text-sm font-medium text-green-600">Completado</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
                   </div>
                 </div>
                 <span v-else :class="getStatusClass(item.status)" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
@@ -102,25 +109,26 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ formatDate(item.fileModified) }}
+                {{ formatDate(item.xlsx_last_modified) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <div v-if="item.lastImportDate">
-                  {{ formatDate(item.lastImportDate) }}
+                <div v-if="item.last_import_date">
+                  {{ formatDate(item.last_import_date) }}
                 </div>
                 <div v-else class="text-gray-400">-</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ item.lastImportedRows !== null ? item.lastImportedRows.toLocaleString() : '-' }}
+                {{ item.rows_imported !== null ? item.rows_imported.toLocaleString() : '-' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <button 
                   @click="forceImportTable(item)" 
-                  class="px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md text-xs font-medium transition-colors flex items-center gap-1"
+                  class="px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   :disabled="importing || loading"
                 >
-                  <span>⚡</span>
-                  Forzar
+                  <span v-if="importing && currentImportTable === item.table" class="animate-spin">⚙️</span>
+                  <span v-else>⚡</span>
+                  {{ importing && currentImportTable === item.table ? 'Procesando...' : 'Forzar' }}
                 </button>
               </td>
             </tr>
@@ -150,8 +158,29 @@ const loading = ref(false)
 const importing = ref(false)
 const importOutput = ref(null)
 const currentImportTable = ref(null)
+const forceAllRunning = ref(false)
+const baselineImports = ref({})
+const completedTables = ref(new Set())
+let pollIntervalId = null
 
 const API_URL = 'http://localhost:3002/api'
+
+const toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 4000,
+  timerProgressBar: true
+})
+
+const toastError = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 5000,
+  timerProgressBar: true,
+  icon: 'error'
+})
 
 onMounted(() => {
   fetchStatus()
@@ -171,9 +200,13 @@ async function fetchStatus() {
     if (resDb.ok) {
       dbInfo.value = await resDb.json()
     }
+
+    if (importing.value) {
+      updateProgressPointers()
+    }
   } catch (err) {
     console.error(err)
-    Swal.fire('Error', 'No se pudo conectar con el servidor de API', 'error')
+    toastError.fire({ title: 'No se pudo conectar con el servidor de API' })
   } finally {
     loading.value = false
   }
@@ -193,40 +226,34 @@ async function triggerImport() {
   if (result.isConfirmed) {
     importing.value = true
     importOutput.value = null
-    
-    // Iniciar polling del estado cada 1 segundo
-    const pollInterval = setInterval(async () => {
-      if (!importing.value) {
-        clearInterval(pollInterval)
-        return
-      }
-      await fetchStatus()
-      // Detectar qué tabla está siendo actualizada
-      const outdated = statusList.value.find(s => s.status === 'OUTDATED')
-      if (outdated) {
-        currentImportTable.value = outdated.table
-      }
-    }, 1000)
+    forceAllRunning.value = false
+    startPolling()
+    const t0 = performance.now()
     
     try {
       const res = await fetch(`${API_URL}/import/trigger`, { method: 'POST' })
       const data = await res.json()
       
-      clearInterval(pollInterval)
+      stopPolling()
       currentImportTable.value = null
       
       if (data.success) {
         importOutput.value = data.output
-        Swal.fire('Completado', 'El proceso de importación ha finalizado.', 'success')
+        const elapsed = Math.round(performance.now() - t0)
+        toast.fire({
+          icon: 'success',
+          title: 'Importación completada',
+          text: `Tiempo: ${elapsed} ms`
+        })
         fetchStatus() // Recargar estado final
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
     } catch (err) {
-      clearInterval(pollInterval)
+      stopPolling()
       currentImportTable.value = null
       console.error(err)
-      Swal.fire('Error', 'Falló la ejecución del script de importación', 'error')
+      toastError.fire({ title: 'Falló la ejecución del script de importación' })
     } finally {
       importing.value = false
     }
@@ -248,6 +275,8 @@ function getStatusClass(status) {
     case 'OUTDATED': return 'bg-yellow-100 text-yellow-800'
     case 'NOT_IMPORTED': return 'bg-blue-100 text-blue-800'
     case 'MISSING_FILE': return 'bg-red-100 text-red-800'
+    case 'PENDING': return 'bg-orange-100 text-orange-800'
+    case 'IMPORTING': return 'bg-blue-100 text-blue-800'
     default: return 'bg-gray-100 text-gray-800'
   }
 }
@@ -259,8 +288,14 @@ function getStatusLabel(status) {
     case 'NOT_IMPORTED': return 'Pendiente'
     case 'MISSING_FILE': return 'Archivo No Encontrado'
     case 'ERROR_READING_FILE': return 'Error Lectura'
+    case 'PENDING': return 'Pendiente'
+    case 'IMPORTING': return 'Importando...'
     default: return status
   }
+}
+
+function hasTableCompleted(table) {
+  return completedTables.value.has(table)
 }
 
 async function forceImportAll() {
@@ -278,36 +313,108 @@ async function forceImportAll() {
   if (result.isConfirmed) {
     importing.value = true
     importOutput.value = null
+    forceAllRunning.value = true
     
-    const pollInterval = setInterval(async () => {
-      if (!importing.value) {
-        clearInterval(pollInterval)
-        return
+    // Cambiar todos los estados a "Pendiente" visualmente
+    statusList.value.forEach(item => {
+      item.status = 'PENDING'
+    })
+    
+    // Baseline para detectar avances
+    const snapshot = {}
+    statusList.value.forEach((s) => {
+      snapshot[s.table] = {
+        last: s.last_import_date,
+        rows: s.rows_imported
       }
-      await fetchStatus()
-    }, 1000)
-    
+    })
+    baselineImports.value = snapshot
+    completedTables.value = new Set()
+    currentImportTable.value = statusList.value[0]?.table || null
+    startPolling()
+    const t0 = performance.now()
+
     try {
-      const res = await fetch(`${API_URL}/import/force-all`, { method: 'POST' })
+      // Timeout de 3 minutos por seguridad
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 180000)
+
+      const res = await fetch(`${API_URL}/import/force-all`, {
+        method: 'POST',
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
+
       const data = await res.json()
-      
-      clearInterval(pollInterval)
+
+      // Detener polling e importación inmediatamente
+      stopPolling()
+      importing.value = false
+      forceAllRunning.value = false
+      completedTables.value = new Set()
       currentImportTable.value = null
-      
+
       if (data.success) {
-        importOutput.value = data.output
-        Swal.fire('Completado', 'La importación forzada ha finalizado.', 'success')
-        fetchStatus()
+        const elapsed = data?.timings?.totalMs ?? Math.round(performance.now() - t0)
+        const elapsedUI = Math.round(performance.now() - t0)
+        const elapsedServer = data?.timings?.totalMs || 0
+        const seconds = (elapsed / 1000).toFixed(1)
+        const secondsUI = (elapsedUI / 1000).toFixed(2)
+        const secondsServer = (elapsedServer / 1000).toFixed(2)
+        
+        // Refrescar estado en background
+        fetchStatus().catch(err => console.error('Error refreshing status:', err))
+        
+        // Calcular filas importadas (excluyendo tb_FICHAS que es catálogo)
+        const dataRows = statusList.value
+          .filter(s => s.table !== 'tb_FICHAS')
+          .reduce((sum, s) => sum + (s.rows_imported || 0), 0)
+        
+        // Mostrar resultado en modal para que sea bien visible
+        Swal.fire({
+          icon: 'success',
+          title: '✓ Importación Completa',
+          html: `
+            <div style="text-align: left; padding: 10px;">
+              <div style="font-size: 1.1em; margin-bottom: 15px;">
+                <strong>${statusList.value.length} tablas</strong> • <strong>${dataRows.toLocaleString()}</strong> registros importados
+              </div>
+              <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-family: monospace;">
+                <div style="margin-bottom: 8px;">
+                  <span style="color: #059669; font-weight: bold;">⏱️ Servidor:</span> 
+                  <span style="font-size: 1.2em; font-weight: bold;">${secondsServer}s</span>
+                </div>
+                <div>
+                  <span style="color: #3b82f6; font-weight: bold;">🖥️ UI:</span> 
+                  <span style="font-size: 1.2em; font-weight: bold;">${secondsUI}s</span>
+                </div>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#059669',
+          allowOutsideClick: false
+        })
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
     } catch (err) {
-      clearInterval(pollInterval)
-      currentImportTable.value = null
-      console.error(err)
-      Swal.fire('Error', err.message || 'Falló la ejecución del script', 'error')
-    } finally {
+      stopPolling()
       importing.value = false
+      forceAllRunning.value = false
+      completedTables.value = new Set()
+      currentImportTable.value = null
+      if (err.name === 'AbortError') {
+        toast.fire({ icon: 'warning', title: 'Timeout', text: 'La importación completa tomó demasiado tiempo' })
+      } else {
+        console.error(err)
+        toastError.fire({ title: err.message || 'Falló la ejecución del script' })
+      }
     }
   }
 }
@@ -328,57 +435,76 @@ async function forceImportTable(item) {
     importing.value = true
     importOutput.value = null
     currentImportTable.value = item.table
+    forceAllRunning.value = false
     
-    // Polling cada 2 segundos
-    const pollInterval = setInterval(async () => {
-      if (!importing.value) {
-        clearInterval(pollInterval)
-        return
-      }
-      await fetchStatus()
-    }, 2000)
+    // Cambiar estado visual a "Importando..."
+    item.status = 'IMPORTING'
+    
+    const t0 = performance.now()
+    // Guardar timestamp inicial para detección de cambio
+    const initialTimestamp = item.last_import_date ?? null
     
     try {
+      // Ejecutar importación con timeout de 30 segundos
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+      
       const res = await fetch(`${API_URL}/import/force-table`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: item.table })
+        body: JSON.stringify({ table: item.table }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
+      
       const data = await res.json()
       
       if (data.success) {
-        // Iniciar importación en background, mostrar mensaje inmediato
-        Swal.fire({
-          title: 'Importación iniciada',
-          text: `La tabla ${item.table} se está importando. Verifica el estado en unos momentos.`,
-          icon: 'info',
-          timer: 2000,
-          showConfirmButton: false
-        })
+        currentImportTable.value = null
+        importing.value = false
         
-        // Esperar 5 segundos y luego verificar varias veces
-        let attempts = 0
-        const checkInterval = setInterval(async () => {
-          attempts++
-          await fetchStatus()
-          
-          if (attempts >= 6) { // 6 intentos = 12 segundos
-            clearInterval(checkInterval)
-            clearInterval(pollInterval)
-            currentImportTable.value = null
-            importing.value = false
-            Swal.fire('Completado', `Verifica el estado actualizado de ${item.table}`, 'success')
-          }
-        }, 2000)
+        // Refrescar estado
+        await fetchStatus()
+        
+        // Mostrar mensaje de éxito
+        const elapsed = Math.round(performance.now() - t0)
+        const seconds = (elapsed / 1000).toFixed(2)
+        toast.fire({
+          icon: 'success',
+          title: `✓ ${item.table} importada`,
+          text: `${data.rows?.toLocaleString() || 0} filas • ${seconds}s`,
+          timer: 4000
+        })
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
     } catch (err) {
-      clearInterval(pollInterval)
       currentImportTable.value = null
       importing.value = false
-      console.error(err)
-      Swal.fire('Error', err.message || 'Falló la importación', 'error')
+      
+      if (err.name === 'AbortError') {
+        console.error('Timeout después de 30 segundos')
+        // Fallback: verificar si la importación sí terminó en backend
+        await fetchStatus()
+        const updated = statusList.value.find(i => i.table === item.table)
+        if (updated && updated.last_import_date && updated.last_import_date !== initialTimestamp) {
+          toast.fire({
+            icon: 'success',
+            title: `${item.table} importada`,
+            text: `${updated.rows_imported?.toLocaleString() || 0} filas (detectado por estado)`
+          })
+        } else {
+          toast.fire({ icon: 'warning', title: 'Timeout', text: 'La importación tomó demasiado tiempo (>30s)' })
+        }
+      } else {
+        console.error('Error en importación:', err)
+        toastError.fire({ title: err.message || 'Falló la importación' })
+      }
     }
   }
 }
@@ -386,5 +512,47 @@ async function forceImportTable(item) {
 function formatDate(isoString) {
   if (!isoString) return '-'
   return new Date(isoString).toLocaleString()
+}
+
+function startPolling() {
+  stopPolling()
+  pollIntervalId = setInterval(async () => {
+    if (!importing.value) {
+      stopPolling()
+      return
+    }
+    await fetchStatus()
+    updateProgressPointers()
+  }, 500)
+}
+
+function stopPolling() {
+  if (pollIntervalId) {
+    clearInterval(pollIntervalId)
+    pollIntervalId = null
+  }
+}
+
+function updateProgressPointers() {
+  if (!importing.value) return
+  if (forceAllRunning.value) {
+    // Detectar tablas completadas comparando baseline
+    const updatedSet = new Set(completedTables.value)
+    statusList.value.forEach((s) => {
+      const base = baselineImports.value[s.table]
+      if (!base) return
+      const changed = (base.last !== s.last_import_date) || (base.rows !== s.rows_imported)
+      if (changed) {
+        updatedSet.add(s.table)
+      }
+    })
+    completedTables.value = updatedSet
+    // La tabla actual es la primera no completada en el orden recibido
+    const next = statusList.value.find((s) => !completedTables.value.has(s.table))
+    currentImportTable.value = next ? next.table : null
+  } else {
+    const next = statusList.value.find((s) => s.status !== 'UP_TO_DATE')
+    currentImportTable.value = next ? next.table : null
+  }
 }
 </script>
