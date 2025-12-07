@@ -3,10 +3,10 @@
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold text-gray-800">Control de Importaciones</h1>
-      <div class="flex gap-3">
+      <div class="flex gap-2">
         <button 
           @click="fetchStatus" 
-          class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="loading || importing"
         >
           <span v-if="loading" class="animate-spin">↻</span>
@@ -15,7 +15,7 @@
         </button>
         <button 
           @click="forceImportAll" 
-          class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-1.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="importing || loading"
         >
           <span>⚡</span>
@@ -23,7 +23,7 @@
         </button>
         <button 
           @click="triggerImport" 
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="importing || loading"
         >
           <span>🚀</span>
@@ -34,41 +34,49 @@
 
     <!-- Resumen de Estado -->
     <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
-      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-        <div class="text-xs text-gray-500 mb-1">Total Archivos</div>
-        <div class="text-xl font-bold text-gray-800">{{ statusList.length }}</div>
+      <div class="bg-gray-50 px-3 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">Total Archivos:</div>
+        <div class="text-lg font-bold text-gray-800">{{ statusList.length }}</div>
       </div>
-      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-        <div class="text-xs text-gray-500 mb-1">Actualizados</div>
-        <div class="text-xl font-bold text-green-600">{{ countStatus('UP_TO_DATE') }}</div>
+      <div class="bg-gray-50 px-3 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">Actualizados:</div>
+        <div class="text-lg font-bold text-green-600">{{ countStatus('UP_TO_DATE') }}</div>
       </div>
-      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-        <div class="text-xs text-gray-500 mb-1">Desactualizados</div>
-        <div class="text-xl font-bold text-yellow-600">{{ countStatus('OUTDATED') }}</div>
+      <div class="bg-gray-50 px-3 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">Desactualizados:</div>
+        <div class="text-lg font-bold text-yellow-600">{{ countStatus('OUTDATED') }}</div>
       </div>
-      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-        <div class="text-xs text-gray-500 mb-1">Faltantes / Error</div>
-        <div class="text-xl font-bold text-red-600">{{ countStatus('MISSING_FILE') + countStatus('NOT_IMPORTED') }}</div>
+      <div class="bg-gray-50 px-3 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">Faltantes / Error:</div>
+        <div class="text-lg font-bold text-red-600">{{ countStatus('MISSING_FILE') + countStatus('NOT_IMPORTED') }}</div>
       </div>
-      <div class="bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200">
-        <div class="text-xs text-gray-500 mb-1">Tamaño DB</div>
-        <div class="text-xl font-bold text-purple-600">{{ dbInfo ? dbInfo.sizeMB + ' MB' : '-' }}</div>
+      <div class="bg-gray-50 px-3 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">Tamaño DB:</div>
+        <div class="text-lg font-bold text-purple-600">{{ dbInfo ? dbInfo.sizeMB + ' MB' : '-' }}</div>
       </div>
     </div>
 
     <!-- Tabla de Estado -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tabla Destino</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo Origen</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Modif. (Archivo)</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Importación</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filas</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+    <div class="flex-1 min-h-0 overflow-y-auto bg-white rounded-lg shadow-sm border border-gray-200">
+      <table class="min-w-full divide-y divide-gray-200 table-fixed">
+        <colgroup>
+          <col style="width: 14%;">
+          <col style="width: 16%;">
+          <col style="width: 14%;">
+          <col style="width: 15%;">
+          <col style="width: 15%;">
+          <col style="width: 10%;">
+          <col style="width: 16%;">
+        </colgroup>
+        <thead class="bg-gray-50 sticky top-0 z-10">
+          <tr>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tabla Destino</th>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo Origen</th>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Modif. (Archivo)</th>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Importación</th>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filas</th>
+              <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -79,14 +87,14 @@
               <td colspan="7" class="px-6 py-10 text-center text-gray-500">No hay configuraciones de importación disponibles.</td>
             </tr>
             <tr v-for="item in statusList" :key="item.table" class="hover:bg-gray-50 transition-colors">
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-6 py-2 whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900">{{ item.table }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-6 py-2 whitespace-nowrap">
                 <div class="text-sm text-gray-500" :title="item.file">{{ getFileName(item.file) }}</div>
                 <div class="text-xs text-gray-400">Hoja: {{ item.sheet }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-6 py-2 whitespace-nowrap">
                 <div v-if="importing && currentImportTable === item.table" class="space-y-2">
                   <div class="flex items-center gap-2">
                     <span class="animate-spin">⚙️</span>
@@ -109,19 +117,19 @@
                   {{ getStatusLabel(item.status) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
                 {{ formatDate(item.xlsx_last_modified) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
                 <div v-if="item.last_import_date">
                   {{ formatDate(item.last_import_date) }}
                 </div>
                 <div v-else class="text-gray-400">-</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
                 {{ item.rows_imported !== null ? item.rows_imported.toLocaleString() : '-' }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <td class="px-6 py-2 whitespace-nowrap text-sm">
                 <button 
                   @click="forceImportTable(item)" 
                   class="px-3 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -136,7 +144,6 @@
           </tbody>
         </table>
       </div>
-    </div>
 
     <!-- Log de Importación -->
     <div v-if="importOutput" class="mt-4 bg-gray-900 rounded-lg shadow-lg overflow-hidden">
@@ -197,7 +204,24 @@ async function fetchStatus() {
     ])
     
     if (!resStatus.ok) throw new Error('Error al obtener estado de importación')
-    statusList.value = await resStatus.json()
+    const freshData = await resStatus.json()
+    
+    // Si está corriendo forceAll, preservar estados PENDING para tablas no completadas
+    if (forceAllRunning.value) {
+      const completed = completedTables.value
+      const current = currentImportTable.value
+      
+      statusList.value = freshData.map(item => {
+        if (item.table === current) {
+          item.status = 'IMPORTING'
+        } else if (!completed.has(item.table)) {
+          item.status = 'PENDING'
+        }
+        return item
+      })
+    } else {
+      statusList.value = freshData
+    }
     
     if (resDb.ok) {
       dbInfo.value = await resDb.json()
