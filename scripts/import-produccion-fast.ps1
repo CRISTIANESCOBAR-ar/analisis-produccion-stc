@@ -11,6 +11,9 @@ $csvPath = $tmpCsv -replace '\\','/'
 try {
   # Usar Python (mucho más rápido que Import-Excel)
   python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Error en la conversión de Excel a CSV (Python script failed). Verifica si el archivo está abierto o dañado."
+  }
 
   # Importar a tabla temporal y hacer date_delete usando DT_BASE_PRODUCAO
   # PROTECCIÓN: Solo borra/actualiza datos del mes ACTUAL (diciembre 2025), NO históricos
@@ -27,7 +30,10 @@ try {
     "DROP TABLE temp_produccion;"
   )
 
-  & sqlite3 $SqlitePath @cmds
+  $cmds | & sqlite3 $SqlitePath
+  if ($LASTEXITCODE -ne 0) {
+    throw "Error en la importación a SQLite. La transacción ha sido revertida."
+  }
 
   Write-Host "Importacion PRODUCCION completada (fast csv)." -ForegroundColor Green
 

@@ -12,9 +12,19 @@ start_row = int(sys.argv[4]) if len(sys.argv) > 4 else 2
 # Usar motor calamine (mucho más rápido que openpyxl)
 try:
     df = pd.read_excel(xlsx_path, sheet_name=sheet_name, header=0, engine='calamine')
-except Exception:
-    # Fallback a openpyxl si calamine falla
-    df = pd.read_excel(xlsx_path, sheet_name=sheet_name, header=0, engine='openpyxl')
+except PermissionError:
+    print(f"ERROR: No se puede leer el archivo '{xlsx_path}'. Asegúrate de que NO esté abierto en Excel.", file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    try:
+        # Fallback a openpyxl si calamine falla (pero no por permisos)
+        df = pd.read_excel(xlsx_path, sheet_name=sheet_name, header=0, engine='openpyxl')
+    except PermissionError:
+        print(f"ERROR: No se puede leer el archivo '{xlsx_path}'. Asegúrate de que NO esté abierto en Excel.", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e2:
+        print(f"ERROR: Falló la lectura del Excel. Calamine: {e}, Openpyxl: {e2}", file=sys.stderr)
+        sys.exit(1)
 
 # Filtrar filas donde la primera columna (GRP_DEF) no es nula ni 'GRP_DEF'
 first_col = df.iloc[:, 0]

@@ -11,6 +11,9 @@ $csvPath = $tmpCsv -replace '\\','/'
 try {
   # Usar Python con filtrado especial para CALIDAD (elimina encabezados repetidos)
   python "$PSScriptRoot\excel-to-csv-calidad.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Error en la conversión de Excel a CSV (Python script failed). Verifica si el archivo está abierto o dañado."
+  }
 
   # Importar a tabla temporal (el filtrado ya se hizo en Python)
   $cmds = @(
@@ -30,7 +33,10 @@ try {
     "DROP TABLE temp_calidad;"
   )
 
-  & sqlite3 $SqlitePath @cmds
+  $cmds | & sqlite3 $SqlitePath
+  if ($LASTEXITCODE -ne 0) {
+    throw "Error en la importación a SQLite. La transacción ha sido revertida."
+  }
 
   Write-Host "Importacion CALIDAD completada (fast csv)." -ForegroundColor Green
 

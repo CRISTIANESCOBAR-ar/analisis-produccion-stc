@@ -118,7 +118,7 @@
                 </span>
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                {{ formatDate(item.xlsx_last_modified) }}
+                {{ formatDate(item.file_modified || item.xlsx_last_modified) }}
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                 <div v-if="item.last_import_date">

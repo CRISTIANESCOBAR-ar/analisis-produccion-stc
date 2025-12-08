@@ -28,7 +28,28 @@
               <div v-if="showCalendar" class="calendar-dropdown">
                 <div class="calendar-header">
                   <button class="calendar-nav-btn" @click.stop="changeMonth(-1)">&lt;</button>
-                  <span class="calendar-title">{{ calendarTitle }}</span>
+                  <div class="calendar-selects">
+                    <select 
+                      :value="currentMonth.getMonth()" 
+                      @change="updateMonth" 
+                      @click.stop
+                      class="calendar-select"
+                    >
+                      <option v-for="(month, index) in monthNames" :key="index" :value="index">
+                        {{ month }}
+                      </option>
+                    </select>
+                    <select 
+                      :value="currentMonth.getFullYear()" 
+                      @change="updateYear" 
+                      @click.stop
+                      class="calendar-select"
+                    >
+                      <option v-for="year in years" :key="year" :value="year">
+                        {{ year }}
+                      </option>
+                    </select>
+                  </div>
                   <button class="calendar-nav-btn" @click.stop="changeMonth(1)">&gt;</button>
                 </div>
                 <div class="calendar-weekdays">
@@ -316,11 +337,30 @@ const displayDate = computed(() => {
   return `${dia} ${diaNum}/${mes}/${anio}`
 })
 
-const calendarTitle = computed(() => {
-  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-  return `${meses[calendarMonth.value]} ${calendarYear.value}`
+const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+const years = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const startYear = 2020
+  const yearList = []
+  for (let y = startYear; y <= currentYear + 1; y++) {
+    yearList.push(y)
+  }
+  return yearList
 })
+
+const currentMonth = computed(() => {
+  return new Date(calendarYear.value, calendarMonth.value)
+})
+
+function updateMonth(event) {
+  calendarMonth.value = parseInt(event.target.value)
+}
+
+function updateYear(event) {
+  calendarYear.value = parseInt(event.target.value)
+}
 
 const calendarDays = computed(() => {
   const days = []
@@ -725,10 +765,29 @@ function formatPartida(partida) {
   margin-bottom: 12px;
 }
 
-.calendar-title {
-  font-size: 14px;
+.calendar-selects {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.calendar-select {
+  padding: 0.1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #333;
+  color: #374151;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.calendar-select:hover {
+  background-color: #f3f4f6;
+}
+
+.calendar-select:focus {
+  outline: none;
+  border-color: #d1d5db;
 }
 
 .calendar-nav-btn {

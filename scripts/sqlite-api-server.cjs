@@ -1191,6 +1191,96 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
   }
 });
 
+// GET /api/calidad/historico-global - Análisis histórico mensual GLOBAL (todos los revisores)
+app.get('/api/calidad/historico-global', async (req, res) => {
+  try {
+    const { startDate, endDate, tramas } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Se requieren startDate y endDate' });
+    }
+
+    // Filtro de tramas
+    let tramasFilter = '';
+    if (tramas === 'ALG 100%') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'A'";
+    } else if (tramas === 'P + E') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'Y'";
+    } else if (tramas === 'POL 100%') {
+      tramasFilter = "AND SUBSTR(ARTIGO, 1, 1) = 'P'";
+    }
+
+    const sql = `
+      WITH CAL AS (
+        SELECT
+          strftime('%Y-%m', DAT_PROD) AS MesAno,
+          DAT_PROD,
+          ARTIGO,
+          SUM(CAST(REPLACE(METRAGEM, ',', '.') AS REAL)) AS METRAGEM,
+          AVG(CAST(REPLACE(PONTUACAO, ',', '.') AS REAL)) AS PONTUACAO,
+          AVG(CAST(REPLACE(LARGURA, ',', '.') AS REAL)) AS LARGURA,
+          TRIM(QUALIDADE) AS QUALIDADE
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND DAT_PROD BETWEEN ? AND ?
+          AND "REVISOR FINAL" IS NOT NULL 
+          AND "REVISOR FINAL" != ''
+          AND "REVISOR FINAL" != 'RETALHO'
+          AND QUALIDADE NOT LIKE '%RETALHO%'
+          ${tramasFilter}
+        GROUP BY
+          strftime('%Y-%m', DAT_PROD),
+          DAT_PROD,
+          ARTIGO,
+          PEÇA,
+          QUALIDADE,
+          ETIQUETA
+      ),
+      MENSUAL AS (
+        SELECT
+          MesAno,
+          CAST(SUM(METRAGEM) AS INTEGER) AS Mts_Total,
+          
+          -- Calidad %
+          ROUND(
+            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END) 
+            / NULLIF(SUM(METRAGEM), 0) * 100
+          , 1) AS Calidad_Perc,
+          
+          -- Pts 100m²
+          ROUND(
+            (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN PONTUACAO ELSE 0 END) * 100)
+            /
+            NULLIF(
+              (SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM * LARGURA ELSE 0 END))
+              / NULLIF(SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END), 0)
+              / 100
+              * SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN METRAGEM ELSE 0 END)
+            , 0)
+          , 1) AS Pts_100m2,
+          
+          -- % Sin Pts
+          ROUND(
+            CAST(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' AND (PONTUACAO IS NULL OR PONTUACAO = 0) THEN 1 END) AS REAL)
+            / NULLIF(COUNT(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' THEN 1 END), 0) * 100
+          , 1) AS Perc_Sin_Pts
+
+        FROM CAL
+        GROUP BY MesAno
+      )
+      SELECT * FROM MENSUAL
+      ORDER BY MesAno
+    `;
+
+    const rows = await dbAll(sql, [startDate, endDate]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Manejo de cierre graceful
 process.on('SIGINT', () => {
   console.log('\n🛑 Cerrando servidor...');

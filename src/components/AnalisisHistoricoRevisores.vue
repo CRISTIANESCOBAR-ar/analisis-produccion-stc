@@ -34,7 +34,14 @@
             <div v-if="showCalendarStart" class="calendar-dropdown">
               <div class="calendar-header">
                 <button class="calendar-nav-btn" @click.stop="changeMonth('start', -1)">&lt;</button>
-                <span class="calendar-title">{{ calendarStartTitle }}</span>
+                <div class="calendar-selects">
+                  <select :value="calendarStartMonth.getMonth()" @change="updateMonth('start', $event)" @click.stop class="calendar-select">
+                    <option v-for="(m, i) in monthNames" :key="i" :value="i">{{ m }}</option>
+                  </select>
+                  <select :value="calendarStartMonth.getFullYear()" @change="updateYear('start', $event)" @click.stop class="calendar-select">
+                    <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                  </select>
+                </div>
                 <button class="calendar-nav-btn" @click.stop="changeMonth('start', 1)">&gt;</button>
               </div>
               <div class="calendar-weekdays">
@@ -76,7 +83,14 @@
             <div v-if="showCalendarEnd" class="calendar-dropdown">
               <div class="calendar-header">
                 <button class="calendar-nav-btn" @click.stop="changeMonth('end', -1)">&lt;</button>
-                <span class="calendar-title">{{ calendarEndTitle }}</span>
+                <div class="calendar-selects">
+                  <select :value="calendarEndMonth.getMonth()" @change="updateMonth('end', $event)" @click.stop class="calendar-select">
+                    <option v-for="(m, i) in monthNames" :key="i" :value="i">{{ m }}</option>
+                  </select>
+                  <select :value="calendarEndMonth.getFullYear()" @change="updateYear('end', $event)" @click.stop class="calendar-select">
+                    <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                  </select>
+                </div>
                 <button class="calendar-nav-btn" @click.stop="changeMonth('end', 1)">&gt;</button>
               </div>
               <div class="calendar-weekdays">
@@ -128,34 +142,59 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th class="col-mes">MES-AÑO</th>
-              <th class="col-metros text-center">Metros Día</th>
-              <th class="col-calidad text-center">Calidad %</th>
-              <th class="col-pts text-center">Pts 100 m²</th>
-              <th class="col-rollos text-center">Rollos 1era</th>
-              <th class="col-sin-pts-un text-center">Sin Pts [un]</th>
-              <th class="col-sin-pts-perc text-center">Sin Pts [%]</th>
+              <th class="col-mes" rowspan="2">MES-AÑO</th>
+              <th class="col-metros text-center" rowspan="2">Metros Día</th>
+              <th class="text-center border-b-2 border-gray-200" colspan="2">Calidad %</th>
+              <th class="text-center border-b-2 border-gray-200" colspan="2">Pts 100 m²</th>
+              <th class="col-rollos text-center" rowspan="2">Rollos 1era</th>
+              <th class="col-sin-pts-un text-center" rowspan="2">Sin Pts [un]</th>
+              <th class="text-center border-b-2 border-gray-200" colspan="2">Sin Pts [%]</th>
+            </tr>
+            <tr>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Revisor</th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Todos</th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Revisor</th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Todos</th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Revisor</th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Todos</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in historico" :key="row.MesAno">
               <td class="col-mes font-medium">{{ formatMesAno(row.MesAno) }}</td>
               <td class="col-metros text-center font-bold">{{ formatInteger(row.Mts_Total) }}</td>
-              <td class="col-calidad text-center">{{ formatNumber(row.Calidad_Perc) }}</td>
-              <td class="col-pts text-center">{{ formatNumber(row.Pts_100m2) }}</td>
+              
+              <!-- Calidad -->
+              <td class="col-calidad text-center font-medium">{{ formatNumber(row.Calidad_Perc) }}</td>
+              <td class="col-calidad text-center text-gray-500">{{ formatNumber(row.Global_Calidad_Perc) }}</td>
+              
+              <!-- Pts -->
+              <td class="col-pts text-center font-medium">{{ formatNumber(row.Pts_100m2) }}</td>
+              <td class="col-pts text-center text-gray-500">{{ formatNumber(row.Global_Pts_100m2) }}</td>
+              
               <td class="col-rollos text-center">{{ row.Rollos_1era }}</td>
               <td class="col-sin-pts-un text-center">{{ row.Rollos_Sin_Pts }}</td>
-              <td class="col-sin-pts-perc text-center">{{ formatNumber(row.Perc_Sin_Pts) }}</td>
+              
+              <!-- Sin Pts % -->
+              <td class="col-sin-pts-perc text-center font-medium">{{ formatNumber(row.Perc_Sin_Pts) }}</td>
+              <td class="col-sin-pts-perc text-center text-gray-500">{{ formatNumber(row.Global_Perc_Sin_Pts) }}</td>
             </tr>
             <!-- Fila Totales -->
             <tr v-if="historico.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
               <td class="col-mes">Total / Promedio</td>
               <td class="col-metros text-center">{{ formatInteger(totales.Mts_Total) }}</td>
+              
               <td class="col-calidad text-center">{{ formatNumber(totales.Calidad_Perc) }}</td>
+              <td class="col-calidad text-center text-gray-600">{{ formatNumber(totales.Global_Calidad_Perc) }}</td>
+              
               <td class="col-pts text-center">{{ formatNumber(totales.Pts_100m2) }}</td>
+              <td class="col-pts text-center text-gray-600">{{ formatNumber(totales.Global_Pts_100m2) }}</td>
+              
               <td class="col-rollos text-center">{{ totales.Rollos_1era }}</td>
               <td class="col-sin-pts-un text-center">{{ totales.Rollos_Sin_Pts }}</td>
+              
               <td class="col-sin-pts-perc text-center">{{ formatNumber(totales.Perc_Sin_Pts) }}</td>
+              <td class="col-sin-pts-perc text-center text-gray-600">{{ formatNumber(totales.Global_Perc_Sin_Pts) }}</td>
             </tr>
           </tbody>
         </table>
@@ -198,14 +237,16 @@ const datepickerEndRef = ref(null);
 const displayFechaInicio = computed(() => formatDisplayDate(filtros.value.fechaInicio));
 const displayFechaFin = computed(() => formatDisplayDate(filtros.value.fechaFin));
 
-const calendarStartTitle = computed(() => {
-  const date = calendarStartMonth.value;
-  return `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
-});
+const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-const calendarEndTitle = computed(() => {
-  const date = calendarEndMonth.value;
-  return `${getMonthName(date.getMonth())} ${date.getFullYear()}`;
+const years = computed(() => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = 2020; i <= currentYear + 1; i++) {
+    years.push(i);
+  }
+  return years;
 });
 
 const calendarStartDays = computed(() => generateCalendarDays(calendarStartMonth.value, filtros.value.fechaInicio));
@@ -218,18 +259,29 @@ const totales = computed(() => {
   const totalRollos1era = historico.value.reduce((sum, r) => sum + (r.Rollos_1era || 0), 0);
   const totalRollosSinPts = historico.value.reduce((sum, r) => sum + (r.Rollos_Sin_Pts || 0), 0);
   
-  // Promedios ponderados
+  // Global totals for weighted averages
+  const totalMetrosGlobal = historico.value.reduce((sum, r) => sum + (r.Global_Mts_Total || 0), 0);
+
+  // Promedios ponderados Revisor
   const avgCalidad = historico.value.reduce((sum, r) => sum + (r.Calidad_Perc || 0) * (r.Mts_Total || 0), 0) / totalMetros;
   const avgPts = historico.value.reduce((sum, r) => sum + (r.Pts_100m2 || 0) * (r.Mts_Total || 0), 0) / totalMetros;
   const avgSinPts = totalRollos1era > 0 ? (totalRollosSinPts / totalRollos1era) * 100 : 0;
   
+  // Promedios ponderados Global
+  const avgCalidadGlobal = historico.value.reduce((sum, r) => sum + (r.Global_Calidad_Perc || 0) * (r.Global_Mts_Total || 0), 0) / totalMetrosGlobal;
+  const avgPtsGlobal = historico.value.reduce((sum, r) => sum + (r.Global_Pts_100m2 || 0) * (r.Global_Mts_Total || 0), 0) / totalMetrosGlobal;
+  const avgSinPtsGlobal = historico.value.reduce((sum, r) => sum + (r.Global_Perc_Sin_Pts || 0) * (r.Global_Mts_Total || 0), 0) / totalMetrosGlobal;
+
   return {
     Mts_Total: totalMetros,
     Calidad_Perc: avgCalidad,
     Pts_100m2: avgPts,
     Rollos_1era: totalRollos1era,
     Rollos_Sin_Pts: totalRollosSinPts,
-    Perc_Sin_Pts: avgSinPts
+    Perc_Sin_Pts: avgSinPts,
+    Global_Calidad_Perc: avgCalidadGlobal,
+    Global_Pts_100m2: avgPtsGlobal,
+    Global_Perc_Sin_Pts: avgSinPtsGlobal
   };
 });
 
@@ -288,6 +340,32 @@ function changeMonth(type, delta) {
   } else {
     const newDate = new Date(calendarEndMonth.value);
     newDate.setMonth(newDate.getMonth() + delta);
+    calendarEndMonth.value = newDate;
+  }
+}
+
+function updateMonth(type, event) {
+  const month = parseInt(event.target.value);
+  if (type === 'start') {
+    const newDate = new Date(calendarStartMonth.value);
+    newDate.setMonth(month);
+    calendarStartMonth.value = newDate;
+  } else {
+    const newDate = new Date(calendarEndMonth.value);
+    newDate.setMonth(month);
+    calendarEndMonth.value = newDate;
+  }
+}
+
+function updateYear(type, event) {
+  const year = parseInt(event.target.value);
+  if (type === 'start') {
+    const newDate = new Date(calendarStartMonth.value);
+    newDate.setFullYear(year);
+    calendarStartMonth.value = newDate;
+  } else {
+    const newDate = new Date(calendarEndMonth.value);
+    newDate.setFullYear(year);
     calendarEndMonth.value = newDate;
   }
 }
@@ -402,11 +480,35 @@ async function loadData() {
       revisor: filtros.value.revisor,
       tramas: filtros.value.tramas
     });
+
+    const paramsGlobal = new URLSearchParams({
+      startDate: filtros.value.fechaInicio,
+      endDate: filtros.value.fechaFin,
+      tramas: filtros.value.tramas
+    });
     
-    const response = await fetch(`${API_URL}/api/calidad/historico-revisor?${params}`);
-    if (!response.ok) throw new Error('Error cargando datos');
+    const [resRevisor, resGlobal] = await Promise.all([
+      fetch(`${API_URL}/api/calidad/historico-revisor?${params}`),
+      fetch(`${API_URL}/api/calidad/historico-global?${paramsGlobal}`)
+    ]);
+
+    if (!resRevisor.ok || !resGlobal.ok) throw new Error('Error cargando datos');
     
-    historico.value = await response.json();
+    const dataRevisor = await resRevisor.json();
+    const dataGlobal = await resGlobal.json();
+
+    // Merge data
+    historico.value = dataRevisor.map(rev => {
+      const global = dataGlobal.find(g => g.MesAno === rev.MesAno) || {};
+      return {
+        ...rev,
+        Global_Calidad_Perc: global.Calidad_Perc,
+        Global_Pts_100m2: global.Pts_100m2,
+        Global_Perc_Sin_Pts: global.Perc_Sin_Pts,
+        Global_Mts_Total: global.Mts_Total // Needed for weighted average
+      };
+    });
+
   } catch (error) {
     console.error('Error:', error);
     historico.value = [];
@@ -544,6 +646,41 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+}
+
+.calendar-selects {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.calendar-select {
+  padding: 0.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.calendar-select:hover {
+  background-color: #f3f4f6;
+}
+
+.calendar-select:focus {
+  outline: none;
+  border-color: #d1d5db;
+}
+
+.calendar-nav-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
 }
 
 .calendar-title {
