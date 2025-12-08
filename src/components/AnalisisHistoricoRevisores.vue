@@ -125,6 +125,18 @@
             <option value="POL 100%">POL 100%</option>
           </select>
         </div>
+
+        <!-- Botón Gráfico -->
+        <div class="filter-group" style="justify-content: flex-end;">
+          <button 
+            class="btn-chart" 
+            @click="openChartModal" 
+            :disabled="historico.length === 0"
+            title="Ver Gráfico Combinado"
+          >
+            📊 Ver Gráfico
+          </button>
+        </div>
       </div>
     </div>
 
@@ -204,16 +216,76 @@
         <p>No hay datos para el período seleccionado</p>
       </div>
     </div>
+
+    <!-- Modal Gráfico -->
+    <div v-if="showChartModal" class="modal-overlay" @click.self="showChartModal = false">
+      <div class="modal-content chart-modal">
+        <div class="modal-header">
+          <h3>Análisis Gráfico: {{ filtros.revisor }} vs Global</h3>
+          <div class="modal-header-controls">
+            <select v-model="filtros.revisor" @change="loadData" class="revisor-select">
+              <option v-for="rev in revisores" :key="rev" :value="rev">{{ rev }}</option>
+            </select>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="showDataLabels" class="checkbox-input" />
+              <span>Mostrar valores de puntos</span>
+            </label>
+            <button class="close-btn" @click="showChartModal = false">×</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div v-if="loading" class="chart-loading">
+            <div class="spinner"></div>
+            <p>Cargando datos de {{ filtros.revisor }}...</p>
+          </div>
+          <Bar v-else :data="chartData" :options="chartOptions" />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  BarController,
+  LineController
+} from 'chart.js'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
+import { Bar } from 'vue-chartjs'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  BarController,
+  LineController,
+  ChartDataLabels
+)
 
 const API_URL = 'http://localhost:3002';
 
+const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
 // Estado
 const loading = ref(false);
+const showChartModal = ref(false);
+const showDataLabels = ref(false);
 const revisores = ref([]);
 const historico = ref([]);
 
@@ -224,6 +296,215 @@ const filtros = ref({
   fechaFin: getDefaultEndDate(),
   tramas: 'Todas'
 });
+
+// Chart Data
+const chartData = computed(() => {
+  if (!historico.value.length) return { labels: [], datasets: [] }
+
+  const labels = historico.value.map(h => {
+    if (!h.MesAno) return '';
+    const [year, month] = h.MesAno.split('-');
+    const monthIndex = parseInt(month) - 1;
+    const shortMonth = monthNames[monthIndex].substring(0, 3).toLowerCase();
+    const shortYear = year.substring(2);
+    return `${shortMonth}-${shortYear}`;
+  })
+  
+  return {
+    labels,
+    datasets: [
+      {
+        type: 'bar',
+        label: `Calidad % (${filtros.value.revisor})`,
+        backgroundColor: '#6366f1', // Indigo 500
+        hoverBackgroundColor: '#4f46e5', // Indigo 600
+        data: historico.value.map(h => h.Calidad_Perc),
+        yAxisID: 'y',
+        order: 2,
+        borderRadius: 4,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8
+      },
+      {
+        type: 'bar',
+        label: 'Calidad % (Global)',
+        backgroundColor: '#e2e8f0', // Slate 200
+        hoverBackgroundColor: '#cbd5e1', // Slate 300
+        data: historico.value.map(h => h.Global_Calidad_Perc),
+        yAxisID: 'y',
+        order: 3,
+        borderRadius: 4,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8
+      },
+      {
+        type: 'line',
+        label: `Pts 100m² (${filtros.value.revisor})`,
+        borderColor: '#f43f5e', // Rose 500
+        backgroundColor: '#f43f5e',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#fff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
+        tension: 0.3, // Smooth curves
+        data: historico.value.map(h => h.Pts_100m2),
+        yAxisID: 'y1',
+        order: 0,
+        datalabels: {
+          display: showDataLabels.value,
+          align: 'top',
+          color: '#f43f5e',
+          font: {
+            size: 10,
+            weight: 'bold'
+          },
+          formatter: (value) => value ? value.toFixed(1) : ''
+        }
+      },
+      {
+        type: 'line',
+        label: 'Pts 100m² (Global)',
+        borderColor: '#10b981', // Emerald 500
+        backgroundColor: '#10b981',
+        borderWidth: 2,
+        pointRadius: 0, // Hide points for global trend unless hovered
+        pointHoverRadius: 4,
+        borderDash: [5, 5],
+        tension: 0.3,
+        data: historico.value.map(h => h.Global_Pts_100m2),
+        yAxisID: 'y1',
+        order: 1
+      }
+    ]
+  }
+})
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: {
+    mode: 'index',
+    intersect: false,
+  },
+  plugins: {
+    datalabels: {
+      display: false // Default off for all datasets
+    },
+    legend: {
+      position: 'top',
+      align: 'center',
+      labels: {
+        usePointStyle: true,
+        boxWidth: 8,
+        padding: 20,
+        font: {
+          family: "'Inter', 'Segoe UI', sans-serif",
+          size: 12
+        },
+        color: '#4b5563' // Gray 600
+      }
+    },
+    tooltip: {
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      titleColor: '#1f2937',
+      bodyColor: '#4b5563',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      padding: 12,
+      boxPadding: 4,
+      usePointStyle: true,
+      titleFont: {
+        family: "'Inter', 'Segoe UI', sans-serif",
+        size: 14,
+        weight: 'bold'
+      },
+      bodyFont: {
+        family: "'Inter', 'Segoe UI', sans-serif",
+        size: 13
+      },
+      callbacks: {
+        label: function(context) {
+          let label = context.dataset.label || '';
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += context.parsed.y.toFixed(1);
+          }
+          return label;
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false,
+        drawBorder: false
+      },
+      ticks: {
+        font: {
+          family: "'Inter', 'Segoe UI', sans-serif",
+          size: 11
+        },
+        color: '#6b7280'
+      }
+    },
+    y: {
+      type: 'linear',
+      display: true,
+      position: 'left',
+      title: {
+        display: true,
+        text: 'Calidad %',
+        font: {
+          family: "'Inter', 'Segoe UI', sans-serif",
+          weight: 'bold'
+        },
+        color: '#6366f1'
+      },
+      grid: {
+        color: '#f3f4f6',
+        borderDash: [4, 4],
+        drawBorder: false
+      },
+      ticks: {
+        font: {
+          family: "'Inter', 'Segoe UI', sans-serif",
+        },
+        color: '#6b7280'
+      },
+      min: 80,
+      max: 100
+    },
+    y1: {
+      type: 'linear',
+      display: true,
+      position: 'right',
+      title: {
+        display: true,
+        text: 'Puntos cada 100m²',
+        font: {
+          family: "'Inter', 'Segoe UI', sans-serif",
+          weight: 'bold'
+        },
+        color: '#f43f5e'
+      },
+      grid: {
+        display: false,
+        drawBorder: false
+      },
+      ticks: {
+        font: {
+          family: "'Inter', 'Segoe UI', sans-serif",
+        },
+        color: '#6b7280'
+      },
+      min: 0
+    },
+  }
+}
 
 // Calendarios
 const showCalendarStart = ref(false);
@@ -236,9 +517,6 @@ const datepickerEndRef = ref(null);
 // Computed
 const displayFechaInicio = computed(() => formatDisplayDate(filtros.value.fechaInicio));
 const displayFechaFin = computed(() => formatDisplayDate(filtros.value.fechaFin));
-
-const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 const years = computed(() => {
   const currentYear = new Date().getFullYear();
@@ -535,6 +813,11 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
+
+function openChartModal() {
+  console.log('Opening chart modal');
+  showChartModal.value = true;
+}
 </script>
 
 <style scoped>
@@ -850,4 +1133,166 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+/* Chart Modal Styles */
+.btn-chart {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-chart:hover {
+  background-color: #2563eb;
+}
+
+.btn-chart:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content.chart-modal {
+  background: white;
+  border-radius: 0.5rem;
+  width: 95%;
+  max-width: 1400px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.modal-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.revisor-select {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 150px;
+}
+
+.revisor-select:hover {
+  border-color: #3b82f6;
+}
+
+.revisor-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #1f2937;
+}
+
+.chart-container {
+  flex: 1;
+  padding: 1.5rem;
+  position: relative;
+  min-height: 0; /* Important for flex child to shrink */
+}
+
+.chart-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+}
+
+.chart-loading p {
+  font-size: 1rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 </style>
+
