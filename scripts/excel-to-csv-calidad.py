@@ -26,9 +26,10 @@ except Exception as e:
         print(f"ERROR: Falló la lectura del Excel. Calamine: {e}, Openpyxl: {e2}", file=sys.stderr)
         sys.exit(1)
 
-# Filtrar filas donde la primera columna (GRP_DEF) no es nula ni 'GRP_DEF'
+# Filtrar filas de encabezados repetidos
+# Los encabezados tienen 'EMP' en la primera columna, así que excluirlos
 first_col = df.iloc[:, 0]
-df = df[first_col.notna() & (first_col != 'GRP_DEF')]
+df = df[first_col.notna() & (first_col != 'GRP_DEF') & (first_col != 'EMP')]
 
 # NO formatear aquí - dejar que SQLite lo haga durante UPDATE
 # Esto es mucho más rápido que formatear 665k filas en Python
