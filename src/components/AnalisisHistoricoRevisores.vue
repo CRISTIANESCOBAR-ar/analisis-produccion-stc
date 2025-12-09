@@ -230,6 +230,7 @@
               <input type="checkbox" v-model="showDataLabels" class="checkbox-input" />
               <span>Mostrar valores de puntos</span>
             </label>
+            <button class="copy-btn" @click="copyChartToClipboard" title="Copiar gráfico para WhatsApp">📋 Copiar</button>
             <button class="close-btn" @click="showChartModal = false">×</button>
           </div>
         </div>
@@ -247,6 +248,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import html2canvas from 'html2canvas';
+import Swal from 'sweetalert2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -818,6 +821,79 @@ function openChartModal() {
   console.log('Opening chart modal');
   showChartModal.value = true;
 }
+
+async function copyChartToClipboard() {
+  try {
+    const modalElement = document.querySelector('.modal-content.chart-modal');
+    const headerControls = document.querySelector('.modal-header-controls');
+    
+    if (!modalElement) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo encontrar el gráfico',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      return;
+    }
+    
+    // Ocultar controles temporalmente
+    if (headerControls) {
+      headerControls.style.display = 'none';
+    }
+    
+    // Capturar con controles ocultos
+    const canvas = await html2canvas(modalElement, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false
+    });
+    
+    // Restaurar controles inmediatamente
+    if (headerControls) {
+      headerControls.style.display = 'flex';
+    }
+    
+    canvas.toBlob((blob) => {
+      navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        .then(() => {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Copiado!',
+            text: 'Gráfico copiado al portapapeles. Ya puedes pegarlo en WhatsApp.',
+            timer: 1500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+          });
+        })
+        .catch(() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo copiar al portapapeles.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        });
+    });
+  } catch (error) {
+    console.error('Error capturando gráfico:', error);
+    // Restaurar controles en caso de error
+    const headerControls = document.querySelector('.modal-header-controls');
+    if (headerControls) {
+      headerControls.style.display = 'flex';
+    }
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al procesar la imagen.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  }
+}
 </script>
 
 <style scoped>
@@ -1180,6 +1256,7 @@ function openChartModal() {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  font-family: 'Ubuntu', 'Segoe UI', sans-serif;
 }
 
 .modal-header {
@@ -1189,6 +1266,7 @@ function openChartModal() {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  font-family: 'Ubuntu', 'Segoe UI', sans-serif;
 }
 
 .modal-header h3 {
@@ -1196,6 +1274,7 @@ function openChartModal() {
   font-size: 1.25rem;
   font-weight: 600;
   color: #1f2937;
+  font-family: 'Ubuntu', 'Segoe UI', sans-serif;
 }
 
 .modal-header-controls {
@@ -1241,6 +1320,29 @@ function openChartModal() {
   width: 1rem;
   height: 1rem;
   cursor: pointer;
+}
+
+.copy-btn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.copy-btn:hover {
+  background-color: #059669;
+}
+
+.copy-btn:active {
+  transform: scale(0.95);
 }
 
 .close-btn {
