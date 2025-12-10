@@ -265,11 +265,14 @@ async function triggerImport() {
       
       if (data.success) {
         importOutput.value = data.output
-        const elapsed = Math.round(performance.now() - t0)
+        const elapsedMs = Math.round(performance.now() - t0)
+        const minutes = Math.floor(elapsedMs / 60000)
+        const seconds = Math.floor((elapsedMs % 60000) / 1000)
+        const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
         toast.fire({
           icon: 'success',
           title: 'Importación completada',
-          text: `Tiempo: ${elapsed} ms`
+          text: `Tiempo: ${timeStr}`
         })
         fetchStatus() // Recargar estado final
       } else {

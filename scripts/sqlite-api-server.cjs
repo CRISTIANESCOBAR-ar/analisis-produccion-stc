@@ -762,6 +762,33 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
           AND PARTIDA IS NOT NULL
           AND PARTIDA != ''
         GROUP BY PARTIDA
+      ),
+      -- Mapeo de partidas de calidad a producción (busca variantes restando del primer dígito)
+      PartidaMapping AS (
+        SELECT 
+          CAL.PARTIDA as CalPartida,
+          COALESCE(
+            -- Primero busca coincidencia exacta
+            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = CAL.PARTIDA),
+            -- Si no, intenta restando 1 al primer dígito (1xxx -> 0xxx)
+            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
+              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 0 
+                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
+                   ELSE NULL END),
+            -- Intenta restando 2 (2xxx -> 0xxx)
+            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
+              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 1 
+                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
+                   ELSE NULL END),
+            -- Intenta restando 3
+            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
+              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 2 
+                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 3 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
+                   ELSE NULL END),
+            -- Intenta con prefijo 0 directo
+            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = '0' || SUBSTR(CAL.PARTIDA, 2))
+          ) as ProdPartida
+        FROM CalidadPorPartida CAL
       )
       SELECT
         HP.HoraInicio,
@@ -788,7 +815,8 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
         END as RT105
       FROM CalidadPorPartida CAL
       LEFT JOIN HorasPartida HP ON CAL.PARTIDA = HP.PARTIDA
-      LEFT JOIN ProduccionTelares TEJ ON CAL.PARTIDA = TEJ.PARTIDA
+      LEFT JOIN PartidaMapping PM ON CAL.PARTIDA = PM.CalPartida
+      LEFT JOIN ProduccionTelares TEJ ON PM.ProdPartida = TEJ.PARTIDA
       ORDER BY HP.HoraInicio ASC
     `;
 

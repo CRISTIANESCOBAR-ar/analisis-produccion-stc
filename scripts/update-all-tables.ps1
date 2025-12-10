@@ -15,6 +15,17 @@ $SqlitePath = "C:\analisis-produccion-stc\database\produccion.db"
 $ScriptRoot = "C:\analisis-produccion-stc\scripts"
 $ImportScript = "$ScriptRoot\import-xlsx-to-sqlite.ps1"
 
+# Scripts rápidos de Python disponibles por tabla
+$FastScripts = @{
+  'tb_PRODUCCION' = "$ScriptRoot\import-produccion-fast.ps1"
+  'tb_CALIDAD' = "$ScriptRoot\import-calidad-fast.ps1"
+  'tb_TESTES' = "$ScriptRoot\import-testes-fast.ps1"
+  'tb_PARADAS' = "$ScriptRoot\import-paradas-fast.ps1"
+  'tb_FICHAS' = "$ScriptRoot\import-fichas-fast.ps1"
+  'tb_RESIDUOS_INDIGO' = "$ScriptRoot\import-residuos-indig-fast.ps1"
+  'tb_RESIDUOS_POR_SECTOR' = "$ScriptRoot\import-residuos-por-sector-fast.ps1"
+}
+
 # Buscar sqlite3.exe en ubicaciones comunes
 $sqlite3Paths = @(
   "sqlite3",  # En PATH
@@ -278,7 +289,16 @@ foreach ($config in $tableConfigs) {
     
     # Ejecutar importacion
     Write-Host "  > Iniciando importacion..." -ForegroundColor Yellow
-    $importResult = & $ImportScript @importParams 2>&1
+    
+    # Usar script rápido de Python si está disponible
+    if ($FastScripts.ContainsKey($config.Table)) {
+      $fastScript = $FastScripts[$config.Table]
+      Write-Host "  ~ Usando script rápido (Python): $(Split-Path $fastScript -Leaf)" -ForegroundColor Cyan
+      $importResult = & $fastScript -XlsxPath $config.XlsxPath -SqlitePath $SqlitePath -Sheet $config.Sheet 2>&1
+    } else {
+      # Fallback a script lento ImportExcel
+      $importResult = & $ImportScript @importParams 2>&1
+    }
     
     if ($LASTEXITCODE -eq 0) {
       # Extraer numero de filas importadas del output
