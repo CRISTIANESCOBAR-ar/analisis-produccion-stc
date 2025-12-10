@@ -453,7 +453,7 @@
     >
       <div class="modal-content chart-modal">
         <div class="modal-header">
-          <h3>Análisis Gráfico: {{ filtros.revisor }} vs Global</h3>
+          <h3>Análisis Gráfico del Revisor: <strong class="revisor-name">{{ filtros.revisor }}</strong> vs Global</h3>
           <div class="modal-header-controls">
             <select
               v-model="filtros.revisor"
@@ -530,6 +530,43 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Bar } from 'vue-chartjs'
 
+// Plugin para controlar rotación binaria (0° o 90°)
+const smartRotationPlugin = {
+  id: 'smartRotation',
+  beforeUpdate(chart) {
+    const xScale = chart.scales.x;
+    if (!xScale || !xScale.ticks || xScale.ticks.length === 0) return;
+    
+    // Obtener el ancho disponible por tick
+    const chartWidth = chart.width;
+    const tickCount = xScale.ticks.length;
+    const spacePerTick = chartWidth / tickCount;
+    
+    // Estimar ancho promedio de las etiquetas (en horizontal)
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = "11px 'Inter', 'Segoe UI', sans-serif";
+    
+    let maxLabelWidth = 0;
+    xScale.ticks.forEach(tick => {
+      const label = tick.label || '';
+      const metrics = ctx.measureText(label);
+      if (metrics.width > maxLabelWidth) {
+        maxLabelWidth = metrics.width;
+      }
+    });
+    ctx.restore();
+    
+    // Decidir rotación: 0° si caben horizontalmente con margen, 90° si no
+    const marginFactor = 1.2; // 20% de margen
+    const wouldOverlap = maxLabelWidth * marginFactor > spacePerTick;
+    
+    // Aplicar rotación binaria
+    xScale.options.ticks.minRotation = wouldOverlap ? 90 : 0;
+    xScale.options.ticks.maxRotation = wouldOverlap ? 90 : 0;
+  }
+};
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -541,7 +578,8 @@ ChartJS.register(
   Legend,
   BarController,
   LineController,
-  ChartDataLabels
+  ChartDataLabels,
+  smartRotationPlugin
 )
 
 const API_URL = 'http://localhost:3002';
@@ -655,6 +693,7 @@ const chartOptions = {
     intersect: false,
   },
   plugins: {
+    smartRotation: true, // Activar nuestro plugin
     datalabels: {
       display: false // Default off for all datasets
     },
@@ -715,7 +754,10 @@ const chartOptions = {
           family: "'Inter', 'Segoe UI', sans-serif",
           size: 11
         },
-        color: '#6b7280'
+        color: '#6b7280',
+        autoSkip: false,
+        minRotation: 0,
+        maxRotation: 0
       }
     },
     y: {
@@ -754,7 +796,8 @@ const chartOptions = {
         text: 'Puntos cada 100m²',
         font: {
           family: "'Inter', 'Segoe UI', sans-serif",
-          weight: 'bold'
+          weight: 'bold',
+          size: 14
         },
         color: '#f43f5e'
       },
@@ -765,6 +808,7 @@ const chartOptions = {
       ticks: {
         font: {
           family: "'Inter', 'Segoe UI', sans-serif",
+          size: 13
         },
         color: '#6b7280'
       },
@@ -1514,13 +1558,14 @@ async function copyChartToClipboard() {
 .modal-content.chart-modal {
   background: white;
   border-radius: 0.5rem;
-  width: 95%;
-  max-width: 1400px;
-  height: 85vh;
+  width: 98vw;
+  max-width: none;
+  height: 95vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   font-family: 'Ubuntu', 'Segoe UI', sans-serif;
+  margin: 1vh 1vw;
 }
 
 .modal-header {
@@ -1539,6 +1584,12 @@ async function copyChartToClipboard() {
   font-weight: 600;
   color: #1f2937;
   font-family: 'Ubuntu', 'Segoe UI', sans-serif;
+}
+
+.revisor-name {
+  color: #4f46e5;
+  font-weight: 800;
+  font-size: 1.5rem;
 }
 
 .modal-header-controls {
