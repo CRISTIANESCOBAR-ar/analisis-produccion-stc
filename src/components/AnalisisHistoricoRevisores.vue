@@ -1,8 +1,12 @@
 <template>
   <div class="historico-container">
     <div class="header">
-      <h1 class="title">📊 ANÁLISIS HISTÓRICO REVISORES</h1>
-      <p class="subtitle">Rendimiento mensual por revisor</p>
+      <h1 class="title">
+        📊 ANÁLISIS HISTÓRICO REVISORES
+      </h1>
+      <p class="subtitle">
+        Rendimiento mensual por revisor
+      </p>
     </div>
 
     <!-- Filtros -->
@@ -11,41 +15,98 @@
         <!-- Revisor -->
         <div class="filter-group">
           <label>Revisor:</label>
-          <select v-model="filtros.revisor" class="filter-input" @change="loadData" :disabled="loading">
-            <option value="">Seleccione un revisor</option>
-            <option v-for="rev in revisores" :key="rev" :value="rev">{{ rev }}</option>
+          <select
+            v-model="filtros.revisor"
+            class="filter-input"
+            :disabled="loading"
+            @change="loadData"
+          >
+            <option value="">
+              Seleccione un revisor
+            </option>
+            <option
+              v-for="rev in revisores"
+              :key="rev"
+              :value="rev"
+            >
+              {{ rev }}
+            </option>
           </select>
         </div>
 
         <!-- Fecha Inicio -->
         <div class="filter-group">
           <label>Fecha Inicio:</label>
-          <div class="custom-datepicker" ref="datepickerStartRef">
+          <div
+            ref="datepickerStartRef"
+            class="custom-datepicker"
+          >
             <input 
-              type="text" 
               v-model="displayFechaInicio" 
+              type="text" 
               class="filter-input datepicker-input"
               placeholder="Selecciona fecha inicio"
-              @click="toggleCalendar('start')"
               readonly
-            />
-            <span class="calendar-icon" @click="toggleCalendar('start')">📅</span>
+              @click="toggleCalendar('start')"
+            >
+            <span
+              class="calendar-icon"
+              @click="toggleCalendar('start')"
+            >📅</span>
             
-            <div v-if="showCalendarStart" class="calendar-dropdown">
+            <div
+              v-if="showCalendarStart"
+              class="calendar-dropdown"
+            >
               <div class="calendar-header">
-                <button class="calendar-nav-btn" @click.stop="changeMonth('start', -1)">&lt;</button>
+                <button
+                  class="calendar-nav-btn"
+                  @click.stop="changeMonth('start', -1)"
+                >
+                  &lt;
+                </button>
                 <div class="calendar-selects">
-                  <select :value="calendarStartMonth.getMonth()" @change="updateMonth('start', $event)" @click.stop class="calendar-select">
-                    <option v-for="(m, i) in monthNames" :key="i" :value="i">{{ m }}</option>
+                  <select
+                    :value="calendarStartMonth.getMonth()"
+                    class="calendar-select"
+                    @change="updateMonth('start', $event)"
+                    @click.stop
+                  >
+                    <option
+                      v-for="(m, i) in monthNames"
+                      :key="i"
+                      :value="i"
+                    >
+                      {{ m }}
+                    </option>
                   </select>
-                  <select :value="calendarStartMonth.getFullYear()" @change="updateYear('start', $event)" @click.stop class="calendar-select">
-                    <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                  <select
+                    :value="calendarStartMonth.getFullYear()"
+                    class="calendar-select"
+                    @change="updateYear('start', $event)"
+                    @click.stop
+                  >
+                    <option
+                      v-for="y in years"
+                      :key="y"
+                      :value="y"
+                    >
+                      {{ y }}
+                    </option>
                   </select>
                 </div>
-                <button class="calendar-nav-btn" @click.stop="changeMonth('start', 1)">&gt;</button>
+                <button
+                  class="calendar-nav-btn"
+                  @click.stop="changeMonth('start', 1)"
+                >
+                  &gt;
+                </button>
               </div>
               <div class="calendar-weekdays">
-                <span v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">{{ day }}</span>
+                <span
+                  v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']"
+                  :key="day"
+                >{{ day }}</span>
               </div>
               <div class="calendar-days">
                 <button 
@@ -56,8 +117,8 @@
                     'selected': day.selected,
                     'today': day.today
                   }]"
-                  @click.stop="selectDate('start', day)"
                   :disabled="day.otherMonth"
+                  @click.stop="selectDate('start', day)"
                 >
                   {{ day.day }}
                 </button>
@@ -69,32 +130,76 @@
         <!-- Fecha Fin -->
         <div class="filter-group">
           <label>Fecha Fin:</label>
-          <div class="custom-datepicker" ref="datepickerEndRef">
+          <div
+            ref="datepickerEndRef"
+            class="custom-datepicker"
+          >
             <input 
-              type="text" 
               v-model="displayFechaFin" 
+              type="text" 
               class="filter-input datepicker-input"
               placeholder="Selecciona fecha fin"
-              @click="toggleCalendar('end')"
               readonly
-            />
-            <span class="calendar-icon" @click="toggleCalendar('end')">📅</span>
+              @click="toggleCalendar('end')"
+            >
+            <span
+              class="calendar-icon"
+              @click="toggleCalendar('end')"
+            >📅</span>
             
-            <div v-if="showCalendarEnd" class="calendar-dropdown">
+            <div
+              v-if="showCalendarEnd"
+              class="calendar-dropdown"
+            >
               <div class="calendar-header">
-                <button class="calendar-nav-btn" @click.stop="changeMonth('end', -1)">&lt;</button>
+                <button
+                  class="calendar-nav-btn"
+                  @click.stop="changeMonth('end', -1)"
+                >
+                  &lt;
+                </button>
                 <div class="calendar-selects">
-                  <select :value="calendarEndMonth.getMonth()" @change="updateMonth('end', $event)" @click.stop class="calendar-select">
-                    <option v-for="(m, i) in monthNames" :key="i" :value="i">{{ m }}</option>
+                  <select
+                    :value="calendarEndMonth.getMonth()"
+                    class="calendar-select"
+                    @change="updateMonth('end', $event)"
+                    @click.stop
+                  >
+                    <option
+                      v-for="(m, i) in monthNames"
+                      :key="i"
+                      :value="i"
+                    >
+                      {{ m }}
+                    </option>
                   </select>
-                  <select :value="calendarEndMonth.getFullYear()" @change="updateYear('end', $event)" @click.stop class="calendar-select">
-                    <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                  <select
+                    :value="calendarEndMonth.getFullYear()"
+                    class="calendar-select"
+                    @change="updateYear('end', $event)"
+                    @click.stop
+                  >
+                    <option
+                      v-for="y in years"
+                      :key="y"
+                      :value="y"
+                    >
+                      {{ y }}
+                    </option>
                   </select>
                 </div>
-                <button class="calendar-nav-btn" @click.stop="changeMonth('end', 1)">&gt;</button>
+                <button
+                  class="calendar-nav-btn"
+                  @click.stop="changeMonth('end', 1)"
+                >
+                  &gt;
+                </button>
               </div>
               <div class="calendar-weekdays">
-                <span v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">{{ day }}</span>
+                <span
+                  v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']"
+                  :key="day"
+                >{{ day }}</span>
               </div>
               <div class="calendar-days">
                 <button 
@@ -105,8 +210,8 @@
                     'selected': day.selected,
                     'today': day.today
                   }]"
-                  @click.stop="selectDate('end', day)"
                   :disabled="day.otherMonth"
+                  @click.stop="selectDate('end', day)"
                 >
                   {{ day.day }}
                 </button>
@@ -118,21 +223,36 @@
         <!-- Tramas -->
         <div class="filter-group">
           <label>Tramas:</label>
-          <select v-model="filtros.tramas" class="filter-input" @change="loadData">
-            <option value="Todas">Todas</option>
-            <option value="ALG 100%">ALG 100%</option>
-            <option value="P + E">P + E</option>
-            <option value="POL 100%">POL 100%</option>
+          <select
+            v-model="filtros.tramas"
+            class="filter-input"
+            @change="loadData"
+          >
+            <option value="Todas">
+              Todas
+            </option>
+            <option value="ALG 100%">
+              ALG 100%
+            </option>
+            <option value="P + E">
+              P + E
+            </option>
+            <option value="POL 100%">
+              POL 100%
+            </option>
           </select>
         </div>
 
         <!-- Botón Gráfico -->
-        <div class="filter-group" style="justify-content: flex-end;">
+        <div
+          class="filter-group"
+          style="justify-content: flex-end;"
+        >
           <button 
             class="btn-chart" 
-            @click="openChartModal" 
-            :disabled="historico.length === 0"
+            :disabled="historico.length === 0" 
             title="Ver Gráfico Combinado"
+            @click="openChartModal"
           >
             📊 Ver Gráfico
           </button>
@@ -144,102 +264,246 @@
     <div class="table-card">
       <div class="table-header">
         <div class="results-info">
-          <span v-if="loading" class="results-count">Cargando...</span>
-          <span v-else-if="!filtros.revisor" class="results-count">Seleccione un revisor</span>
-          <span v-else class="results-count">{{ historico.length }} meses - {{ filtros.revisor }}</span>
+          <span
+            v-if="loading"
+            class="results-count"
+          >Cargando...</span>
+          <span
+            v-else-if="!filtros.revisor"
+            class="results-count"
+          >Seleccione un revisor</span>
+          <span
+            v-else
+            class="results-count"
+          >{{ historico.length }} meses - {{ filtros.revisor }}</span>
         </div>
       </div>
 
-      <div v-if="historico.length > 0" class="table-responsive">
+      <div
+        v-if="historico.length > 0"
+        class="table-responsive"
+      >
         <table class="data-table">
           <thead>
             <tr>
-              <th class="col-mes" rowspan="2">MES-AÑO</th>
-              <th class="col-metros text-center" rowspan="2">Metros Día</th>
-              <th class="text-center border-b-2 border-gray-200" colspan="2">Calidad %</th>
-              <th class="text-center border-b-2 border-gray-200" colspan="2">Pts 100 m²</th>
-              <th class="col-rollos text-center" rowspan="2">Rollos 1era</th>
-              <th class="col-sin-pts-un text-center" rowspan="2">Sin Pts [un]</th>
-              <th class="text-center border-b-2 border-gray-200" colspan="2">Sin Pts [%]</th>
+              <th
+                class="col-mes"
+                rowspan="2"
+              >
+                MES-AÑO
+              </th>
+              <th
+                class="col-metros text-center"
+                rowspan="2"
+              >
+                Metros Día
+              </th>
+              <th
+                class="text-center border-b-2 border-gray-200"
+                colspan="2"
+              >
+                Calidad %
+              </th>
+              <th
+                class="text-center border-b-2 border-gray-200"
+                colspan="2"
+              >
+                Pts 100 m²
+              </th>
+              <th
+                class="col-rollos text-center"
+                rowspan="2"
+              >
+                Rollos 1era
+              </th>
+              <th
+                class="col-sin-pts-un text-center"
+                rowspan="2"
+              >
+                Sin Pts [un]
+              </th>
+              <th
+                class="text-center border-b-2 border-gray-200"
+                colspan="2"
+              >
+                Sin Pts [%]
+              </th>
             </tr>
             <tr>
-              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Revisor</th>
-              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Todos</th>
-              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Revisor</th>
-              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Todos</th>
-              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Revisor</th>
-              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">Todos</th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">
+                Revisor
+              </th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">
+                Todos
+              </th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">
+                Revisor
+              </th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">
+                Todos
+              </th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">
+                Revisor
+              </th>
+              <th class="col-sub text-center text-xs text-gray-500 bg-gray-50">
+                Todos
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in historico" :key="row.MesAno">
-              <td class="col-mes font-medium">{{ formatMesAno(row.MesAno) }}</td>
-              <td class="col-metros text-center font-bold">{{ formatInteger(row.Mts_Total) }}</td>
+            <tr
+              v-for="row in historico"
+              :key="row.MesAno"
+            >
+              <td class="col-mes font-medium">
+                {{ formatMesAno(row.MesAno) }}
+              </td>
+              <td class="col-metros text-center font-bold">
+                {{ formatInteger(row.Mts_Total) }}
+              </td>
               
               <!-- Calidad -->
-              <td class="col-calidad text-center font-medium">{{ formatNumber(row.Calidad_Perc) }}</td>
-              <td class="col-calidad text-center text-gray-500">{{ formatNumber(row.Global_Calidad_Perc) }}</td>
+              <td class="col-calidad text-center font-medium">
+                {{ formatNumber(row.Calidad_Perc) }}
+              </td>
+              <td class="col-calidad text-center text-gray-500">
+                {{ formatNumber(row.Global_Calidad_Perc) }}
+              </td>
               
               <!-- Pts -->
-              <td class="col-pts text-center font-medium">{{ formatNumber(row.Pts_100m2) }}</td>
-              <td class="col-pts text-center text-gray-500">{{ formatNumber(row.Global_Pts_100m2) }}</td>
+              <td class="col-pts text-center font-medium">
+                {{ formatNumber(row.Pts_100m2) }}
+              </td>
+              <td class="col-pts text-center text-gray-500">
+                {{ formatNumber(row.Global_Pts_100m2) }}
+              </td>
               
-              <td class="col-rollos text-center">{{ row.Rollos_1era }}</td>
-              <td class="col-sin-pts-un text-center">{{ row.Rollos_Sin_Pts }}</td>
+              <td class="col-rollos text-center">
+                {{ row.Rollos_1era }}
+              </td>
+              <td class="col-sin-pts-un text-center">
+                {{ row.Rollos_Sin_Pts }}
+              </td>
               
               <!-- Sin Pts % -->
-              <td class="col-sin-pts-perc text-center font-medium">{{ formatNumber(row.Perc_Sin_Pts) }}</td>
-              <td class="col-sin-pts-perc text-center text-gray-500">{{ formatNumber(row.Global_Perc_Sin_Pts) }}</td>
+              <td class="col-sin-pts-perc text-center font-medium">
+                {{ formatNumber(row.Perc_Sin_Pts) }}
+              </td>
+              <td class="col-sin-pts-perc text-center text-gray-500">
+                {{ formatNumber(row.Global_Perc_Sin_Pts) }}
+              </td>
             </tr>
             <!-- Fila Totales -->
-            <tr v-if="historico.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
-              <td class="col-mes">Total / Promedio</td>
-              <td class="col-metros text-center">{{ formatInteger(totales.Mts_Total) }}</td>
+            <tr
+              v-if="historico.length > 0"
+              class="bg-gray-100 font-bold border-t-2 border-gray-300"
+            >
+              <td class="col-mes">
+                Total / Promedio
+              </td>
+              <td class="col-metros text-center">
+                {{ formatInteger(totales.Mts_Total) }}
+              </td>
               
-              <td class="col-calidad text-center">{{ formatNumber(totales.Calidad_Perc) }}</td>
-              <td class="col-calidad text-center text-gray-600">{{ formatNumber(totales.Global_Calidad_Perc) }}</td>
+              <td class="col-calidad text-center">
+                {{ formatNumber(totales.Calidad_Perc) }}
+              </td>
+              <td class="col-calidad text-center text-gray-600">
+                {{ formatNumber(totales.Global_Calidad_Perc) }}
+              </td>
               
-              <td class="col-pts text-center">{{ formatNumber(totales.Pts_100m2) }}</td>
-              <td class="col-pts text-center text-gray-600">{{ formatNumber(totales.Global_Pts_100m2) }}</td>
+              <td class="col-pts text-center">
+                {{ formatNumber(totales.Pts_100m2) }}
+              </td>
+              <td class="col-pts text-center text-gray-600">
+                {{ formatNumber(totales.Global_Pts_100m2) }}
+              </td>
               
-              <td class="col-rollos text-center">{{ totales.Rollos_1era }}</td>
-              <td class="col-sin-pts-un text-center">{{ totales.Rollos_Sin_Pts }}</td>
+              <td class="col-rollos text-center">
+                {{ totales.Rollos_1era }}
+              </td>
+              <td class="col-sin-pts-un text-center">
+                {{ totales.Rollos_Sin_Pts }}
+              </td>
               
-              <td class="col-sin-pts-perc text-center">{{ formatNumber(totales.Perc_Sin_Pts) }}</td>
-              <td class="col-sin-pts-perc text-center text-gray-600">{{ formatNumber(totales.Global_Perc_Sin_Pts) }}</td>
+              <td class="col-sin-pts-perc text-center">
+                {{ formatNumber(totales.Perc_Sin_Pts) }}
+              </td>
+              <td class="col-sin-pts-perc text-center text-gray-600">
+                {{ formatNumber(totales.Global_Perc_Sin_Pts) }}
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div v-else-if="!loading && filtros.revisor" class="empty-state">
+      <div
+        v-else-if="!loading && filtros.revisor"
+        class="empty-state"
+      >
         <p>No hay datos para el período seleccionado</p>
       </div>
     </div>
 
     <!-- Modal Gráfico -->
-    <div v-if="showChartModal" class="modal-overlay" @click.self="showChartModal = false">
+    <div
+      v-if="showChartModal"
+      class="modal-overlay"
+      @click.self="showChartModal = false"
+    >
       <div class="modal-content chart-modal">
         <div class="modal-header">
           <h3>Análisis Gráfico: {{ filtros.revisor }} vs Global</h3>
           <div class="modal-header-controls">
-            <select v-model="filtros.revisor" @change="loadData" class="revisor-select">
-              <option v-for="rev in revisores" :key="rev" :value="rev">{{ rev }}</option>
+            <select
+              v-model="filtros.revisor"
+              class="revisor-select"
+              @change="loadData"
+            >
+              <option
+                v-for="rev in revisores"
+                :key="rev"
+                :value="rev"
+              >
+                {{ rev }}
+              </option>
             </select>
             <label class="checkbox-label">
-              <input type="checkbox" v-model="showDataLabels" class="checkbox-input" />
+              <input
+                v-model="showDataLabels"
+                type="checkbox"
+                class="checkbox-input"
+              >
               <span>Mostrar valores de puntos</span>
             </label>
-            <button class="copy-btn" @click="copyChartToClipboard" title="Copiar gráfico para WhatsApp">📋 Copiar</button>
-            <button class="close-btn" @click="showChartModal = false">×</button>
+            <button
+              class="copy-btn"
+              title="Copiar gráfico para WhatsApp"
+              @click="copyChartToClipboard"
+            >
+              📋 Copiar
+            </button>
+            <button
+              class="close-btn"
+              @click="showChartModal = false"
+            >
+              ×
+            </button>
           </div>
         </div>
         <div class="chart-container">
-          <div v-if="loading" class="chart-loading">
-            <div class="spinner"></div>
+          <div
+            v-if="loading"
+            class="chart-loading"
+          >
+            <div class="spinner" />
             <p>Cargando datos de {{ filtros.revisor }}...</p>
           </div>
-          <Bar v-else :data="chartData" :options="chartOptions" />
+          <Bar
+            v-else
+            :data="chartData"
+            :options="chartOptions"
+          />
         </div>
       </div>
     </div>
