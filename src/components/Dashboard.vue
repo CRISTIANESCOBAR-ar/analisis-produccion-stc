@@ -225,6 +225,7 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'DashboardView' })
 import { ref, onMounted, computed } from 'vue'
 import { useDatabase } from '../composables/useDatabase'
 
@@ -495,6 +496,12 @@ function getBarWidth(value) {
 function getMotivoBarWidth(value) {
   const maxValue = Math.max(...topMotivos.value.map(item => item.total_horas))
   return (value / maxValue) * 100
+}
+</script>
+
+<script>
+export default {
+  name: 'DashboardView'
 }
 </script>
 
