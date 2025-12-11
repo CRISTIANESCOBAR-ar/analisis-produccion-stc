@@ -1,15 +1,9 @@
 <template>
   <div class="calidad-container" @keydown="handleKeydown" tabindex="0" ref="containerRef">
-    <div class="header">
-      <h1 class="title">📋 REVISIÓN - CQ</h1>
-      <p class="subtitle">Informe detallado de revisión de calidad</p>
-    </div>
-
-    <!-- Filtros -->
-    <div class="filters-card">
-      <div class="filters-grid">
-        <div class="filter-group fecha-nav">
-          <label>Fecha:</label>
+    <div class="header header--with-filters">
+      <div class="header-left">
+        <div class="filter-inline fecha-nav">
+          <label class="sr-only">Fecha:</label>
           <div class="fecha-controls">
             <div class="custom-datepicker" ref="datepickerRef">
               <input 
@@ -24,7 +18,7 @@
                 readonly
               />
               <span class="calendar-icon" @click="toggleCalendar">📅</span>
-              
+
               <div v-if="showCalendar" class="calendar-dropdown">
                 <div class="calendar-header">
                   <button class="calendar-nav-btn" @click.stop="changeMonth(-1)">&lt;</button>
@@ -91,17 +85,23 @@
               >&gt;</button>
             </div>
           </div>
-          <span class="hint-text">Usa ← → para navegar</span>
+          <span class="hint-text">Usa ← →</span>
         </div>
-        <div class="filter-group">
-          <label>Tramas:</label>
-          <select v-model="filters.tramas" class="filter-input" @change="loadData">
+
+        <div class="filter-inline">
+          <label class="filter-label">Trama:</label>
+          <select aria-label="Tramas" v-model="filters.tramas" class="filter-input" @change="loadData">
             <option value="Todas">Todas</option>
             <option value="ALG 100%">ALG 100%</option>
             <option value="P + E">P + E</option>
             <option value="POL 100%">POL 100%</option>
           </select>
         </div>
+      </div>
+
+      <div class="header-right">
+        <h1 class="title">📋</h1>
+        <p class="subtitle">Informe detallado de revisión de calidad</p>
       </div>
     </div>
 
@@ -655,19 +655,54 @@ function formatPartida(partida) {
 <style scoped>
 .calidad-container {
   max-width: 100%;
-  padding: 16px;
-  margin: 0 auto;
-  background: transparent;
-  min-height: 100vh;
+  margin: 6px;
+  padding: 10px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  min-height: calc(100vh - 12px);
   outline: none;
 }
 
 .header {
   background: white;
-  padding: 24px;
-  border-radius: 12px;
+  padding: 10px;
+  border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+.header--with-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right .title {
+  margin: 0;
+}
+
+.header-right .subtitle {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.header-icons {
+  font-size: 18px;
+  opacity: 0.95;
 }
 
 .title {
@@ -689,6 +724,30 @@ function formatPartida(partida) {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   margin-bottom: 24px;
+}
+
+.filter-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.filter-label {
+  font-weight: 600;
+  margin-right: 6px;
+  color: #374151;
 }
 
 .filters-grid {
@@ -720,9 +779,9 @@ function formatPartida(partida) {
 }
 
 .datepicker-input {
-  padding: 10px 40px 10px 12px;
+  padding: 8px 40px 8px 12px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 14px;
   width: 220px;
   cursor: pointer;
@@ -893,10 +952,10 @@ function formatPartida(partida) {
 }
 
 .nav-btn {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 4px;
   background: white;
   font-size: 18px;
   font-weight: bold;
@@ -932,9 +991,9 @@ function formatPartida(partida) {
 }
 
 .filter-input {
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.2s;
 }
@@ -1003,13 +1062,13 @@ function formatPartida(partida) {
 
 .table-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
 .table-header {
-  padding: 20px 24px;
+  padding: 8px 10px;
   border-bottom: 2px solid #f0f0f0;
   display: flex;
   justify-content: space-between;

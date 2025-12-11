@@ -48,6 +48,11 @@ SQLite en `database/produccion.db` con 7 tablas:
 .\scripts\update-with-email.ps1
 ```
 
+## 📝 Changelog (reciente)
+
+- 2025-12-10: Fix: normalización de import para `tb_PRODUCCION` — el script de importación rápido ahora normaliza `PARTIDA` (quita sufijo `.0` y agrega cero inicial cuando corresponde), normaliza `FILIAL` (`5` → `05`) y fechas (`YYYY-MM-DD` → `DD/MM/YYYY`). Además se agregó un fallback en la consulta de producción que intenta mapear partidas con prefijos distintos (p.ej. `1542007` → `0542007`) para mejorar el match entre `tb_CALIDAD` y `tb_PRODUCCION`. Cambios en archivos: `scripts/excel-to-csv.py`, `scripts/import-produccion-fast.ps1`, `scripts/sqlite-api-server.cjs`, `scripts/update-all-tables.ps1`, `src/components/ImportControl.vue`.
+
+
 ## 🔧 Scripts
 
 - **ExportarAccessSegmentado.vba**: Exporta Access a CSV segmentados por mes
