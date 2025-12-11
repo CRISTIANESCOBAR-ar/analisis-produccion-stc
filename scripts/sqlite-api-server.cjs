@@ -154,13 +154,13 @@ app.get('/api/import-status', async (req, res) => {
   }
 });
 
-// POST /api/import/trigger - Ejecutar script de actualización
+// POST /api/import/trigger - Ejecutar script de actualización (solo archivos desactualizados)
 app.post('/api/import/trigger', (req, res) => {
-  // Ejecuta el script de PowerShell que ya existe
+  // Usar -Force para que siempre evalúe cambios y ejecute los scripts rápidos
   const scriptPath = path.join(__dirname, 'update-all-tables.ps1');
-  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}"`;
+  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -Force`;
 
-  console.log('🚀 Ejecutando actualización manual...');
+  console.log('🚀 Ejecutando actualización manual (con evaluación de cambios)...');
   
   exec(command, (error, stdout, stderr) => {
     if (error) {
@@ -763,30 +763,21 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
           AND PARTIDA != ''
         GROUP BY PARTIDA
       ),
-      -- Mapeo de partidas de calidad a producción (busca variantes restando del primer dígito)
+      -- Mapeo de partidas de calidad a producción (búsqueda optimizada)
       PartidaMapping AS (
         SELECT 
           CAL.PARTIDA as CalPartida,
           COALESCE(
-            -- Primero busca coincidencia exacta
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = CAL.PARTIDA),
-            -- Si no, intenta restando 1 al primer dígito (1xxx -> 0xxx)
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
-              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 0 
-                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-                   ELSE NULL END),
-            -- Intenta restando 2 (2xxx -> 0xxx)
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
-              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 1 
-                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-                   ELSE NULL END),
-            -- Intenta restando 3
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
-              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 2 
-                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 3 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-                   ELSE NULL END),
-            -- Intenta con prefijo 0 directo
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = '0' || SUBSTR(CAL.PARTIDA, 2))
+            CASE WHEN EXISTS(SELECT 1 FROM ProduccionTelares WHERE PARTIDA = CAL.PARTIDA) 
+                 THEN CAL.PARTIDA END,
+            CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 0 
+                   AND EXISTS(SELECT 1 FROM ProduccionTelares WHERE PARTIDA = CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2))
+                 THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2) END,
+            CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 1 
+                   AND EXISTS(SELECT 1 FROM ProduccionTelares WHERE PARTIDA = CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2))
+                 THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2) END,
+            CASE WHEN EXISTS(SELECT 1 FROM ProduccionTelares WHERE PARTIDA = '0' || SUBSTR(CAL.PARTIDA, 2))
+                 THEN '0' || SUBSTR(CAL.PARTIDA, 2) END
           ) as ProdPartida
         FROM CalidadPorPartida CAL
       )
