@@ -1,8 +1,9 @@
 <template>
-  <div class="w-full h-screen flex flex-col p-1" @keydown="handleKeydown" tabindex="0" ref="containerRef">
-    <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
-    <div class="header header--with-filters">
-      <div class="header-left">
+  <div class="w-full min-h-screen flex flex-col p-1" @keydown="handleKeydown" tabindex="0" ref="containerRef">
+    <main class="w-full bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
+      <!-- Filtros en línea sin contenedor adicional -->
+      <div class="flex items-center justify-between gap-4 mb-3">
+      <div class="flex items-center gap-4">
         <div class="filter-inline fecha-nav">
           <label class="sr-only">Fecha:</label>
           <div class="fecha-controls">
@@ -100,22 +101,17 @@
         </div>
       </div>
 
-      <div class="header-right">
-        <h1 class="title">📋</h1>
-        <p class="subtitle">Informe detallado de revisión de calidad</p>
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📋</span>
+        <span class="text-sm text-slate-600">Informe detallado de revisión de calidad</span>
       </div>
-    </div>
+      </div>
 
     <!-- Layout de dos tablas lado a lado -->
-    <div class="tables-layout-wrapper">
+    <div class="grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-4">
       <!-- Tabla Izquierda: Resumen por Revisor -->
-      <div class="table-card table-left">
-        <div class="table-header flex items-center justify-between px-2 py-2">
-          <div class="results-info">
-            <span class="results-count text-sm font-semibold text-slate-700">{{ calidadData.length }} revisores</span>
-          </div>
-        </div>
-
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-semibold text-slate-700">{{ calidadData.length }} revisores</span>
         <div class="overflow-auto w-full rounded-xl border border-slate-200">
           <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs tabla-resumen">
             <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
@@ -161,15 +157,10 @@
       </div>
 
       <!-- Tabla Derecha: Detalle del Revisor Seleccionado -->
-      <div class="table-card table-right">
-        <div class="table-header flex items-center justify-between px-2 py-2">
-          <div class="results-info">
-            <span class="results-count text-sm font-semibold text-slate-700">
-              {{ selectedRevisor ? `Detalle - ${selectedRevisor.Revisor}` : 'Seleccione un revisor' }}
-            </span>
-          </div>
-        </div>
-
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-semibold text-slate-700">
+          {{ selectedRevisor ? `Detalle - ${selectedRevisor.Revisor}` : 'Seleccione un revisor' }}
+        </span>
         <div v-if="selectedRevisor && detalleRevisor.length > 0" class="overflow-auto w-full rounded-xl border border-slate-200">
           <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs tabla-detalle">
             <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
@@ -190,7 +181,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(detalle, index) in detalleRevisor" :key="index" class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150">
+              <tr v-for="(detalle, index) in detalleRevisor" :key="index" 
+                  @click="selectPartida(detalle)"
+                  :class="{ 'bg-blue-100': selectedPartida?.Partidas === detalle.Partidas }"
+                  class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150 cursor-pointer">
                 <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatHora(detalle.HoraInicio) }}</td>
                 <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ detalle.NombreArticulo }}</td>
                 <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatPartida(detalle.Partidas) }}</td>
@@ -226,6 +220,60 @@
         <div v-else class="empty-state-detail">
           <p>👆 Haz clic en un revisor para ver el detalle de su producción</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Tabla 3: Detalle de Partida -->
+    <div v-if="selectedPartida && detallePartida.length > 0" class="mt-4 flex flex-col gap-2">
+      <div class="text-sm text-slate-700">
+        <span class="text-slate-600">Detalle de Partida:</span>
+        <span class="ml-1 font-bold text-slate-900 text-base">{{ formatPartida(selectedPartida.Partidas) }}</span>
+        <span class="mx-2 text-slate-600">-</span>
+        <span class="text-slate-600">Artículo:</span>
+        <span class="ml-1 font-bold text-slate-900 text-base">{{ detallePartida[0]?.ARTIGO?.substring(0, 10) || 'N/A' }}</span>
+        <span class="mx-2 text-slate-600">-</span>
+        <span class="text-slate-600">Color:</span>
+        <span class="ml-1 font-bold text-slate-900 text-base">{{ detallePartida[0]?.COR || 'N/A' }}</span>
+        <span class="mx-2 text-slate-600">-</span>
+        <span class="text-slate-600">Nombre:</span>
+        <span class="ml-1 font-bold text-slate-900 text-base">{{ detallePartida[0]?.NM_MERC || selectedPartida.NombreArticulo }}</span>
+        <span class="mx-2 text-slate-600">-</span>
+        <span class="text-slate-600">Trama:</span>
+        <span class="ml-1 font-bold text-slate-900 text-base">{{ detallePartida[0]?.TRAMA || 'N/A' }}</span>
+      </div>
+      <div class="overflow-auto w-full rounded-xl border border-slate-200">
+        <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs">
+          <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
+            <tr>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Grupo</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Código</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Defecto</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metraje</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Calidad</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Hora</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Emendas</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Pieza</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Etiqueta</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Ancho</th>
+              <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Puntuación</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, index) in detallePartida" :key="index" class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150">
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.GRP_DEF }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.COD_DE }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.DEFEITO }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.METRAGEM }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.QUALIDADE }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.HORA }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.EMENDAS }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.PEÇA }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.ETIQUETA }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.LARGURA }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.PONTUACAO }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -269,6 +317,10 @@ const totals = ref({
 // Variables para la segunda tabla (detalle)
 const selectedRevisor = ref(null)
 const detalleRevisor = ref([])
+
+// Variables para la tercera tabla (detalle de partida)
+const selectedPartida = ref(null)
+const detallePartida = ref([])
 
 // Totales del detalle
 const totalesDetalle = computed(() => {
@@ -535,9 +587,11 @@ function onDateChange() {
 async function loadData() {
   if (!canGenerateReport.value) return
   
-  // Limpiar selección de revisor al cambiar fecha
+  // Limpiar selecciones al cambiar fecha
   selectedRevisor.value = null
   detalleRevisor.value = []
+  selectedPartida.value = null
+  detallePartida.value = []
   
   try {
     const params = {
@@ -562,6 +616,9 @@ function applyFilters() {
 // Función para seleccionar un revisor y cargar su detalle
 async function selectRevisor(revisor) {
   selectedRevisor.value = revisor
+  // Limpiar selección de partida al cambiar revisor
+  selectedPartida.value = null
+  detallePartida.value = []
   
   try {
     const params = {
@@ -576,6 +633,28 @@ async function selectRevisor(revisor) {
   } catch (err) {
     console.error('Error cargando detalle del revisor:', err)
     detalleRevisor.value = []
+  }
+}
+
+// Función para seleccionar una partida y cargar su detalle
+async function selectPartida(detalle) {
+  selectedPartida.value = detalle
+  
+  try {
+    const params = {
+      fecha: filters.value.fecha,
+      partida: detalle.PARTIDA || detalle.Partidas,
+      revisor: selectedRevisor.value.Revisor
+    }
+    
+    console.log('📦 Solicitando detalle de partida:', JSON.stringify(params, null, 2))
+    const result = await db.getPartidaDetalle(params)
+    console.log('📊 Respuesta del servidor:', result)
+    console.log('📊 Número de registros:', result?.length || 0)
+    detallePartida.value = result || []
+  } catch (err) {
+    console.error('Error cargando detalle de la partida:', err)
+    detallePartida.value = []
   }
 }
 

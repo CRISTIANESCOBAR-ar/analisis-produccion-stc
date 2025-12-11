@@ -747,59 +747,56 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
         FROM CAL
         GROUP BY NombreArticulo, PARTIDA
       ),
-      ProduccionTelares AS (
-        SELECT
-          PARTIDA,
-          MAX(CAST(SUBSTR(MAQUINA, -2) AS INTEGER)) as Telar,
-          SUM(COALESCE(PONTOS_LIDOS, 0)) as PtsLei,
-          SUM(COALESCE("PONTOS_100%", 0)) as Pts100,
-          SUM(COALESCE("PARADA TEC TRAMA", 0)) as ParTra,
-          SUM(COALESCE("PARADA TEC URDUME", 0)) as ParUrd
-        FROM tb_PRODUCCION
-        WHERE
-          FILIAL = '05'
-          AND SELETOR = 'TECELAGEM'
-          AND PARTIDA IS NOT NULL
-          AND PARTIDA != ''
-          AND DT_BASE_PRODUCAO BETWEEN ? AND ?
-        GROUP BY PARTIDA
-      ),
-      -- Mapeo de partidas de calidad a producción (busca variantes restando del primer dígito)
-      -- Optimizado: usa LEFT JOIN directo con variantes pre-calculadas
+      -- Variantes de cada partida
       PartidaVariantes AS (
         SELECT 
-          CAL.PARTIDA as CalPartida,
-          CAL.PARTIDA as Var0,
-          CASE WHEN LENGTH(CAL.PARTIDA) > 1 AND CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 0 
-               THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-               ELSE NULL END as Var1,
-          CASE WHEN LENGTH(CAL.PARTIDA) > 1 AND CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 1 
-               THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-               ELSE NULL END as Var2,
-          CASE WHEN LENGTH(CAL.PARTIDA) > 1 AND CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 2 
-               THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 3 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-               ELSE NULL END as Var3,
-          CASE WHEN LENGTH(CAL.PARTIDA) > 1 
-               THEN '0' || SUBSTR(CAL.PARTIDA, 2)
-               ELSE NULL END as Var4
-        FROM CalidadPorPartida CAL
+          PARTIDA as CalPartida,
+          PARTIDA as Var0,
+          CASE WHEN LENGTH(PARTIDA) > 1 AND CAST(SUBSTR(PARTIDA, 1, 1) AS INTEGER) > 0 
+               THEN CAST(CAST(SUBSTR(PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(PARTIDA, 2)
+          END as Var1,
+          CASE WHEN LENGTH(PARTIDA) > 1 AND CAST(SUBSTR(PARTIDA, 1, 1) AS INTEGER) > 1 
+               THEN CAST(CAST(SUBSTR(PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(PARTIDA, 2)
+          END as Var2,
+          CASE WHEN LENGTH(PARTIDA) > 1 AND CAST(SUBSTR(PARTIDA, 1, 1) AS INTEGER) > 2 
+               THEN CAST(CAST(SUBSTR(PARTIDA, 1, 1) AS INTEGER) - 3 AS TEXT) || SUBSTR(PARTIDA, 2)
+          END as Var3,
+          CASE WHEN LENGTH(PARTIDA) > 1 
+               THEN '0' || SUBSTR(PARTIDA, 2)
+          END as Var4
+        FROM CalidadPorPartida
       ),
+      -- Buscar en producción usando índice (sin fecha para encontrar todas las partidas)
+      ProduccionTelares AS (
+        SELECT
+          P.PARTIDA,
+          MAX(CAST(SUBSTR(P.MAQUINA, -2) AS INTEGER)) as Telar,
+          SUM(COALESCE(P.PONTOS_LIDOS, 0)) as PtsLei,
+          SUM(COALESCE(P."PONTOS_100%", 0)) as Pts100,
+          SUM(COALESCE(P."PARADA TEC TRAMA", 0)) as ParTra,
+          SUM(COALESCE(P."PARADA TEC URDUME", 0)) as ParUrd
+        FROM tb_PRODUCCION P
+        WHERE
+          P.FILIAL = '05'
+          AND P.SELETOR = 'TECELAGEM'
+          AND P.PARTIDA IN (SELECT Var0 FROM PartidaVariantes WHERE Var0 IS NOT NULL
+                           UNION SELECT Var1 FROM PartidaVariantes WHERE Var1 IS NOT NULL
+                           UNION SELECT Var2 FROM PartidaVariantes WHERE Var2 IS NOT NULL
+                           UNION SELECT Var3 FROM PartidaVariantes WHERE Var3 IS NOT NULL
+                           UNION SELECT Var4 FROM PartidaVariantes WHERE Var4 IS NOT NULL)
+        GROUP BY P.PARTIDA
+      ),
+      -- Mapeo con LEFT JOINs en cascada (más eficiente que COALESCE con subqueries)
       PartidaMapping AS (
-        SELECT DISTINCT
+        SELECT 
           PV.CalPartida,
-          PT.PARTIDA as ProdPartida
+          COALESCE(PT0.PARTIDA, PT1.PARTIDA, PT2.PARTIDA, PT3.PARTIDA, PT4.PARTIDA) as ProdPartida
         FROM PartidaVariantes PV
-        LEFT JOIN ProduccionTelares PT ON PT.PARTIDA IN (PV.Var0, PV.Var1, PV.Var2, PV.Var3, PV.Var4)
-        WHERE PT.PARTIDA IS NOT NULL
-        
-        UNION ALL
-        
-        SELECT CalPartida, NULL as ProdPartida
-        FROM PartidaVariantes PV
-        WHERE NOT EXISTS (
-          SELECT 1 FROM ProduccionTelares PT 
-          WHERE PT.PARTIDA IN (PV.Var0, PV.Var1, PV.Var2, PV.Var3, PV.Var4)
-        )
+        LEFT JOIN ProduccionTelares PT0 ON PT0.PARTIDA = PV.Var0
+        LEFT JOIN ProduccionTelares PT1 ON PT1.PARTIDA = PV.Var1
+        LEFT JOIN ProduccionTelares PT2 ON PT2.PARTIDA = PV.Var2
+        LEFT JOIN ProduccionTelares PT3 ON PT3.PARTIDA = PV.Var3
+        LEFT JOIN ProduccionTelares PT4 ON PT4.PARTIDA = PV.Var4
       )
       SELECT
         HP.HoraInicio,
@@ -832,11 +829,11 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
       ORDER BY HP.HoraInicio ASC
     `;
 
-    // Parámetros: CAL (2), HorasPartida (2), ProduccionTelares (2)
+    // Parámetros: CAL (2), HorasPartida (2)
+    // ProduccionTelares ya no necesita parámetros porque filtra por EXISTS con PartidasCalidad
     const rows = await dbAll(sql, [
       dateRange.start, dateRange.end, revisor,  // CAL
-      dateRange.start, dateRange.end, revisor,  // HorasPartida
-      dateRange.start, dateRange.end             // ProduccionTelares
+      dateRange.start, dateRange.end, revisor   // HorasPartida
     ]);
     res.json(rows);
 
