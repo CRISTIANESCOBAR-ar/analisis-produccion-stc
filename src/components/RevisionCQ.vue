@@ -1,5 +1,6 @@
 <template>
-  <div class="calidad-container" @keydown="handleKeydown" tabindex="0" ref="containerRef">
+  <div class="w-full h-screen flex flex-col p-1" @keydown="handleKeydown" tabindex="0" ref="containerRef">
+    <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
     <div class="header header--with-filters">
       <div class="header-left">
         <div class="filter-inline fecha-nav">
@@ -66,9 +67,9 @@
                 </div>
               </div>
             </div>
-            <div class="nav-btn-group">
+            <div class="flex gap-1.5">
               <button 
-                class="nav-btn" 
+                class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm" 
                 @click="cambiarFecha(-1)" 
                 @mousedown.prevent
                 tabindex="-1"
@@ -76,7 +77,7 @@
                 :disabled="loading"
               >&lt;</button>
               <button 
-                class="nav-btn" 
+                class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm" 
                 @click="cambiarFecha(1)" 
                 @mousedown.prevent
                 tabindex="-1"
@@ -109,23 +110,23 @@
     <div class="tables-layout-wrapper">
       <!-- Tabla Izquierda: Resumen por Revisor -->
       <div class="table-card table-left">
-        <div class="table-header">
+        <div class="table-header flex items-center justify-between px-2 py-2">
           <div class="results-info">
-            <span class="results-count">{{ calidadData.length }} revisores</span>
+            <span class="results-count text-sm font-semibold text-slate-700">{{ calidadData.length }} revisores</span>
           </div>
         </div>
 
-        <div class="table-responsive">
-          <table class="data-table tabla-resumen">
-            <thead>
+        <div class="overflow-auto w-full rounded-xl border border-slate-200">
+          <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs tabla-resumen">
+            <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
               <tr>
-                <th class="col-revisor">Revisor</th>
-                <th class="col-metros text-center">Metros Día</th>
-                <th class="col-calidad text-center">Calidad %</th>
-                <th class="col-pts text-center">Pts 100 m²</th>
-                <th class="col-rollos text-center">Rollos 1era</th>
-                <th class="col-sin-pts-un text-center">Sin Pts [un]</th>
-                <th class="col-sin-pts-perc text-center">Sin Pts [%]</th>
+                <th class="col-revisor px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Revisor</th>
+                <th class="col-metros px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metros Día</th>
+                <th class="col-calidad px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Calidad %</th>
+                <th class="col-pts px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Pts 100 m²</th>
+                <th class="col-rollos px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Rollos 1era</th>
+                <th class="col-sin-pts-un px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Sin Pts [un]</th>
+                <th class="col-sin-pts-perc px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Sin Pts [%]</th>
               </tr>
             </thead>
             <tbody>
@@ -134,25 +135,25 @@
                 :key="row.Revisor"
                 @click="selectRevisor(row)"
                 :class="{ 'selected-row': selectedRevisor?.Revisor === row.Revisor }"
-                class="clickable-row"
+                class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150 cursor-pointer"
               >
-                <td class="col-revisor font-medium">{{ row.Revisor }}</td>
-                <td class="col-metros text-center font-bold">{{ formatInteger(row.Mts_Total) }}</td>
-                <td class="col-calidad text-center">{{ formatNumber(row.Calidad_Perc) }}</td>
-                <td class="col-pts text-center">{{ formatNumber(row.Pts_100m2) }}</td>
-                <td class="col-rollos text-center">{{ row.Rollos_1era }}</td>
-                <td class="col-sin-pts-un text-center">{{ row.Rollos_Sin_Pts }}</td>
-                <td class="col-sin-pts-perc text-center">{{ formatNumber(row.Perc_Sin_Pts) }}</td>
+                <td class="col-revisor px-2 py-[0.3rem] text-center font-medium text-slate-700">{{ row.Revisor }}</td>
+                <td class="col-metros px-2 py-[0.3rem] text-center font-bold text-slate-700">{{ formatInteger(row.Mts_Total) }}</td>
+                <td class="col-calidad px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(row.Calidad_Perc) }}</td>
+                <td class="col-pts px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(row.Pts_100m2) }}</td>
+                <td class="col-rollos px-2 py-[0.3rem] text-center text-slate-700">{{ row.Rollos_1era }}</td>
+                <td class="col-sin-pts-un px-2 py-[0.3rem] text-center text-slate-700">{{ row.Rollos_Sin_Pts }}</td>
+                <td class="col-sin-pts-perc px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(row.Perc_Sin_Pts) }}</td>
               </tr>
               <!-- Fila de Totales -->
-              <tr v-if="calidadData.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
-                <td class="col-revisor">Total</td>
-                <td class="col-metros text-center">{{ formatInteger(totals.Mts_Total) }}</td>
-                <td class="col-calidad text-center">{{ formatNumber(totals.Calidad_Perc) }}</td>
-                <td class="col-pts text-center">{{ formatNumber(totals.Pts_100m2) }}</td>
-                <td class="col-rollos text-center">{{ totals.Rollos_1era }}</td>
-                <td class="col-sin-pts-un text-center">{{ totals.Rollos_Sin_Pts }}</td>
-                <td class="col-sin-pts-perc text-center">{{ formatNumber(totals.Perc_Sin_Pts) }}</td>
+              <tr v-if="calidadData.length > 0" class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                <td class="col-revisor px-2 py-[0.3rem] text-center text-slate-800">Total</td>
+                <td class="col-metros px-2 py-[0.3rem] text-center text-slate-800">{{ formatInteger(totals.Mts_Total) }}</td>
+                <td class="col-calidad px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totals.Calidad_Perc) }}</td>
+                <td class="col-pts px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totals.Pts_100m2) }}</td>
+                <td class="col-rollos px-2 py-[0.3rem] text-center text-slate-800">{{ totals.Rollos_1era }}</td>
+                <td class="col-sin-pts-un px-2 py-[0.3rem] text-center text-slate-800">{{ totals.Rollos_Sin_Pts }}</td>
+                <td class="col-sin-pts-perc px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totals.Perc_Sin_Pts) }}</td>
               </tr>
             </tbody>
           </table>
@@ -161,63 +162,63 @@
 
       <!-- Tabla Derecha: Detalle del Revisor Seleccionado -->
       <div class="table-card table-right">
-        <div class="table-header">
+        <div class="table-header flex items-center justify-between px-2 py-2">
           <div class="results-info">
-            <span class="results-count">
+            <span class="results-count text-sm font-semibold text-slate-700">
               {{ selectedRevisor ? `Detalle - ${selectedRevisor.Revisor}` : 'Seleccione un revisor' }}
             </span>
           </div>
         </div>
 
-        <div v-if="selectedRevisor && detalleRevisor.length > 0" class="table-responsive">
-          <table class="data-table tabla-detalle">
-            <thead>
+        <div v-if="selectedRevisor && detalleRevisor.length > 0" class="overflow-auto w-full rounded-xl border border-slate-200">
+          <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs tabla-detalle">
+            <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
               <tr>
-                <th class="text-center">Hora</th>
-                <th>Nombre Artículo</th>
-                <th>Partidas</th>
-                <th class="text-center">Metros Revisados</th>
-                <th class="text-center">Cal. %</th>
-                <th class="text-center">Pts 100m²</th>
-                <th class="text-center">Total [un]</th>
-                <th class="text-center">Sin Pts [un]</th>
-                <th class="text-center">Sin Pts [%]</th>
-                <th class="text-center">Telar</th>
-                <th class="text-center">Efic. %</th>
-                <th class="text-center">RU 105</th>
-                <th class="text-center">RT 105</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Hora</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Nombre Artículo</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Partidas</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metros Revisados</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Cal. %</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Pts 100m²</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Total [un]</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Sin Pts [un]</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Sin Pts [%]</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Telar</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Efic. %</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">RU 105</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">RT 105</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(detalle, index) in detalleRevisor" :key="index">
-                <td class="text-center">{{ formatHora(detalle.HoraInicio) }}</td>
-                <td>{{ detalle.NombreArticulo }}</td>
-                <td>{{ formatPartida(detalle.Partidas) }}</td>
-                <td class="text-center">{{ formatInteger(detalle.MetrosRevisados) }}</td>
-                <td class="text-center">{{ formatNumber(detalle.CalidadPct) }}</td>
-                <td class="text-center">{{ formatNumber(detalle.Pts100m2) }}</td>
-                <td class="text-center">{{ detalle.TotalRollos }}</td>
-                <td class="text-center">{{ detalle.SinPuntos }}</td>
-                <td class="text-center">{{ formatNumber(detalle.SinPuntosPct) }}</td>
-                <td class="text-center">{{ detalle.Telar }}</td>
-                <td class="text-center">{{ formatNumber(detalle.EficienciaPct) }}</td>
-                <td class="text-center">{{ formatNumber(detalle.RU105) }}</td>
-                <td class="text-center">{{ formatNumber(detalle.RT105) }}</td>
+              <tr v-for="(detalle, index) in detalleRevisor" :key="index" class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150">
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatHora(detalle.HoraInicio) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ detalle.NombreArticulo }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatPartida(detalle.Partidas) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatInteger(detalle.MetrosRevisados) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(detalle.CalidadPct) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(detalle.Pts100m2) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ detalle.TotalRollos }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ detalle.SinPuntos }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(detalle.SinPuntosPct) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ detalle.Telar }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(detalle.EficienciaPct) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(detalle.RU105) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatNumber(detalle.RT105) }}</td>
               </tr>
               <!-- Fila Total del Detalle -->
-              <tr v-if="detalleRevisor.length > 0" class="bg-gray-100 font-bold border-t-2 border-gray-300">
-                <td></td>
-                <td colspan="2">Total</td>
-                <td class="text-center">{{ formatInteger(totalesDetalle.MetrosRevisados) }}</td>
-                <td class="text-center">{{ formatNumber(totalesDetalle.CalidadPct) }}</td>
-                <td class="text-center">{{ formatNumber(totalesDetalle.Pts100m2) }}</td>
-                <td class="text-center">{{ totalesDetalle.TotalRollos }}</td>
-                <td class="text-center">{{ totalesDetalle.SinPuntos }}</td>
-                <td class="text-center">{{ formatNumber(totalesDetalle.SinPuntosPct) }}</td>
-                <td class="text-center">{{ totalesDetalle.Telar }}</td>
-                <td class="text-center">{{ formatNumber(totalesDetalle.EficienciaPct) }}</td>
-                <td class="text-center">{{ formatNumber(totalesDetalle.RU105) }}</td>
-                <td class="text-center">{{ formatNumber(totalesDetalle.RT105) }}</td>
+              <tr v-if="detalleRevisor.length > 0" class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                <td class="px-2 py-[0.3rem]"></td>
+                <td colspan="2" class="px-2 py-[0.3rem] text-center text-slate-800">Total</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatInteger(totalesDetalle.MetrosRevisados) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totalesDetalle.CalidadPct) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totalesDetalle.Pts100m2) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ totalesDetalle.TotalRollos }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ totalesDetalle.SinPuntos }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totalesDetalle.SinPuntosPct) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ totalesDetalle.Telar }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totalesDetalle.EficienciaPct) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totalesDetalle.RU105) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-800">{{ formatNumber(totalesDetalle.RT105) }}</td>
               </tr>
             </tbody>
           </table>
@@ -245,6 +246,7 @@
       <p class="empty-message">No hay datos de calidad disponibles</p>
       <p class="empty-hint">Intenta ajustar los filtros o verifica la importación</p>
     </div>
+    </main>
   </div>
 </template>
 
