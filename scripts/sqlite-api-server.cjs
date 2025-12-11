@@ -761,38 +761,50 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
           AND SELETOR = 'TECELAGEM'
           AND PARTIDA IS NOT NULL
           AND PARTIDA != ''
+          AND DT_BASE_PRODUCAO BETWEEN ? AND ?
         GROUP BY PARTIDA
       ),
       -- Mapeo de partidas de calidad a producción (busca variantes restando del primer dígito)
-      PartidaMapping AS (
+      -- Optimizado: usa LEFT JOIN directo con variantes pre-calculadas
+      PartidaVariantes AS (
         SELECT 
           CAL.PARTIDA as CalPartida,
-          COALESCE(
-            -- Primero busca coincidencia exacta
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = CAL.PARTIDA),
-            -- Si no, intenta restando 1 al primer dígito (1xxx -> 0xxx)
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
-              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 0 
-                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-                   ELSE NULL END),
-            -- Intenta restando 2 (2xxx -> 0xxx)
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
-              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 1 
-                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-                   ELSE NULL END),
-            -- Intenta restando 3
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = 
-              CASE WHEN CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 2 
-                   THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 3 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
-                   ELSE NULL END),
-            -- Intenta con prefijo 0 directo
-            (SELECT PARTIDA FROM ProduccionTelares WHERE PARTIDA = '0' || SUBSTR(CAL.PARTIDA, 2))
-          ) as ProdPartida
+          CAL.PARTIDA as Var0,
+          CASE WHEN LENGTH(CAL.PARTIDA) > 1 AND CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 0 
+               THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 1 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
+               ELSE NULL END as Var1,
+          CASE WHEN LENGTH(CAL.PARTIDA) > 1 AND CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 1 
+               THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 2 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
+               ELSE NULL END as Var2,
+          CASE WHEN LENGTH(CAL.PARTIDA) > 1 AND CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) > 2 
+               THEN CAST(CAST(SUBSTR(CAL.PARTIDA, 1, 1) AS INTEGER) - 3 AS TEXT) || SUBSTR(CAL.PARTIDA, 2)
+               ELSE NULL END as Var3,
+          CASE WHEN LENGTH(CAL.PARTIDA) > 1 
+               THEN '0' || SUBSTR(CAL.PARTIDA, 2)
+               ELSE NULL END as Var4
         FROM CalidadPorPartida CAL
+      ),
+      PartidaMapping AS (
+        SELECT DISTINCT
+          PV.CalPartida,
+          PT.PARTIDA as ProdPartida
+        FROM PartidaVariantes PV
+        LEFT JOIN ProduccionTelares PT ON PT.PARTIDA IN (PV.Var0, PV.Var1, PV.Var2, PV.Var3, PV.Var4)
+        WHERE PT.PARTIDA IS NOT NULL
+        
+        UNION ALL
+        
+        SELECT CalPartida, NULL as ProdPartida
+        FROM PartidaVariantes PV
+        WHERE NOT EXISTS (
+          SELECT 1 FROM ProduccionTelares PT 
+          WHERE PT.PARTIDA IN (PV.Var0, PV.Var1, PV.Var2, PV.Var3, PV.Var4)
+        )
       )
       SELECT
         HP.HoraInicio,
         CAL.NombreArticulo,
+        CAL.PARTIDA,
         CAL.Partidas,
         CAL.MetrosRevisados,
         CAL.CalidadPct,
@@ -820,8 +832,60 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
       ORDER BY HP.HoraInicio ASC
     `;
 
-    // Parámetros duplicados: CAL y HorasPartida usan los mismos filtros
-    const rows = await dbAll(sql, [dateRange.start, dateRange.end, revisor, dateRange.start, dateRange.end, revisor]);
+    // Parámetros: CAL (2), HorasPartida (2), ProduccionTelares (2)
+    const rows = await dbAll(sql, [
+      dateRange.start, dateRange.end, revisor,  // CAL
+      dateRange.start, dateRange.end, revisor,  // HorasPartida
+      dateRange.start, dateRange.end             // ProduccionTelares
+    ]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/partida-detalle - Detalle de defectos de una partida específica
+app.get('/api/calidad/partida-detalle', async (req, res) => {
+  try {
+    const fecha = req.query.fecha;
+    const partida = req.query.partida;
+    const revisor = req.query.revisor;
+
+    if (!fecha || !partida || !revisor) {
+      return res.status(400).json({ error: 'Se requieren fecha, partida y revisor' });
+    }
+
+    const sql = `
+      SELECT
+        DAT_PROD,
+        ARTIGO,
+        COR,
+        "NM MERC" as NM_MERC,
+        TRAMA,
+        GRP_DEF,
+        COD_DE,
+        DEFEITO,
+        CAST(REPLACE(METRAGEM, ',', '.') AS REAL) as METRAGEM,
+        QUALIDADE,
+        HORA,
+        EMENDAS,
+        PEÇA,
+        ETIQUETA,
+        CAST(REPLACE(LARGURA, ',', '.') AS REAL) as LARGURA,
+        CAST(REPLACE(PONTUACAO, ',', '.') AS REAL) as PONTUACAO
+      FROM tb_CALIDAD
+      WHERE
+        EMP = 'STC'
+        AND DATE(DAT_PROD) = ?
+        AND PARTIDA = ?
+        AND "REVISOR FINAL" = ?
+        AND QUALIDADE NOT LIKE '%RETALHO%'
+      ORDER BY HORA ASC, PEÇA ASC
+    `;
+
+    const rows = await dbAll(sql, [fecha, partida, revisor]);
     res.json(rows);
 
   } catch (error) {
