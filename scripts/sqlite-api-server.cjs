@@ -304,6 +304,127 @@ app.post('/api/import/force-table', async (req, res) => {
   }
 });
 
+// POST /api/import/update-outdated - Actualizar solo tablas desactualizadas
+app.post('/api/import/update-outdated', async (req, res) => {
+  const { tables } = req.body;
+  
+  if (!tables || !Array.isArray(tables) || tables.length === 0) {
+    return res.status(400).json({ error: 'Debe especificar un array de tablas' });
+  }
+
+  console.log(`🔄 Iniciando actualización de ${tables.length} tabla(s): ${tables.join(', ')}`);
+  
+  const tStart = Date.now();
+  const results = [];
+  const errors = [];
+
+  // Mapa de scripts optimizados para cada tabla
+  const fastScripts = {
+    'tb_FICHAS': 'import-fichas-fast.ps1',
+    'tb_RESIDUOS_INDIGO': 'import-residuos-indig-fast.ps1',
+    'tb_RESIDUOS_POR_SECTOR': 'import-residuos-por-sector-fast.ps1',
+    'tb_TESTES': 'import-testes-fast.ps1',
+    'tb_PARADAS': 'import-paradas-fast.ps1',
+    'tb_PRODUCCION': 'import-produccion-fast.ps1',
+    'tb_CALIDAD': 'import-calidad-fast.ps1'
+  };
+
+  // Importar cada tabla secuencialmente (SQLite no beneficia de paralelización)
+  for (const table of tables) {
+    const config = TABLE_CONFIGS.find(c => c.table === table);
+    if (!config) {
+      errors.push({ table, error: 'Tabla no encontrada en configuración' });
+      continue;
+    }
+
+    const scriptFile = fastScripts[table] || 'import-xlsx-to-sqlite.ps1';
+    const scriptPath = path.join(__dirname, scriptFile);
+    const command = (scriptFile === 'import-xlsx-to-sqlite.ps1')
+      ? (() => {
+          const mappingJson = path.join(__dirname, 'mappings', `${config.table}.json`);
+          return `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
+        })()
+      : `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
+
+    console.log(`  ⚡ Importando ${table}...`);
+    
+    const t0 = Date.now();
+    try {
+      const { stdout, stderr } = await new Promise((resolve, reject) => {
+        exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
+          if (error) {
+            reject({ error, stderr });
+          } else {
+            resolve({ stdout, stderr });
+          }
+        });
+      });
+      const elapsed = Date.now() - t0;
+      
+      if (stderr && stderr.trim()) {
+        console.warn(`  ⚠️ Stderr para ${table}: ${stderr.trim()}`);
+      }
+      
+      // Obtener datos actualizados
+      const dbRecord = await dbGet(
+        `SELECT * FROM import_control WHERE tabla_destino = ?`,
+        [table]
+      );
+      
+      results.push({ 
+        table,
+        success: true,
+        rows: dbRecord ? dbRecord.rows_imported : null,
+        elapsedMs: elapsed
+      });
+      
+      console.log(`  ✅ ${table} completado (${(elapsed/1000).toFixed(2)}s, ${dbRecord?.rows_imported || 0} filas)`);
+      
+    } catch (err) {
+      const elapsed = Date.now() - t0;
+      errors.push({ 
+        table,
+        error: err.error?.message || 'Error desconocido',
+        stderr: err.stderr,
+        elapsedMs: elapsed
+      });
+      console.error(`  ❌ Error en ${table}:`, err.error?.message || err);
+    }
+  }
+
+  const tExecDone = Date.now();
+
+  // Checkpoint para asegurar sincronización con frontend
+  console.log('  🔄 Ejecutando PRAGMA wal_checkpoint(FULL)...');
+  await new Promise((resolve) => {
+    db.run('PRAGMA wal_checkpoint(FULL);', () => resolve());
+  });
+  const tCheckpointDone = Date.now();
+
+  const success = errors.length === 0;
+  const timings = {
+    totalMs: tCheckpointDone - tStart,
+    execMs: tExecDone - tStart,
+    checkpointMs: tCheckpointDone - tExecDone
+  };
+
+  console.log(`✅ Actualización finalizada - ${results.length} exitosas, ${errors.length} errores`);
+  console.log(`⏱️  update-outdated timings:`, timings);
+
+  res.setHeader('Connection', 'close');
+  res.json({ 
+    success,
+    results,
+    errors,
+    timings,
+    summary: {
+      total: tables.length,
+      successful: results.length,
+      failed: errors.length
+    }
+  });
+});
+
 // GET /api/status - Estado general de la base de datos
 app.get('/api/status', async (req, res) => {
   try {

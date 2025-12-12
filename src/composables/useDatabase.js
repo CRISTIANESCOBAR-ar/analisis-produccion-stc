@@ -82,6 +82,11 @@ export function useDatabase() {
     return await fetchApi(`/calidad/revisor-detalle?${queryString}`)
   }
 
+  const getPartidaDetalle = async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString()
+    return await fetchApi(`/calidad/partida-detalle?${queryString}`)
+  }
+
   // ===================================================================
   // PARADAS
   // ===================================================================
@@ -143,6 +148,7 @@ export function useDatabase() {
     getRevisionCQ,
     getAvailableDates,
     getRevisorDetalle,
+    getPartidaDetalle,
     getParadas,
     getTopMotivosParada,
     getFichas,

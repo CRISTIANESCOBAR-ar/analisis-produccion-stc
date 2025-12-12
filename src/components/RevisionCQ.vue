@@ -1,6 +1,6 @@
 <template>
   <div class="w-full h-screen flex flex-col p-1" @keydown="handleKeydown" tabindex="0" ref="containerRef">
-    <main class="w-full bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col overflow-y-auto">
+    <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col overflow-y-auto">
       <!-- Filtros en línea sin contenedor adicional -->
       <div class="flex items-center justify-between gap-4 mb-3">
       <div class="flex items-center gap-4">

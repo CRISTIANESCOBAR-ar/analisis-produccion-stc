@@ -239,52 +239,141 @@ async function fetchStatus() {
 }
 
 async function triggerImport() {
+  // Detectar tablas desactualizadas
+  const outdatedTables = statusList.value.filter(item => 
+    item.status === 'OUTDATED' || item.status === 'NOT_IMPORTED' || item.status === 'MISSING_FILE'
+  )
+  
+  if (outdatedTables.length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Sin cambios',
+      text: 'Todas las tablas están actualizadas',
+      confirmButtonColor: '#3085d6'
+    })
+    return
+  }
+
   const result = await Swal.fire({
     title: '¿Iniciar actualización?',
-    text: "Se ejecutarán los scripts de importación para los archivos detectados como modificados.",
+    html: `Se importarán <strong>${outdatedTables.length} tabla(s) desactualizada(s)</strong>:<br><br>${outdatedTables.map(t => `• ${t.table}`).join('<br>')}`,
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: '#3085d6',
     cancelButtonColor: '#d33',
-    confirmButtonText: 'Sí, ejecutar'
+    confirmButtonText: 'Sí, actualizar'
   })
 
   if (result.isConfirmed) {
     importing.value = true
     importOutput.value = null
-    forceAllRunning.value = false
+    forceAllRunning.value = true
+    
+    // Cambiar estados a "Pendiente" solo para tablas desactualizadas
+    outdatedTables.forEach(item => {
+      item.status = 'PENDING'
+    })
+    
+    // Baseline para detectar avances
+    const snapshot = {}
+    outdatedTables.forEach((s) => {
+      snapshot[s.table] = {
+        last: s.last_import_date,
+        rows: s.rows_imported
+      }
+    })
+    baselineImports.value = snapshot
+    completedTables.value = new Set()
+    currentImportTable.value = outdatedTables[0]?.table || null
     startPolling()
     const t0 = performance.now()
-    
+
     try {
-      const res = await fetch(`${API_URL}/import/trigger`, { method: 'POST' })
+      // Timeout de 2 minutos para actualizaciones (menos tiempo que forzar todas)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000)
+
+      const res = await fetch(`${API_URL}/import/update-outdated`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          tables: outdatedTables.map(t => t.table) 
+        }),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
+
       const data = await res.json()
-      
+
+      // Detener polling e importación inmediatamente
       stopPolling()
+      importing.value = false
+      forceAllRunning.value = false
+      completedTables.value = new Set()
       currentImportTable.value = null
-      
+
       if (data.success) {
-        importOutput.value = data.output
-        const elapsedMs = Math.round(performance.now() - t0)
-        const minutes = Math.floor(elapsedMs / 60000)
-        const seconds = Math.floor((elapsedMs % 60000) / 1000)
-        const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
-        toast.fire({
+        const elapsed = data?.timings?.totalMs ?? Math.round(performance.now() - t0)
+        const elapsedUI = Math.round(performance.now() - t0)
+        const elapsedServer = data?.timings?.totalMs || 0
+        const seconds = (elapsed / 1000).toFixed(1)
+        const secondsUI = (elapsedUI / 1000).toFixed(2)
+        const secondsServer = (elapsedServer / 1000).toFixed(2)
+        
+        // Refrescar estado en background
+        await fetchStatus()
+        
+        // Calcular filas importadas (de las tablas actualizadas)
+        const dataRows = outdatedTables.reduce((sum, t) => {
+          const updated = statusList.value.find(s => s.table === t.table)
+          return sum + (updated?.rows_imported || 0)
+        }, 0)
+        
+        // Mostrar resultado en modal
+        Swal.fire({
           icon: 'success',
-          title: 'Importación completada',
-          text: `Tiempo: ${timeStr}`
+          title: '✓ Actualización Completa',
+          html: `
+            <div style="text-align: left; padding: 10px;">
+              <div style="font-size: 1.1em; margin-bottom: 15px;">
+                <strong>${outdatedTables.length} tabla(s)</strong> • <strong>${dataRows.toLocaleString()}</strong> registros importados
+              </div>
+              <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-family: monospace;">
+                <div style="margin-bottom: 8px;">
+                  <span style="color: #059669; font-weight: bold;">⏱️ Servidor:</span> 
+                  <span style="font-size: 1.2em; font-weight: bold;">${secondsServer}s</span>
+                </div>
+                <div>
+                  <span style="color: #3b82f6; font-weight: bold;">🖥️ UI:</span> 
+                  <span style="font-size: 1.2em; font-weight: bold;">${secondsUI}s</span>
+                </div>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#059669',
+          allowOutsideClick: false
         })
-        fetchStatus() // Recargar estado final
       } else {
         throw new Error(data.error || 'Error desconocido')
       }
     } catch (err) {
       stopPolling()
-      currentImportTable.value = null
-      console.error(err)
-      toastError.fire({ title: 'Falló la ejecución del script de importación' })
-    } finally {
       importing.value = false
+      forceAllRunning.value = false
+      completedTables.value = new Set()
+      currentImportTable.value = null
+      if (err.name === 'AbortError') {
+        toast.fire({ icon: 'warning', title: 'Timeout', text: 'La actualización tomó demasiado tiempo' })
+      } else {
+        console.error(err)
+        toastError.fire({ title: err.message || 'Falló la actualización' })
+      }
     }
   }
 }
@@ -576,9 +665,10 @@ function updateProgressPointers() {
       }
     })
     completedTables.value = updatedSet
-    // La tabla actual es la primera no completada en el orden recibido
-    const next = statusList.value.find((s) => !completedTables.value.has(s.table))
-    currentImportTable.value = next ? next.table : null
+    // La tabla actual es la primera no completada en el orden que está en baseline
+    const tablesInBaseline = Object.keys(baselineImports.value)
+    const next = tablesInBaseline.find((table) => !completedTables.value.has(table))
+    currentImportTable.value = next || null
   } else {
     const next = statusList.value.find((s) => s.status !== 'UP_TO_DATE')
     currentImportTable.value = next ? next.table : null

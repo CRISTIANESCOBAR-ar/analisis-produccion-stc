@@ -38,6 +38,17 @@
 - **Borde:** `border border-slate-200` (gris claro, 1px)
 - **Layout:** `flex flex-col`
 
+### Header / Barra de filtros
+```vue
+<div class="bg-white rounded-xl border border-slate-200 px-4 py-3 mb-4 flex items-center justify-between gap-4">
+```
+- **Fondo:** `bg-white`
+- **Bordes redondeados:** `rounded-xl` (12px)
+- **Borde:** `border border-slate-200` (**sin sombra, solo borde simple**)
+- **Padding:** `px-4 py-3` (16px horizontal, 12px vertical)
+- **Margin bottom:** `mb-4` (16px)
+- **Layout:** `flex items-center justify-between gap-4`
+
 ---
 
 ## 🔘 Botones
