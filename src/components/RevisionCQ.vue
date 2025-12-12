@@ -1,6 +1,6 @@
 <template>
-  <div class="w-full min-h-screen flex flex-col p-1" @keydown="handleKeydown" tabindex="0" ref="containerRef">
-    <main class="w-full bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
+  <div class="w-full h-screen flex flex-col p-1" @keydown="handleKeydown" tabindex="0" ref="containerRef">
+    <main class="w-full bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col overflow-y-auto">
       <!-- Filtros en línea sin contenedor adicional -->
       <div class="flex items-center justify-between gap-4 mb-3">
       <div class="flex items-center gap-4">
@@ -74,7 +74,7 @@
                 @click="cambiarFecha(-1)" 
                 @mousedown.prevent
                 tabindex="-1"
-                title="Día anterior (←)"
+                v-tippy="'Día anterior (←)'"
                 :disabled="loading"
               >&lt;</button>
               <button 
@@ -82,7 +82,7 @@
                 @click="cambiarFecha(1)" 
                 @mousedown.prevent
                 tabindex="-1"
-                title="Día siguiente (→)"
+                v-tippy="'Día siguiente (→)'"
                 :disabled="loading"
               >&gt;</button>
             </div>
@@ -112,7 +112,7 @@
       <!-- Tabla Izquierda: Resumen por Revisor -->
       <div class="flex flex-col gap-2">
         <span class="text-sm font-semibold text-slate-700">{{ calidadData.length }} revisores</span>
-        <div class="overflow-auto w-full rounded-xl border border-slate-200">
+        <div class="overflow-auto w-full rounded-xl border border-slate-200 max-h-[500px]">
           <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs tabla-resumen">
             <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
               <tr>
@@ -161,7 +161,7 @@
         <span class="text-sm font-semibold text-slate-700">
           {{ selectedRevisor ? `Detalle - ${selectedRevisor.Revisor}` : 'Seleccione un revisor' }}
         </span>
-        <div v-if="selectedRevisor && detalleRevisor.length > 0" class="overflow-auto w-full rounded-xl border border-slate-200">
+        <div v-if="selectedRevisor && detalleRevisor.length > 0" class="overflow-auto w-full rounded-xl border border-slate-200 max-h-[500px]">
           <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs tabla-detalle">
             <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
               <tr>
@@ -241,7 +241,7 @@
         <span class="text-slate-600">Trama:</span>
         <span class="ml-1 font-bold text-slate-900 text-base">{{ detallePartida[0]?.TRAMA || 'N/A' }}</span>
       </div>
-      <div class="overflow-auto w-full rounded-xl border border-slate-200">
+      <div class="overflow-auto w-full rounded-xl border border-slate-200 max-h-[400px]">
         <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs">
           <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
             <tr>
@@ -265,9 +265,9 @@
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.DEFEITO }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.METRAGEM }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.QUALIDADE }}</td>
-              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.HORA }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatHora(row.HORA) }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.EMENDAS }}</td>
-              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.PEÇA }}</td>
+              <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ formatPieza(row.PEÇA) }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.ETIQUETA }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.LARGURA }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.PONTUACAO }}</td>
@@ -730,6 +730,14 @@ function formatPartida(partida) {
   if (!partida) return '-'
   const str = partida.toString().padStart(7, '0')
   return str.slice(0, 1) + '-' + str.slice(1, 5) + '.' + str.slice(5, 7)
+}
+
+// Formatea pieza de "0542207001" a "0542207 001" (separa últimos 3 dígitos)
+function formatPieza(pieza) {
+  if (!pieza) return '-'
+  const str = pieza.toString()
+  if (str.length < 3) return str
+  return str.slice(0, -3) + ' ' + str.slice(-3)
 }
 </script>
 
@@ -1545,5 +1553,20 @@ function formatPartida(partida) {
   outline: none;
   border-color: #4a90e2;
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Estilos para tooltips de Tippy */
+:deep(.tippy-box) {
+  font-size: 0.625rem;
+  background-color: #1f2937;
+  color: white;
+}
+
+:deep(.tippy-content) {
+  padding: 0.125rem 0.375rem;
+}
+
+:deep(.tippy-arrow) {
+  color: #1f2937;
 }
 </style>

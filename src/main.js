@@ -13,9 +13,9 @@ app.directive('tippy', {
     if (binding.value) {
       tippy(el, {
         content: binding.value,
-        placement: 'right',
+        placement: 'bottom',
         arrow: true,
-        theme: 'light-border'
+        theme: 'dark'
       })
     }
   },
@@ -29,9 +29,9 @@ app.directive('tippy', {
     } else if (binding.value) {
       tippy(el, {
         content: binding.value,
-        placement: 'right',
+        placement: 'bottom',
         arrow: true,
-        theme: 'light-border'
+        theme: 'dark'
       })
     }
   },
