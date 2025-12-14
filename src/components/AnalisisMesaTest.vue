@@ -2,23 +2,21 @@
   <div class="w-full h-screen flex flex-col p-1">
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <!-- Header con filtros -->
-      <div class="flex items-center justify-between mb-3 flex-shrink-0">
+      <div class="bg-white rounded-xl border border-slate-200 px-4 py-3 mb-4 flex items-center justify-between gap-4 flex-shrink-0">
         <h3 class="text-lg font-semibold text-slate-800">Análisis de Mesa de Test</h3>
-        
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-2">
             <label class="text-sm text-slate-600">Fecha Inicial:</label>
             <input 
               v-model="fechaInicial" 
               type="date" 
-              class="px-3 py-1.5 border rounded-md text-sm"
+              class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               @change="cargarListaArticulos"
             />
           </div>
-          
           <button 
             @click="cargarListaArticulos" 
-            class="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+            class="inline-flex items-center gap-1 px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm hover:shadow-md"
             :disabled="loadingLista"
           >
             {{ loadingLista ? 'Cargando...' : 'Actualizar Artículos' }}
@@ -29,10 +27,10 @@
       <!-- Lista de Artículos (vista principal) -->
       <div v-if="!articuloSeleccionado" class="flex-1 min-h-0 flex flex-col">
         <!-- Controles de ordenamiento y filtro -->
-        <div class="mb-2 flex items-center gap-4 text-sm flex-shrink-0">
+        <div class="mb-3 flex items-center gap-4 text-sm flex-shrink-0">
           <div class="flex items-center gap-2">
             <label class="text-slate-600">Ordenar por:</label>
-            <select v-model="ordenarPor" class="px-2 py-1 border rounded text-sm">
+            <select v-model="ordenarPor" class="px-2 py-1 border border-slate-200 rounded-md text-sm">
               <option value="Articulo">Código (ASC)</option>
               <option value="Nombre">Nombre (ASC)</option>
               <option value="Trama">Trama (ASC)</option>
@@ -46,7 +44,7 @@
               v-model="filtroTexto" 
               type="text" 
               placeholder="Buscar artículo..." 
-              class="px-2 py-1 border rounded text-sm w-48"
+              class="px-3 py-1.5 border border-slate-300 rounded-md text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
           
@@ -56,28 +54,28 @@
         </div>
 
         <!-- Tabla de artículos -->
-        <div class="flex-1 min-h-0 overflow-auto border rounded-lg">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-100 sticky top-0 z-10">
+        <div class="overflow-auto _minimal-scroll w-full flex-1 min-h-0 rounded-xl border border-slate-200 pb-0">
+          <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs">
+            <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
               <tr>
-                <th class="px-3 py-2 text-left font-semibold text-slate-700">Artículo</th>
-                <th class="px-3 py-2 text-left font-semibold text-slate-700">Color</th>
-                <th class="px-3 py-2 text-left font-semibold text-slate-700">Id</th>
-                <th class="px-3 py-2 text-left font-semibold text-slate-700">Nombre</th>
-                <th class="px-3 py-2 text-left font-semibold text-slate-700">Trama</th>
-                <th class="px-3 py-2 text-right font-semibold text-slate-700">Metros TEST</th>
-                <th class="px-3 py-2 text-right font-semibold text-slate-700">Metros REV</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Artículo</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Color</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Id</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Nombre</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Trama</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metros TEST</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metros REV</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loadingLista">
-                <td colspan="7" class="px-3 py-8 text-center text-slate-500">
+                <td colspan="7" class="px-2 py-[0.3rem] text-center text-slate-500">
                   <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-300 border-t-blue-600"></div>
                   <p class="mt-2">Cargando artículos...</p>
                 </td>
               </tr>
               <tr v-else-if="articulosFiltrados.length === 0">
-                <td colspan="7" class="px-3 py-8 text-center text-slate-500">
+                <td colspan="7" class="px-2 py-[0.3rem] text-center text-slate-500">
                   No hay artículos disponibles para la fecha seleccionada
                 </td>
               </tr>
@@ -86,15 +84,15 @@
                 v-for="item in articulosFiltrados" 
                 :key="item.ARTIGO_COMPLETO"
                 @click="seleccionarArticulo(item)"
-                class="hover:bg-blue-50 cursor-pointer border-b border-slate-200 transition-colors"
+                class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150 cursor-pointer"
               >
-                <td class="px-3 py-2 font-mono">{{ item.Articulo }}</td>
-                <td class="px-3 py-2">{{ item.Color || '-' }}</td>
-                <td class="px-3 py-2 text-center font-semibold">{{ item.Id || '-' }}</td>
-                <td class="px-3 py-2">{{ item.Nombre || '-' }}</td>
-                <td class="px-3 py-2">{{ item.Trama || '-' }}</td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumber(item.Metros_TEST) }}</td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumber(item.Metros_REV) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700 font-mono">{{ item.Articulo }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ item.Color || '-' }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700 font-semibold">{{ item.Id || '-' }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ item.Nombre || '-' }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ item.Trama || '-' }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700 font-mono">{{ formatNumber(item.Metros_TEST) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700 font-mono">{{ formatNumber(item.Metros_REV) }}</td>
               </tr>
             </tbody>
           </table>
