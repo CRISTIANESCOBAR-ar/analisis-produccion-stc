@@ -2,8 +2,35 @@
   <div class="w-full h-screen flex flex-col p-1">
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <!-- Header con filtros -->
-      <div class="bg-white rounded-xl border border-slate-200 px-4 py-3 mb-4 flex items-center justify-between gap-4 flex-shrink-0">
+      <div class="flex items-center justify-between gap-4 flex-shrink-0 mb-2">
         <h3 class="text-lg font-semibold text-slate-800">Análisis de Mesa de Test</h3>
+        
+        <div class="relative flex-1 max-w-md mx-4">
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input 
+              v-model="filtroTexto" 
+              type="text" 
+              placeholder="Buscar por artículo, nombre, color o trama..." 
+              class="w-full pl-9 pr-8 py-1.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            />
+            <button 
+              v-if="filtroTexto" 
+              @click="filtroTexto = ''" 
+              class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600"
+              v-tippy="'Limpiar búsqueda'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-2">
             <label class="text-sm text-slate-600">Fecha Inicial:</label>
@@ -12,6 +39,7 @@
               type="date" 
               class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               @change="cargarListaArticulos"
+              v-tippy="'Seleccionar fecha inicial'"
             />
           </div>
           <button 
@@ -26,45 +54,82 @@
 
       <!-- Lista de Artículos (vista principal) -->
       <div v-if="!articuloSeleccionado" class="flex-1 min-h-0 flex flex-col">
-        <!-- Controles de ordenamiento y filtro -->
-        <div class="mb-3 flex items-center gap-4 text-sm flex-shrink-0">
-          <div class="flex items-center gap-2">
-            <label class="text-slate-600">Ordenar por:</label>
-            <select v-model="ordenarPor" class="px-2 py-1 border border-slate-200 rounded-md text-sm">
-              <option value="Articulo">Código (ASC)</option>
-              <option value="Nombre">Nombre (ASC)</option>
-              <option value="Trama">Trama (ASC)</option>
-              <option value="Metros_REV">Metros REV (DESC)</option>
-            </select>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <label class="text-slate-600">Filtrar:</label>
-            <input 
-              v-model="filtroTexto" 
-              type="text" 
-              placeholder="Buscar artículo..." 
-              class="px-3 py-1.5 border border-slate-300 rounded-md text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-            />
-          </div>
-          
-          <div class="ml-auto text-slate-600">
-            Total Artículos: <span class="font-semibold">{{ articulosFiltrados.length }}</span>
-          </div>
-        </div>
+
 
         <!-- Tabla de artículos -->
         <div class="overflow-auto _minimal-scroll w-full flex-1 min-h-0 rounded-xl border border-slate-200 pb-0">
           <table class="min-w-full w-full table-auto divide-y divide-slate-200 text-xs">
             <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-20">
               <tr>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Artículo</th>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Color</th>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Id</th>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Nombre</th>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Trama</th>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metros TEST</th>
-                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">Metros REV</th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Articulo')" v-tippy="'Ordenar por Artículo'">
+                    <span>Artículo</span>
+                      <svg v-if="sortDirFor('Articulo') === 'asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true">
+                        <g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M9 6 L15 12 L9 18"/>
+                        </g>
+                      </svg>
+                      <svg v-else-if="sortDirFor('Articulo') === 'desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true">
+                        <g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M15 6 L9 12 L15 18"/>
+                        </g>
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true">
+                        <g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M9 6 L3 12 L9 18"/>
+                          <path d="M15 6 L21 12 L15 18"/>
+                        </g>
+                      </svg>
+                  </button>
+                </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Color')" v-tippy="'Ordenar por Color'">
+                    <span>Color</span>
+                      <svg v-if="sortDirFor('Color') === 'asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                      <svg v-else-if="sortDirFor('Color') === 'desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Id')" v-tippy="'Ordenar por ID'">
+                    <span>ID</span>
+                    <svg v-if="sortDirFor('Id')==='asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                    <svg v-else-if="sortDirFor('Id')==='desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Nombre')" v-tippy="'Ordenar por Nombre'">
+                    <span>Nombre</span>
+                    <svg v-if="sortDirFor('Nombre')==='asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                    <svg v-else-if="sortDirFor('Nombre')==='desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Trama')" v-tippy="'Ordenar por Trama'">
+                    <span>Trama</span>
+                    <svg v-if="sortDirFor('Trama')==='asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                    <svg v-else-if="sortDirFor('Trama')==='desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Metros_TEST')" v-tippy="'Ordenar por Metros TEST'">
+                    <span>Metros TEST</span>
+                      <svg v-if="sortDirFor('Metros_TEST') === 'asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                      <svg v-else-if="sortDirFor('Metros_TEST') === 'desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Metros_REV')" v-tippy="'Ordenar por Metros REV'">
+                    <span>Metros REV</span>
+                    <svg v-if="sortDirFor('Metros_REV')==='asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                    <svg v-else-if="sortDirFor('Metros_REV')==='desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +252,8 @@ const API_BASE = 'http://localhost:3002'
 // Estado reactivo - Lista de artículos
 const listaArticulos = ref([])
 const loadingLista = ref(false)
-const ordenarPor = ref('Articulo')
+// Ordenación multi-columna: lista de criterios [{ key, dir }]
+const sortState = ref([]) // dir: 'asc' | 'desc'
 const filtroTexto = ref('')
 const articuloSeleccionado = ref(null)
 
@@ -222,22 +288,58 @@ const articulosFiltrados = computed(() => {
     lista = lista.filter(item => 
       (item.Articulo || '').toLowerCase().includes(buscar) ||
       (item.Nombre || '').toLowerCase().includes(buscar) ||
+      (item.Color || '').toLowerCase().includes(buscar) ||
       (item.Trama || '').toLowerCase().includes(buscar)
     )
   }
   
-  // Ordenar
-  lista.sort((a, b) => {
-    if (ordenarPor.value === 'Metros_REV') {
-      return (b.Metros_REV || 0) - (a.Metros_REV || 0) // DESC
-    }
-    const valA = (a[ordenarPor.value] || '').toString()
-    const valB = (b[ordenarPor.value] || '').toString()
-    return valA.localeCompare(valB) // ASC
-  })
+  // Ordenar por múltiples columnas según sortState
+  if (sortState.value.length > 0) {
+    lista.sort((a, b) => {
+      for (const { key, dir } of sortState.value) {
+        const aVal = a[key]
+        const bVal = b[key]
+        let cmp = 0
+        if (key === 'Metros_TEST' || key === 'Metros_REV' || key === 'Id') {
+          const aNum = Number(aVal || 0)
+          const bNum = Number(bVal || 0)
+          cmp = aNum - bNum
+        } else {
+          const aStr = (aVal ?? '').toString()
+          const bStr = (bVal ?? '').toString()
+          cmp = aStr.localeCompare(bStr)
+        }
+        if (cmp !== 0) {
+          return dir === 'asc' ? cmp : -cmp
+        }
+      }
+      return 0
+    })
+  }
   
   return lista
 })
+// Manejo de clic en encabezado para ordenar (ASC -> DESC -> null)
+const toggleSort = (key) => {
+  const idx = sortState.value.findIndex(s => s.key === key)
+  if (idx === -1) {
+    // agregar como asc al final
+    sortState.value.push({ key, dir: 'asc' })
+    return
+  }
+  const current = sortState.value[idx]
+  if (current.dir === 'asc') {
+    sortState.value[idx] = { key, dir: 'desc' }
+  } else {
+    // quitar (estado none)
+    sortState.value.splice(idx, 1)
+  }
+}
+
+const sortDirFor = (key) => {
+  const s = sortState.value.find(x => x.key === key)
+  return s ? s.dir : null
+}
 
 // Computed: texto del período
 const periodoTexto = computed(() => {
