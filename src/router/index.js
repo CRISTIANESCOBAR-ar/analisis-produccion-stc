@@ -6,6 +6,7 @@ import ParadasTable from '../components/ParadasTable.vue'
 import ImportControl from '../components/ImportControl.vue'
 import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
+import AnalisisMesaTest from '../components/AnalisisMesaTest.vue'
 
 const routes = [
   {
@@ -37,6 +38,12 @@ const routes = [
     name: 'AnalisisHistoricoRevisores',
     component: AnalisisHistoricoRevisores,
     meta: { title: 'Análisis Histórico Revisores - Análisis Producción STC' }
+  },
+  {
+    path: '/analisis-mesa-test',
+    name: 'AnalisisMesaTest',
+    component: AnalisisMesaTest,
+    meta: { title: 'Análisis Mesa de Test - Análisis Producción STC' }
   },
   {
     path: '/paradas',

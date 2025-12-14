@@ -170,6 +170,7 @@ const currentImportTable = ref(null)
 const forceAllRunning = ref(false)
 const baselineImports = ref({})
 const completedTables = ref(new Set())
+const importQueue = ref(new Set()) // Tablas en la cola de importación
 let pollIntervalId = null
 
 const API_URL = 'http://localhost:3002/api'
@@ -206,17 +207,20 @@ async function fetchStatus() {
     if (!resStatus.ok) throw new Error('Error al obtener estado de importación')
     const freshData = await resStatus.json()
     
-    // Si está corriendo forceAll, preservar estados PENDING para tablas no completadas
+    // Si está corriendo forceAll o triggerImport, preservar estados PENDING solo para tablas en la cola
     if (forceAllRunning.value) {
       const completed = completedTables.value
       const current = currentImportTable.value
+      const tablasEnCola = importQueue.value // Tablas que se están importando
       
       statusList.value = freshData.map(item => {
         if (item.table === current) {
           item.status = 'IMPORTING'
-        } else if (!completed.has(item.table)) {
+        } else if (!completed.has(item.table) && tablasEnCola.has(item.table)) {
+          // Solo marcar PENDING si está en la cola de importación
           item.status = 'PENDING'
         }
+        // Si no está en la cola ni completada, mantener su estado real (UP_TO_DATE, etc.)
         return item
       })
     } else {
@@ -269,6 +273,9 @@ async function triggerImport() {
     importOutput.value = null
     forceAllRunning.value = true
     
+    // Inicializar la cola con las tablas que se van a importar
+    importQueue.value = new Set(outdatedTables.map(t => t.table))
+    
     // Cambiar estados a "Pendiente" solo para tablas desactualizadas
     outdatedTables.forEach(item => {
       item.status = 'PENDING'
@@ -316,6 +323,7 @@ async function triggerImport() {
       forceAllRunning.value = false
       completedTables.value = new Set()
       currentImportTable.value = null
+      importQueue.value = new Set() // Limpiar cola
 
       if (data.success) {
         const elapsed = data?.timings?.totalMs ?? Math.round(performance.now() - t0)
@@ -368,6 +376,7 @@ async function triggerImport() {
       forceAllRunning.value = false
       completedTables.value = new Set()
       currentImportTable.value = null
+      importQueue.value = new Set() // Limpiar cola
       if (err.name === 'AbortError') {
         toast.fire({ icon: 'warning', title: 'Timeout', text: 'La actualización tomó demasiado tiempo' })
       } else {
@@ -433,6 +442,9 @@ async function forceImportAll() {
     importOutput.value = null
     forceAllRunning.value = true
     
+    // Inicializar la cola con TODAS las tablas para forceAll
+    importQueue.value = new Set(statusList.value.map(s => s.table))
+    
     // Cambiar todos los estados a "Pendiente" visualmente
     statusList.value.forEach(item => {
       item.status = 'PENDING'
@@ -476,6 +488,7 @@ async function forceImportAll() {
       forceAllRunning.value = false
       completedTables.value = new Set()
       currentImportTable.value = null
+      importQueue.value = new Set() // Limpiar cola
 
       if (data.success) {
         const elapsed = data?.timings?.totalMs ?? Math.round(performance.now() - t0)
@@ -527,6 +540,7 @@ async function forceImportAll() {
       forceAllRunning.value = false
       completedTables.value = new Set()
       currentImportTable.value = null
+      importQueue.value = new Set() // Limpiar cola
       if (err.name === 'AbortError') {
         toast.fire({ icon: 'warning', title: 'Timeout', text: 'La importación completa tomó demasiado tiempo' })
       } else {

@@ -80,6 +80,13 @@
         @click="handleNavClick('/analisis-historico-revisores')"
       />
       <SidebarItem 
+        icon="📉" 
+        label="Mesa de Test" 
+        :active="isActive('/analisis-mesa-test')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/analisis-mesa-test')"
+      />
+      <SidebarItem 
         icon="⚠️" 
         label="Paradas" 
         :active="isActive('/paradas')" 

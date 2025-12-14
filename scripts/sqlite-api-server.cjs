@@ -1491,6 +1491,288 @@ app.get('/api/calidad/historico-global', async (req, res) => {
   }
 });
 
+// =====================================================================
+// ENDPOINT - Análisis Mesa de Test (TESTES + CALIDAD + FICHAS)
+// =====================================================================
+// GET /api/analisis-mesa-test?articulo=XXX&fecha_inicial=YYYY-MM-DD&fecha_final=YYYY-MM-DD
+app.get('/api/analisis-mesa-test', async (req, res) => {
+  try {
+    const { articulo, fecha_inicial, fecha_final } = req.query;
+
+    if (!articulo) {
+      return res.status(400).json({ error: 'Parámetro "articulo" requerido' });
+    }
+    if (!fecha_inicial) {
+      return res.status(400).json({ error: 'Parámetro "fecha_inicial" requerido' });
+    }
+
+    // Convertir fechas a formato compatible con SQLite
+    const fechaInicio = `${fecha_inicial} 00:00:00`;
+    const fechaFin = fecha_final ? `${fecha_final} 23:59:59` : '9999-12-31 23:59:59';
+
+    // SQL equivalente al query de Excel VBA, adaptado a SQLite
+    const sql = `
+      -- Subconsulta TESTES
+      -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
+      WITH TESTES AS (
+        SELECT 
+          MAQUINA,
+          ARTIGO AS ART_TEST,
+          CAST(PARTIDA AS INTEGER) AS PARTIDA,
+          ARTIGO AS TESTES,
+          DT_PROD,
+          APROV,
+          OBS,
+          REPROCESSO,
+          CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) AS METRAGEM,
+          LARG_AL,
+          GRAMAT,
+          POTEN,
+          "%_ENC_URD",
+          "%_ENC_TRAMA",
+          "%_SK1",
+          "%_SK2",
+          "%_SK3",
+          "%_SK4",
+          "%_SKE",
+          "%_STT",
+          "%_SKM"
+        FROM tb_TESTES
+        WHERE ARTIGO = ?
+          AND DATE(DT_PROD) >= DATE(?)
+          AND DATE(DT_PROD) <= DATE(?)
+      ),
+      
+      -- Subconsulta CALIDAD (agregada por PARTIDA)
+      -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
+      CALIDAD AS (
+        SELECT 
+          MIN(DATE(DAT_PROD)) AS DAT_PROD,
+          ARTIGO AS ART_CAL,
+          CAST(PARTIDA AS INTEGER) AS PARTIDA,
+          ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS METRAGEM,
+          ROUND(AVG(LARGURA), 1) AS LARGURA,
+          ROUND(AVG("GR/M2"), 1) AS "GR/M2"
+        FROM tb_CALIDAD
+        WHERE ARTIGO = ?
+          AND DATE(DAT_PROD) >= DATE(?)
+          AND DATE(DAT_PROD) <= DATE(?)
+        GROUP BY ARTIGO, PARTIDA
+      ),
+      
+      -- LEFT JOIN TESTES + CALIDAD
+      TESTES_CALIDAD AS (
+        SELECT 
+          T.*,
+          C.DAT_PROD,
+          C.METRAGEM AS CALIDAD_METRAGEM,
+          C.LARGURA AS CALIDAD_LARGURA,
+          C."GR/M2" AS CALIDAD_GRM2
+        FROM TESTES T
+        LEFT JOIN CALIDAD C ON T.PARTIDA = C.PARTIDA
+      ),
+      
+      -- Subconsulta ESPECIFICACION (tb_FICHAS)
+      ESPECIFICACION AS (
+        SELECT 
+          "ARTIGO CODIGO",
+          URDUME,
+          "TRAMA REDUZIDO",
+          BATIDA,
+          "Oz/jd2",
+          "Peso/m2",
+          "LARGURA MIN",
+          LARGURA AS ANCHO,
+          "LARGURA MAX",
+          "SKEW MIN",
+          ("SKEW MIN" + "SKEW MAX") / 2.0 AS "SKEW STD",
+          "SKEW MAX",
+          "URD#MIN",
+          ("URD#MIN" + "URD#MAX") / 2.0 AS "URD#STD",
+          "URD#MAX",
+          "TRAMA MIN",
+          ("TRAMA MIN" + "TRAMA MAX") / 2.0 AS "TRAMA STD",
+          "TRAMA MAX",
+          "VAR STR#MIN TRAMA",
+          ("VAR STR#MIN TRAMA" + "VAR STR#MAX TRAMA") / 2.0 AS "VAR STR#STD TRAMA",
+          "VAR STR#MAX TRAMA",
+          "VAR STR#MIN URD",
+          ("VAR STR#MIN URD" + "VAR STR#MAX URD") / 2.0 AS "VAR STR#STD URD",
+          "VAR STR#MAX URD",
+          "ENC#ACAB URD"
+        FROM tb_FICHAS
+        WHERE "ARTIGO CODIGO" = ?
+      )
+      
+      -- SELECT FINAL con LEFT JOIN a ESPECIFICACION
+      SELECT 
+        CAST(TC.MAQUINA AS INTEGER) AS Maquina,
+        TC.ART_TEST AS Articulo,
+        E."TRAMA REDUZIDO" AS Trama,
+        TC.PARTIDA AS Partida,
+        TC.TESTES AS C,
+        DATE(TC.DT_PROD) AS Fecha,
+        TC.APROV AS Ap,
+        TC.OBS AS Obs,
+        TC.REPROCESSO AS R,
+        ROUND(TC.METRAGEM, 0) AS Metros_TEST,
+        ROUND(TC.CALIDAD_METRAGEM, 0) AS Metros_MESA,
+        
+        ROUND(TC.CALIDAD_LARGURA, 1) AS Ancho_MESA,
+        ROUND(E."LARGURA MIN", 1) AS Ancho_MIN,
+        ROUND(E.ANCHO, 1) AS Ancho_STD,
+        ROUND(E."LARGURA MAX", 1) AS Ancho_MAX,
+        ROUND(TC.LARG_AL, 1) AS Ancho_TEST,
+        
+        ROUND(TC.CALIDAD_GRM2, 1) AS Peso_MESA,
+        E."Peso/m2" * 0.95 AS Peso_MIN,
+        ROUND(E."Peso/m2", 1) AS Peso_STD,
+        E."Peso/m2" * 1.05 AS Peso_MAX,
+        ROUND(TC.GRAMAT, 1) AS Peso_TEST,
+        
+        TC.POTEN AS Potencial,
+        E."ENC#ACAB URD" AS Potencial_STD,
+        
+        TC."%_ENC_URD" AS "ENC_URD_%",
+        E."URD#MIN" AS "ENC_URD_MIN_%",
+        E."URD#STD" AS "ENC_URD_STD_%",
+        E."URD#MAX" AS "ENC_URD_MAX_%",
+        -1.5 AS "%_ENC_URD_MIN_Meta",
+        -1.0 AS "%_ENC_URD_MAX_Meta",
+        
+        TC."%_ENC_TRAMA" AS "ENC_TRA_%",
+        E."TRAMA MIN" AS "ENC_TRA_MIN_%",
+        E."TRAMA STD" AS "ENC_TRA_STD_%",
+        E."TRAMA MAX" AS "ENC_TRA_MAX_%",
+        
+        TC."%_SK1" AS "%_SK1",
+        TC."%_SK2" AS "%_SK2",
+        TC."%_SK3" AS "%_SK3",
+        TC."%_SK4" AS "%_SK4",
+        TC."%_SKE" AS "%_SKE",
+        
+        E."SKEW MIN" AS Skew_MIN,
+        E."SKEW STD" AS Skew_STD,
+        E."SKEW MAX" AS Skew_MAX,
+        
+        CAST(TC."%_STT" AS REAL) AS "%_STT",
+        E."VAR STR#MIN TRAMA" AS "%_STT_MIN",
+        E."VAR STR#STD TRAMA" AS "%_STT_STD",
+        E."VAR STR#MAX TRAMA" AS "%_STT_MAX",
+        
+        TC."%_SKM" AS Pasadas_Terminadas,
+        E."VAR STR#MIN URD" AS Pasadas_MIN,
+        E."VAR STR#STD URD" AS Pasadas_STD,
+        E."VAR STR#MAX URD" AS Pasadas_MAX,
+        
+        ROUND(TC.CALIDAD_GRM2 * 0.0295, 1) AS "Peso_MESA_OzYd²",
+        ROUND(E."Peso/m2" * 0.95 * 0.0295, 1) AS "Peso_MIN_OzYd²",
+        ROUND(E."Peso/m2" * 0.0295, 1) AS "Peso_STD_OzYd²",
+        ROUND(E."Peso/m2" * 1.05 * 0.0295, 1) AS "Peso_MAX_OzYd²"
+        
+      FROM TESTES_CALIDAD TC
+      LEFT JOIN ESPECIFICACION E ON TC.ART_TEST = E."ARTIGO CODIGO"
+      ORDER BY DATE(TC.DT_PROD);
+    `;
+
+    const rows = await dbAll(sql, [articulo, fechaInicio, fechaFin, articulo, fechaInicio, fechaFin, articulo]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/analisis-mesa-test:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT - Lista de Artículos para Análisis Mesa Test
+// =====================================================================
+// GET /api/articulos-mesa-test?fecha_inicial=YYYY-MM-DD
+app.get('/api/articulos-mesa-test', async (req, res) => {
+  try {
+    const { fecha_inicial } = req.query;
+
+    if (!fecha_inicial) {
+      return res.status(400).json({ error: 'Parámetro "fecha_inicial" requerido' });
+    }
+
+    const fechaInicio = `${fecha_inicial} 00:00:00`;
+
+    // SQL optimizado para listar artículos con métricas agregadas
+    const sql = `
+      -- Obtener artículos únicos de ambas tablas con sus métricas
+      WITH ArticulosUnicos AS (
+        -- Artículos de tb_CALIDAD (excluir artículos sin TRAMA)
+        SELECT DISTINCT ARTIGO
+        FROM tb_CALIDAD
+        WHERE DATE(DAT_PROD) >= DATE(?)
+          AND TRAMA IS NOT NULL
+        
+        UNION
+        
+        -- Artículos de tb_TESTES
+        SELECT DISTINCT ARTIGO
+        FROM tb_TESTES
+        WHERE DATE(DT_PROD) >= DATE(?)
+      ),
+      
+      -- Métricas de CALIDAD (directo, excluir artículos sin TRAMA)
+      -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
+      MetricasCalidad AS (
+        SELECT 
+          ARTIGO,
+          ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS METROS_REV
+        FROM tb_CALIDAD
+        WHERE DATE(DAT_PROD) >= DATE(?)
+          AND TRAMA IS NOT NULL
+        GROUP BY ARTIGO
+      ),
+      
+      -- Métricas de TESTES (AVG por PARTIDA primero para evitar duplicados)
+      -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
+      MetricasTestes AS (
+        SELECT 
+          ARTIGO,
+          ROUND(SUM(METRAGEM_AVG), 0) AS METROS_TEST
+        FROM (
+          SELECT 
+            ARTIGO,
+            PARTIDA,
+            AVG(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM_AVG
+          FROM tb_TESTES
+          WHERE DATE(DT_PROD) >= DATE(?)
+          GROUP BY ARTIGO, PARTIDA
+        )
+        GROUP BY ARTIGO
+      )
+      
+      -- SELECT FINAL con JOIN a tb_FICHAS
+      SELECT 
+        AU.ARTIGO AS ARTIGO_COMPLETO,
+        SUBSTR(AU.ARTIGO, 1, 10) AS Articulo,
+        SUBSTR(AU.ARTIGO, 7, 2) AS Id,
+        F.COR AS Color,
+        F."NOME DE MERCADO" AS Nombre,
+        F."TRAMA REDUZIDO" AS Trama,
+        COALESCE(MT.METROS_TEST, 0) AS Metros_TEST,
+        COALESCE(MC.METROS_REV, 0) AS Metros_REV
+      FROM ArticulosUnicos AU
+      LEFT JOIN MetricasTestes MT ON AU.ARTIGO = MT.ARTIGO
+      LEFT JOIN MetricasCalidad MC ON AU.ARTIGO = MC.ARTIGO
+      LEFT JOIN tb_FICHAS F ON AU.ARTIGO = F."ARTIGO CODIGO"
+      WHERE F."TRAMA REDUZIDO" IS NOT NULL
+      ORDER BY AU.ARTIGO;
+    `;
+
+    const rows = await dbAll(sql, [fechaInicio, fechaInicio, fechaInicio, fechaInicio]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/articulos-mesa-test:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Manejo de cierre graceful
 process.on('SIGINT', () => {
   console.log('\n🛑 Cerrando servidor...');
