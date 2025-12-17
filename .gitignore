@@ -28,4 +28,13 @@ database/*.db
 database/*.db-shm
 database/*.db-wal
 database/backups/
+*.db
+*.db-shm
+*.db-wal
+
+# Data files
+*.csv
+*.txt
+*.xlsx
+*.xls
 
