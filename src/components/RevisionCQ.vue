@@ -102,8 +102,8 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <span class="text-2xl">📋</span>
-        <span class="text-sm text-slate-600">Informe detallado de revisión de calidad</span>
+        <img src="/Ícono moderno para Control de Calidad.png" alt="Control de Calidad" class="w-8 h-8 object-contain" />
+        <span class="text-lg font-bold text-slate-700">Informe detallado de revisión de calidad</span>
       </div>
       </div>
 

@@ -2,7 +2,7 @@
   <div class="w-full h-screen flex flex-col p-1">
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <!-- Header con filtros -->
-      <div class="flex items-center justify-between gap-4 flex-shrink-0 mb-2">
+      <div v-if="!articuloSeleccionado" class="flex items-center justify-between gap-4 flex-shrink-0 mb-2">
         <h3 class="text-lg font-semibold text-slate-800">Análisis de Mesa de Test</h3>
         
         <div class="relative flex-1 max-w-md mx-4">
@@ -33,22 +33,26 @@
 
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-2">
-            <label class="text-sm text-slate-600">Fecha Inicial:</label>
             <input 
-              v-model="fechaInicial" 
-              type="date" 
-              class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              @change="cargarListaArticulos"
-              v-tippy="'Seleccionar fecha inicial'"
+              v-model="filtroEnProduccion" 
+              type="checkbox" 
+              id="chkEnProduccion"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
             />
+            <label for="chkEnProduccion" class="text-sm text-slate-600 cursor-pointer select-none">En Producción</label>
           </div>
-          <button 
-            @click="cargarListaArticulos" 
-            class="inline-flex items-center gap-1 px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm hover:shadow-md"
-            :disabled="loadingLista"
-          >
-            {{ loadingLista ? 'Cargando...' : 'Actualizar Artículos' }}
-          </button>
+          <CustomDatepicker 
+            v-model="fechaInicial" 
+            label="Desde:" 
+            :show-buttons="false"
+            @change="cargarListaArticulos" 
+          />
+          <CustomDatepicker 
+            v-model="fechaFinal" 
+            label="Hasta:" 
+            :show-buttons="false"
+            @change="cargarListaArticulos" 
+          />
         </div>
       </div>
 
@@ -130,17 +134,25 @@
                     <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
                   </button>
                 </th>
+                <th class="px-2 py-[0.3rem] text-center font-semibold text-slate-700 border-b border-slate-200">
+                  <button class="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-700" @click="toggleSort('Prod')" v-tippy="'Ordenar por Producción'">
+                    <span>Prod.</span>
+                    <svg v-if="sortDirFor('Prod')==='asc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L15 12 L9 18"/></g></svg>
+                    <svg v-else-if="sortDirFor('Prod')==='desc'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-700 transition-colors" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 L9 12 L15 18"/></g></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 text-slate-400 opacity-60 group-hover:opacity-80 transition-all" aria-hidden="true"><g transform="rotate(90 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L3 12 L9 18"/><path d="M15 6 L21 12 L15 18"/></g></svg>
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loadingLista">
-                <td colspan="7" class="px-2 py-[0.3rem] text-center text-slate-500">
+                <td colspan="8" class="px-2 py-[0.3rem] text-center text-slate-500">
                   <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-300 border-t-blue-600"></div>
                   <p class="mt-2">Cargando artículos...</p>
                 </td>
               </tr>
               <tr v-else-if="articulosFiltrados.length === 0">
-                <td colspan="7" class="px-2 py-[0.3rem] text-center text-slate-500">
+                <td colspan="8" class="px-2 py-[0.3rem] text-center text-slate-500">
                   No hay artículos disponibles para la fecha seleccionada
                 </td>
               </tr>
@@ -158,6 +170,7 @@
                 <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ item.Trama || '-' }}</td>
                 <td class="px-2 py-[0.3rem] text-center text-slate-700 font-mono">{{ formatNumber(item.Metros_TEST) }}</td>
                 <td class="px-2 py-[0.3rem] text-center text-slate-700 font-mono">{{ formatNumber(item.Metros_REV) }}</td>
+                <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ item.Prod || '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -165,74 +178,113 @@
       </div>
 
       <!-- Vista de Gráfico (cuando se selecciona un artículo) -->
-      <div v-else class="flex-1 min-h-0 flex flex-col">
-        <!-- Botón volver + filtros del gráfico -->
-        <div class="mb-3 flex items-center gap-3 flex-shrink-0">
+      <div v-else class="flex-1 min-h-0 flex flex-col relative overflow-hidden group/container">
+        <!-- Trigger Area (siempre visible en el borde superior) -->
+        <div class="absolute top-0 left-0 right-0 h-4 z-40 peer bg-transparent transition-colors flex justify-center cursor-pointer">
+          <div class="w-24 h-1 bg-slate-300 rounded-b-full shadow-sm opacity-50 hover:opacity-100 transition-opacity"></div>
+        </div>
+
+        <!-- Toolbar Flotante -->
+        <div class="absolute top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur shadow-md border-b border-slate-200 px-3 py-2 transition-transform duration-300 transform -translate-y-full peer-hover:translate-y-0 hover:translate-y-0 flex flex-nowrap items-center gap-2">
           <button 
             @click="volverALista" 
-            class="px-3 py-1.5 bg-slate-600 text-white rounded-md text-sm hover:bg-slate-700 flex items-center gap-1"
+            class="p-1.5 bg-slate-600 text-white rounded-md hover:bg-slate-700 flex items-center justify-center transition-colors flex-shrink-0"
+            v-tippy="'Volver a Lista'"
           >
-            ← Volver a Lista
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
           </button>
           
-          <div class="flex-1 flex items-center gap-3">
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-slate-600">Hasta:</label>
-              <input 
-                v-model="fechaFinal" 
-                type="date" 
-                class="px-3 py-1.5 border rounded-md text-sm"
-              />
+          <div class="flex-1 flex flex-nowrap items-center gap-2">
+            <CustomDatepicker 
+              v-model="fechaInicial" 
+              label="Inicio:" 
+              :show-buttons="false"
+            />
+
+            <CustomDatepicker 
+              v-model="fechaFinal" 
+              label="Hasta:" 
+              :show-buttons="false"
+            />
+
+            <div class="flex items-center gap-1.5">
+              <label class="text-xs text-slate-600 font-medium whitespace-nowrap">Métrica:</label>
+              <select v-model="metricaActiva" class="px-2 py-1.5 border border-slate-300 rounded-md text-sm max-w-[180px] truncate">
+                <option v-for="m in metricas" :key="m.value" :value="m.value">{{ m.label }}</option>
+              </select>
             </div>
 
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-slate-600">Métrica:</label>
-              <select v-model="metricaActiva" class="px-3 py-1.5 border rounded-md text-sm">
-                <option v-for="m in metricas" :key="m.value" :value="m.value">{{ m.label }}</option>
+            <div class="flex items-center gap-1.5">
+              <label class="text-xs text-slate-600 font-medium whitespace-nowrap">Aprob:</label>
+              <select v-model="filtroAprobacion" class="px-2 py-1.5 border border-slate-300 rounded-md text-sm max-w-[100px]">
+                <option value="A">Aprobado</option>
+                <option value="R">Reprobado</option>
+                <option value="all">Todos</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <label class="text-xs text-slate-600 font-medium whitespace-nowrap">Repr:</label>
+              <select v-model="filtroReproceso" class="px-2 py-1.5 border border-slate-300 rounded-md text-sm max-w-[120px]">
+                <option value="sin">Sin Reprocesos</option>
+                <option value="con">Con Reprocesos</option>
+                <option value="all">Todos</option>
               </select>
             </div>
             
             <button 
               @click="loadData" 
-              class="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+              class="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center flex-shrink-0 ml-auto"
               :disabled="loading"
+              v-tippy="'Actualizar Gráfico'"
             >
-              {{ loading ? 'Cargando...' : 'Actualizar Gráfico' }}
+              <svg v-if="loading" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
             </button>
           </div>
         </div>
 
-        <!-- Indicador de carga del gráfico -->
-        <div v-if="loading" class="flex-1 flex items-center justify-center">
-          <div class="text-center">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-300 border-t-blue-600"></div>
-            <p class="mt-3 text-sm text-slate-600">Cargando datos del gráfico...</p>
-          </div>
-        </div>
-
-        <!-- Error -->
-        <div v-else-if="error" class="flex-1 flex items-center justify-center">
-          <div class="text-center p-6 bg-red-50 border border-red-200 rounded-md max-w-md">
-            <div class="text-red-700 font-semibold mb-2">Error al cargar datos</div>
-            <div class="text-red-600 text-sm">{{ error }}</div>
-            <button @click="loadData" class="mt-4 px-4 py-2 bg-red-600 text-white rounded text-sm">
-              Reintentar
-            </button>
-          </div>
-        </div>
-
-        <!-- Gráfico -->
-        <div v-else-if="datos.length > 0" class="flex-1 min-h-0 flex flex-col">
-          <!-- Stats resumen -->
-          <div class="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center gap-6 text-sm flex-shrink-0">
-            <div class="font-semibold text-slate-700">{{ articuloSeleccionado.Articulo }} - {{ articuloSeleccionado.Nombre || 'Sin nombre' }}</div>
-            <div class="text-slate-600"><span class="font-semibold">Total ensayos:</span> {{ datos.length }}</div>
-            <div class="text-slate-600"><span class="font-semibold">Período:</span> {{ periodoTexto }}</div>
+        <!-- Contenido Principal -->
+        <div class="flex-1 min-h-0 flex flex-col pt-2">
+          <!-- Indicador de carga del gráfico -->
+          <div v-if="loading" class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+              <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-300 border-t-blue-600"></div>
+              <p class="mt-3 text-sm text-slate-600">Cargando datos del gráfico...</p>
+            </div>
           </div>
 
-          <!-- Canvas para Chart.js -->
-          <div class="flex-1 min-h-0 relative" style="min-height: 400px;">
-            <canvas ref="chartCanvas" style="max-height: 100%;"></canvas>
+          <!-- Error -->
+          <div v-else-if="error" class="flex-1 flex items-center justify-center">
+            <div class="text-center p-6 bg-red-50 border border-red-200 rounded-md max-w-md">
+              <div class="text-red-700 font-semibold mb-2">Error al cargar datos</div>
+              <div class="text-red-600 text-sm">{{ error }}</div>
+              <button @click="loadData" class="mt-4 px-4 py-2 bg-red-600 text-white rounded text-sm">
+                Reintentar
+              </button>
+            </div>
+          </div>
+
+          <!-- Gráfico -->
+          <div v-else-if="datos.length > 0" class="flex-1 min-h-0 flex flex-col">
+            <!-- Stats resumen -->
+            <div class="mb-2 p-2 bg-slate-50 border border-slate-200 rounded-md flex items-center gap-6 text-sm flex-shrink-0">
+              <div class="font-semibold text-slate-700">{{ articuloSeleccionado.Articulo }} - {{ articuloSeleccionado.Nombre || 'Sin nombre' }}</div>
+              <div class="text-slate-600"><span class="font-semibold">Total ensayos:</span> {{ datosGrafico.length }}</div>
+              <div class="text-slate-600"><span class="font-semibold">Período:</span> {{ periodoTexto }}</div>
+            </div>
+
+            <!-- Canvas para Chart.js -->
+            <div class="flex-1 min-h-0 relative" style="min-height: 400px;">
+              <canvas ref="chartCanvas" style="max-height: 100%;"></canvas>
+            </div>
           </div>
         </div>
       </div>
@@ -241,7 +293,9 @@
 </template>
 
 <script setup>
+// Force refresh
 import { ref, onMounted, onBeforeUnmount, watch, nextTick, computed } from 'vue'
+import CustomDatepicker from './CustomDatepicker.vue'
 import { Chart, registerables } from 'chart.js'
 
 // Registrar todos los componentes de Chart.js
@@ -253,14 +307,17 @@ const API_BASE = 'http://localhost:3002'
 const listaArticulos = ref([])
 const loadingLista = ref(false)
 // Ordenación multi-columna: lista de criterios [{ key, dir }]
-const sortState = ref([]) // dir: 'asc' | 'desc'
+const sortState = ref([{ key: 'Nombre', dir: 'asc' }]) // dir: 'asc' | 'desc'
 const filtroTexto = ref('')
+const filtroEnProduccion = ref(true)
 const articuloSeleccionado = ref(null)
 
 // Estado reactivo - Gráfico
 const fechaInicial = ref('2024-01-01') // Fecha inicial por defecto
 const fechaFinal = ref(new Date().toISOString().split('T')[0]) // Hoy
 const metricaActiva = ref('Ancho_MESA')
+const filtroAprobacion = ref('A') // 'A', 'R', 'all'
+const filtroReproceso = ref('sin') // 'sin', 'con', 'all'
 const datos = ref([])
 const loading = ref(false)
 const error = ref(null)
@@ -271,12 +328,42 @@ let chartInstance = null
 const metricas = [
   { label: 'Ancho - Mesa de Revisión', value: 'Ancho_MESA', min: 'Ancho_MIN', std: 'Ancho_STD', max: 'Ancho_MAX' },
   { label: 'Peso - Mesa de Revisión', value: 'Peso_MESA', min: 'Peso_MIN', std: 'Peso_STD', max: 'Peso_MAX' },
+  { label: 'Ancho [cm] - Mesa de TEST', value: 'Ancho_TEST', min: 'Ancho_MIN', std: 'Ancho_STD', max: 'Ancho_MAX' },
+  { label: 'Peso [gr/m²] - Mesa de TEST', value: 'Peso_TEST', min: 'Peso_MIN', std: 'Peso_STD', max: 'Peso_MAX' },
+  { label: 'Potencial [%] - Mesa de TEST', value: 'Potencial', min: null, std: 'Potencial_STD', max: null },
   { label: 'Encogimiento Urdimbre %', value: 'ENC_URD_%', min: 'ENC_URD_MIN_%', std: 'ENC_URD_STD_%', max: 'ENC_URD_MAX_%' },
   { label: 'Encogimiento Trama %', value: 'ENC_TRA_%', min: 'ENC_TRA_MIN_%', std: 'ENC_TRA_STD_%', max: 'ENC_TRA_MAX_%' },
+  { label: 'SK1 [%] - Mesa de TEST', value: '%_SK1', min: 'Skew_MIN', std: 'Skew_STD', max: 'Skew_MAX' },
+  { label: 'SK2 [%] - Mesa de TEST', value: '%_SK2', min: 'Skew_MIN', std: 'Skew_STD', max: 'Skew_MAX' },
+  { label: 'SK3 [%] - Mesa de TEST', value: '%_SK3', min: 'Skew_MIN', std: 'Skew_STD', max: 'Skew_MAX' },
+  { label: 'SK4 [%] - Mesa de TEST', value: '%_SK4', min: 'Skew_MIN', std: 'Skew_STD', max: 'Skew_MAX' },
   { label: 'Skew %', value: '%_SKE', min: 'Skew_MIN', std: 'Skew_STD', max: 'Skew_MAX' },
   { label: 'Variación Stretch Trama %', value: '%_STT', min: '%_STT_MIN', std: '%_STT_STD', max: '%_STT_MAX' },
-  { label: 'Pasadas Terminadas', value: 'Pasadas_Terminadas', min: 'Pasadas_MIN', std: 'Pasadas_STD', max: 'Pasadas_MAX' }
+  { label: 'Pasadas Terminadas', value: 'Pasadas_Terminadas', min: 'Pasadas_MIN', std: 'Pasadas_STD', max: 'Pasadas_MAX' },
+  { label: 'MESA de REVISIÓN - Peso [Oz/Yd²]', value: 'Peso_MESA_OzYd²', min: 'Peso_MIN_OzYd²', std: 'Peso_STD_OzYd²', max: 'Peso_MAX_OzYd²' }
 ]
+
+// Computed: datos filtrados para el gráfico
+const datosGrafico = computed(() => {
+  return datos.value.filter(d => {
+    // Filtro Aprobación
+    if (filtroAprobacion.value !== 'all') {
+      if (d.Ap !== filtroAprobacion.value) return false
+    }
+
+    // Filtro Reproceso
+    if (filtroReproceso.value === 'sin') {
+      // Sin reproceso: R es vacío o null
+      if (d.R && d.R.trim() === 'R') return false
+    } else if (filtroReproceso.value === 'con') {
+      // Con reproceso: R es 'R'
+      if (!d.R || d.R.trim() !== 'R') return false
+    }
+    // 'all' no filtra nada
+
+    return true
+  })
+})
 
 // Computed: artículos filtrados y ordenados
 const articulosFiltrados = computed(() => {
@@ -291,6 +378,11 @@ const articulosFiltrados = computed(() => {
       (item.Color || '').toLowerCase().includes(buscar) ||
       (item.Trama || '').toLowerCase().includes(buscar)
     )
+  }
+
+  // Filtrar por En Producción
+  if (filtroEnProduccion.value) {
+    lista = lista.filter(item => item.Prod === 'S')
   }
   
   // Ordenar por múltiples columnas según sortState
@@ -343,13 +435,22 @@ const sortDirFor = (key) => {
 
 // Computed: texto del período
 const periodoTexto = computed(() => {
-  if (datos.value.length === 0) return '-'
-  const fechas = datos.value.map(d => d.Fecha).filter(Boolean).sort()
+  if (datosGrafico.value.length === 0) return '-'
+  const fechas = datosGrafico.value.map(d => d.Fecha).filter(Boolean).sort()
   if (fechas.length === 0) return '-'
-  const primera = fechas[0]
-  const ultima = fechas[fechas.length - 1]
+  const primera = formatFechaCorta(fechas[0])
+  const ultima = formatFechaCorta(fechas[fechas.length - 1])
   return primera === ultima ? primera : `${primera} - ${ultima}`
 })
+
+// Helper: formatea 'YYYY-MM-DD' a 'dd/mm/yy' para ejes/tooltip
+const formatFechaCorta = (iso) => {
+  if (!iso || typeof iso !== 'string') return '-'
+  const parts = iso.split('-')
+  if (parts.length !== 3) return iso
+  const [y, m, d] = parts
+  return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y.slice(-2)}`
+}
 
 // Función para formatear números con separador de miles
 const formatNumber = (num) => {
@@ -367,7 +468,10 @@ const cargarListaArticulos = async () => {
   loadingLista.value = true
 
   try {
-    const url = `${API_BASE}/api/articulos-mesa-test?fecha_inicial=${fechaInicial.value}`
+    let url = `${API_BASE}/api/articulos-mesa-test?fecha_inicial=${fechaInicial.value}`
+    if (fechaFinal.value) {
+      url += `&fecha_final=${fechaFinal.value}`
+    }
     const response = await fetch(url)
     
     if (!response.ok) {
@@ -478,11 +582,16 @@ const loadData = async () => {
 const renderChart = () => {
   console.log('renderChart llamado', { 
     canvasExists: !!chartCanvas.value, 
-    datosLength: datos.value.length 
+    datosLength: datosGrafico.value.length 
   })
   
-  if (!chartCanvas.value || datos.value.length === 0) {
+  if (!chartCanvas.value || datosGrafico.value.length === 0) {
     console.warn('No se puede renderizar: canvas o datos no disponibles')
+    // Si hay datos pero el filtro los ocultó todos, podríamos mostrar un mensaje o limpiar el gráfico
+    if (chartInstance) {
+      chartInstance.destroy()
+      chartInstance = null
+    }
     return
   }
 
@@ -499,12 +608,12 @@ const renderChart = () => {
     return
   }
 
-  // Preparar datos
-  const labels = datos.value.map(d => d.Fecha || '-')
-  const valoresReales = datos.value.map(d => d[metricaActiva.value])
-  const valoresMin = datos.value.map(d => d[metricaConfig.min])
-  const valoresStd = datos.value.map(d => d[metricaConfig.std])
-  const valoresMax = datos.value.map(d => d[metricaConfig.max])
+  // Preparar datos usando datosGrafico (filtrados)
+  const labels = datosGrafico.value.map(d => d.Fecha || '-')
+  const valoresReales = datosGrafico.value.map(d => d[metricaActiva.value])
+  const valoresMin = datosGrafico.value.map(d => d[metricaConfig.min])
+  const valoresStd = datosGrafico.value.map(d => d[metricaConfig.std])
+  const valoresMax = datosGrafico.value.map(d => d[metricaConfig.max])
   
   console.log('Datos preparados:', { 
     labels: labels.length, 
@@ -592,20 +701,33 @@ const renderChart = () => {
           intersect: false
         },
         plugins: {
+          datalabels: {
+            display: false
+          },
           legend: {
             display: true,
-            position: 'top'
+            position: 'bottom',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'line',
+              padding: 20
+            }
           },
           title: {
-            display: true,
+            display: false,
             text: metricaConfig.label,
             font: { size: 16 }
           },
           tooltip: {
             callbacks: {
+              title: (items) => {
+                if (!items || items.length === 0) return ''
+                const lbl = items[0].label
+                return formatFechaCorta(lbl)
+              },
               afterLabel: (context) => {
                 const index = context.dataIndex
-                const dato = datos.value[index]
+                const dato = datosGrafico.value[index]
                 return [
                   `Partida: ${dato.Partida || '-'}`,
                   `Máquina: ${dato.Maquina || '-'}`
@@ -617,14 +739,18 @@ const renderChart = () => {
         scales: {
           x: {
             title: {
-              display: true,
+              display: false,
               text: 'Fecha'
             },
             ticks: {
               maxRotation: rotacion.max,
               minRotation: rotacion.min,
               autoSkip: true,
-              maxTicksLimit: rotacion.max === 0 ? 20 : undefined
+              maxTicksLimit: rotacion.max === 0 ? 20 : undefined,
+              callback: (value, index) => {
+                const lbl = labels[index]
+                return formatFechaCorta(lbl)
+              }
             }
           },
           y: {
@@ -644,8 +770,8 @@ const renderChart = () => {
   }
 }
 
-// Watcher: re-renderizar cuando cambie la métrica
-watch(metricaActiva, () => {
+// Watcher: re-renderizar cuando cambie la métrica o los filtros
+watch([metricaActiva, filtroAprobacion, filtroReproceso], () => {
   if (datos.value.length > 0 && chartCanvas.value) {
     renderChart()
   }
