@@ -10,15 +10,7 @@ echo Iniciando proceso de actualizacion...
 echo Por favor espere, esto puede tomar unos minutos.
 echo.
 
-rem Medir tiempo total desde el .BAT
-powershell.exe -ExecutionPolicy Bypass -NoLogo -Command "^
-    $start = Get-Date; ^
-    & 'c:\analisis-produccion-stc\scripts\export-all-to-access.ps1'; ^
-    $code = $LASTEXITCODE; ^
-    $elapsed = (Get-Date) - $start; ^
-    Write-Host ('`nTiempo total (BAT): {0:N2} minutos ({1:N2} segundos)' -f $elapsed.TotalMinutes, $elapsed.TotalSeconds) -ForegroundColor Yellow; ^
-    exit $code ^
-"
+powershell.exe -ExecutionPolicy Bypass -File "c:\analisis-produccion-stc\scripts\export-all-to-access.ps1"
 
 if %ERRORLEVEL% EQU 0 (
     color 2F
