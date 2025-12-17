@@ -24,7 +24,8 @@ const TABLE_CONFIGS = [
   { table: 'tb_TESTES', xlsxPath: 'C:\\STC\\rptPrdTestesFisicos.xlsx', sheet: 'report2' },
   { table: 'tb_PARADAS', xlsxPath: 'C:\\STC\\rptParadaMaquinaPRD.xlsx', sheet: 'rptpm' },
   { table: 'tb_PRODUCCION', xlsxPath: 'C:\\STC\\rptProducaoMaquina.xlsx', sheet: 'rptProdMaq' },
-  { table: 'tb_CALIDAD', xlsxPath: 'C:\\STC\\rptAcompDiarioPBI.xlsx', sheet: 'report5' }
+  { table: 'tb_CALIDAD', xlsxPath: 'C:\\STC\\rptAcompDiarioPBI.csv', sheet: 'report5' },
+  { table: 'tb_PROCESO', xlsxPath: 'C:\\STC\\rpsPosicaoEstoquePRD.csv', sheet: 'rptStock' }
 ];
 
 // Middleware
@@ -244,7 +245,8 @@ app.post('/api/import/force-table', async (req, res) => {
     'tb_TESTES': 'import-testes-fast.ps1',
     'tb_PARADAS': 'import-paradas-fast.ps1',
     'tb_PRODUCCION': 'import-produccion-fast.ps1',
-    'tb_CALIDAD': 'import-calidad-fast.ps1'
+    'tb_CALIDAD': 'import-calidad-fast.ps1',
+    'tb_PROCESO': 'import-proceso-fast.ps1'
   };
 
   const scriptFile = fastScripts[table] || 'import-xlsx-to-sqlite.ps1';
@@ -326,7 +328,8 @@ app.post('/api/import/update-outdated', async (req, res) => {
     'tb_TESTES': 'import-testes-fast.ps1',
     'tb_PARADAS': 'import-paradas-fast.ps1',
     'tb_PRODUCCION': 'import-produccion-fast.ps1',
-    'tb_CALIDAD': 'import-calidad-fast.ps1'
+    'tb_CALIDAD': 'import-calidad-fast.ps1',
+    'tb_PROCESO': 'import-proceso-fast.ps1'
   };
 
   // Importar cada tabla secuencialmente (SQLite no beneficia de paralelización)
@@ -1687,25 +1690,30 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
 // =====================================================================
 // ENDPOINT - Lista de Artículos para Análisis Mesa Test
 // =====================================================================
-// GET /api/articulos-mesa-test?fecha_inicial=YYYY-MM-DD
+// GET /api/articulos-mesa-test?fecha_inicial=YYYY-MM-DD&fecha_final=YYYY-MM-DD
 app.get('/api/articulos-mesa-test', async (req, res) => {
   try {
-    const { fecha_inicial } = req.query;
+    const { fecha_inicial, fecha_final } = req.query;
 
     if (!fecha_inicial) {
       return res.status(400).json({ error: 'Parámetro "fecha_inicial" requerido' });
     }
 
-    const fechaInicio = `${fecha_inicial} 00:00:00`;
+    const fechaInicioFull = `${fecha_inicial} 00:00:00`;
+    const fechaFinFull = fecha_final ? `${fecha_final} 23:59:59` : '2099-12-31 23:59:59';
+    
+    const fechaInicioShort = fecha_inicial;
+    const fechaFinShort = fecha_final || '2099-12-31';
 
     // SQL optimizado para listar artículos con métricas agregadas
+    // NOTA: Se eliminó DATE() en WHERE para usar índices (idx_calidad_dat_prod, idx_testes_dt_prod)
     const sql = `
       -- Obtener artículos únicos de ambas tablas con sus métricas
       WITH ArticulosUnicos AS (
         -- Artículos de tb_CALIDAD (excluir artículos sin TRAMA)
         SELECT DISTINCT ARTIGO
         FROM tb_CALIDAD
-        WHERE DATE(DAT_PROD) >= DATE(?)
+        WHERE DAT_PROD >= ? AND DAT_PROD <= ?
           AND TRAMA IS NOT NULL
         
         UNION
@@ -1713,7 +1721,7 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
         -- Artículos de tb_TESTES
         SELECT DISTINCT ARTIGO
         FROM tb_TESTES
-        WHERE DATE(DT_PROD) >= DATE(?)
+        WHERE DT_PROD >= ? AND DT_PROD <= ?
       ),
       
       -- Métricas de CALIDAD (directo, excluir artículos sin TRAMA)
@@ -1723,7 +1731,7 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
           ARTIGO,
           ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS METROS_REV
         FROM tb_CALIDAD
-        WHERE DATE(DAT_PROD) >= DATE(?)
+        WHERE DAT_PROD >= ? AND DAT_PROD <= ?
           AND TRAMA IS NOT NULL
         GROUP BY ARTIGO
       ),
@@ -1740,7 +1748,7 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
             PARTIDA,
             AVG(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM_AVG
           FROM tb_TESTES
-          WHERE DATE(DT_PROD) >= DATE(?)
+          WHERE DT_PROD >= ? AND DT_PROD <= ?
           GROUP BY ARTIGO, PARTIDA
         )
         GROUP BY ARTIGO
@@ -1754,6 +1762,7 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
         F.COR AS Color,
         F."NOME DE MERCADO" AS Nombre,
         F."TRAMA REDUZIDO" AS Trama,
+        F."PRODUÇÃO" AS Prod,
         COALESCE(MT.METROS_TEST, 0) AS Metros_TEST,
         COALESCE(MC.METROS_REV, 0) AS Metros_REV
       FROM ArticulosUnicos AU
@@ -1764,7 +1773,12 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
       ORDER BY AU.ARTIGO;
     `;
 
-    const rows = await dbAll(sql, [fechaInicio, fechaInicio, fechaInicio, fechaInicio]);
+    const rows = await dbAll(sql, [
+      fechaInicioFull, fechaFinFull,   // ArticulosUnicos (CALIDAD)
+      fechaInicioShort, fechaFinShort, // ArticulosUnicos (TESTES)
+      fechaInicioFull, fechaFinFull,   // MetricasCalidad
+      fechaInicioShort, fechaFinShort  // MetricasTestes
+    ]);
     res.json(rows);
 
   } catch (error) {

@@ -5,40 +5,51 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$tmpCsv = [System.IO.Path]::GetTempFileName()
-$csvPath = $tmpCsv -replace '\\','/'
+
+# CSV directo o XLSX
+$isCsv = [System.IO.Path]::GetExtension($XlsxPath).ToLower() -eq '.csv'
+$tmpCsv = $null
+$csvPath = $null
+$isTab = $false
 
 try {
-  # Usar Python con filtrado especial para CALIDAD (elimina encabezados repetidos)
-  python "$PSScriptRoot\excel-to-csv-calidad.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
-  if ($LASTEXITCODE -ne 0) {
-    throw "Error en la conversión de Excel a CSV (Python script failed). Verifica si el archivo está abierto o dañado."
+  if ($isCsv) {
+    $origPath = $XlsxPath
+    $firstLine = (Get-Content -Path $origPath -TotalCount 1)
+    $isTab = $firstLine -match "\t"
+    
+    # Optimization: Use the original CSV directly.
+    # We will clean headers and invalid rows using SQL after import.
+    $csvPath = $origPath
+  } else {
+    $tmpCsv = [System.IO.Path]::GetTempFileName()
+    $csvPath = $tmpCsv -replace '\\','/'
+    python "$PSScriptRoot\excel-to-csv-calidad.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "Error en la conversión de Excel a CSV (Python script failed)." }
   }
 
-  # Importar a tabla temporal (el filtrado ya se hizo en Python)
+  if ($isTab) { $mode = 'tabs' } else { $mode = 'csv' }
+
   $cmds = @(
     "DROP TABLE IF EXISTS temp_calidad;",
-    "CREATE TEMP TABLE temp_calidad AS SELECT * FROM tb_CALIDAD WHERE 1=0;",
-    ".mode csv",
-    ".import $csvPath temp_calidad",
-    "BEGIN;",
-    "-- Formatear columnas decimales en temp (más rápido en memoria)",
-    "UPDATE temp_calidad SET METRAGEM = REPLACE(printf('%.2f', METRAGEM), '.', ',') WHERE TYPEOF(METRAGEM) IN ('real', 'integer');",
-    "UPDATE temp_calidad SET LARGURA = REPLACE(printf('%.2f', LARGURA), '.', ',') WHERE TYPEOF(LARGURA) IN ('real', 'integer');",
-    "UPDATE temp_calidad SET ""GR/M2"" = REPLACE(printf('%.2f', ""GR/M2""), '.', ',') WHERE TYPEOF(""GR/M2"") IN ('real', 'integer');",
-    "UPDATE temp_calidad SET PONTUACAO = REPLACE(printf('%.2f', PONTUACAO), '.', ',') WHERE TYPEOF(PONTUACAO) IN ('real', 'integer');",
-    "DELETE FROM tb_CALIDAD WHERE DATE(DAT_PROD) IN (SELECT DISTINCT DATE(DAT_PROD) FROM temp_calidad);",
+    "CREATE TABLE temp_calidad AS SELECT * FROM tb_CALIDAD WHERE 0;",
+    ".mode $mode",
+    ".import '$csvPath' temp_calidad",
+    "BEGIN IMMEDIATE;",
+    "-- Cleaning: Remove headers, empty dates, and subtotals",
+    "DELETE FROM temp_calidad WHERE DAT_PROD IS NULL OR TRIM(DAT_PROD) = '' OR DAT_PROD = 'DAT_PROD' OR DAT_PROD LIKE '%Total%';",
+    "-- Normalization: Convert dd/mm/yyyy to yyyy-mm-dd HH:mm:ss",
+    "UPDATE temp_calidad SET DAT_PROD = substr(DAT_PROD, 7, 4) || '-' || substr(DAT_PROD, 4, 2) || '-' || substr(DAT_PROD, 1, 2) || ' 00:00:00' WHERE DAT_PROD LIKE '__/__/____';",
+    "-- Incremental Update Logic",
+    "DELETE FROM tb_CALIDAD WHERE DAT_PROD IN (SELECT DISTINCT DAT_PROD FROM temp_calidad);",
     "INSERT INTO tb_CALIDAD SELECT * FROM temp_calidad;",
-    "COMMIT;",
-    "DROP TABLE temp_calidad;"
+    "DROP TABLE temp_calidad;",
+    "COMMIT;"
   )
 
-  $cmds | & sqlite3 $SqlitePath
-  if ($LASTEXITCODE -ne 0) {
-    throw "Error en la importación a SQLite. La transacción ha sido revertida."
-  }
+  $cmds -join "`n" | & sqlite3 $SqlitePath
 
-  Write-Host "Importacion CALIDAD completada (fast csv)." -ForegroundColor Green
+  Write-Host "Importación CALIDAD completada (actualización incremental)." -ForegroundColor Green
 
   try {
     $xlsxLastModified = (Get-Item $XlsxPath).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
@@ -63,5 +74,5 @@ ON CONFLICT(tabla_destino) DO UPDATE SET
   }
 }
 finally {
-  Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue
+  if ($tmpCsv) { Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue }
 }
