@@ -11,16 +11,6 @@
             :show-buttons="true"
             @change="cargarDatos" 
           />
-          
-          <button 
-            @click="cargarDatos" 
-            class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Actualizar
-          </button>
         </div>
       </div>
 
@@ -41,17 +31,24 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
-            <tr v-for="(item, index) in datos" :key="index" class="bg-white hover:bg-slate-50 transition-colors">
+            <tr v-for="(item, index) in datosCompletos" :key="index" class="bg-white hover:bg-slate-50 transition-colors">
               <td class="px-6 py-3 font-medium text-slate-900 whitespace-nowrap">{{ item.DT_BASE_PRODUCAO }}</td>
               <td class="px-6 py-3 text-right font-mono">{{ formatNumber(item.TotalMetros) }}</td>
               <td class="px-6 py-3 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
             </tr>
-            <tr v-if="datos.length === 0 && !cargando">
+            <tr v-if="datosCompletos.length === 0 && !cargando">
               <td colspan="3" class="px-6 py-8 text-center text-slate-500">
                 No se encontraron datos para el período seleccionado.
               </td>
             </tr>
           </tbody>
+          <tfoot v-if="datosCompletos.length > 0" class="bg-slate-100 font-bold text-slate-800 sticky bottom-0 shadow-inner">
+            <tr>
+              <td class="px-6 py-3">TOTAL</td>
+              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(totales.metros) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-blue-800">{{ formatNumber(totales.kg) }}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </main>
@@ -66,21 +63,79 @@ const datos = ref([])
 const cargando = ref(false)
 const API_BASE = 'http://localhost:3002' // Ajustar según configuración
 
-// Inicializar con la fecha actual
-const fechaSeleccionada = ref(new Date().toISOString().split('T')[0])
+// Inicializar con la fecha de ayer
+const getYesterday = () => {
+  const date = new Date()
+  date.setDate(date.getDate() - 1)
+  return date.toISOString().split('T')[0]
+}
 
-// Calcular fecha de inicio (primer día del mes de la fecha seleccionada)
+const fechaSeleccionada = ref(getYesterday())
+
+// Calcular fecha de inicio (primer día del mes)
 const fechaInicio = computed(() => {
   if (!fechaSeleccionada.value) return ''
   const [year, month] = fechaSeleccionada.value.split('-')
   return `${year}-${month}-01`
 })
 
+// Calcular fecha de fin (último día del mes)
+const fechaFinMes = computed(() => {
+  if (!fechaSeleccionada.value) return ''
+  const [year, month] = fechaSeleccionada.value.split('-')
+  // Obtener el último día del mes: día 0 del mes siguiente
+  const lastDay = new Date(year, month, 0).getDate()
+  return `${year}-${month}-${lastDay}`
+})
+
+// Generar lista completa de días del mes
+const datosCompletos = computed(() => {
+  if (!fechaSeleccionada.value) return []
+  
+  const [year, month, day] = fechaSeleccionada.value.split('-')
+  const selectedDay = parseInt(day, 10)
+  const result = []
+  
+  // Crear mapa de datos existentes para búsqueda rápida
+  const datosMap = new Map()
+  datos.value.forEach(item => {
+    datosMap.set(item.DT_BASE_PRODUCAO, item)
+  })
+  
+  // Iterar solo hasta el día seleccionado
+  for (let i = 1; i <= selectedDay; i++) {
+    // Formato DD/MM/YYYY
+    const dayStr = i.toString().padStart(2, '0')
+    const dateStr = `${dayStr}/${month}/${year}`
+    
+    if (datosMap.has(dateStr)) {
+      result.push(datosMap.get(dateStr))
+    } else {
+      result.push({
+        DT_BASE_PRODUCAO: dateStr,
+        TotalMetros: 0,
+        TotalKg: 0
+      })
+    }
+  }
+  
+  return result
+})
+
+const totales = computed(() => {
+  return datosCompletos.value.reduce((acc, item) => {
+    acc.metros += Number(item.TotalMetros) || 0
+    acc.kg += Number(item.TotalKg) || 0
+    return acc
+  }, { metros: 0, kg: 0 })
+})
+
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '-'
+  // Formato entero con separador de miles (#.###0)
   return new Intl.NumberFormat('es-AR', { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
+    minimumFractionDigits: 0, 
+    maximumFractionDigits: 0 
   }).format(num)
 }
 
@@ -89,8 +144,8 @@ const cargarDatos = async () => {
   
   cargando.value = true
   try {
-    // Enviar rango: desde el 1 del mes hasta la fecha seleccionada
-    const url = `${API_BASE}/api/residuos-indigo-tejeduria?fecha_inicio=${fechaInicio.value}&fecha_fin=${fechaSeleccionada.value}`
+    // Solicitar datos para todo el mes
+    const url = `${API_BASE}/api/residuos-indigo-tejeduria?fecha_inicio=${fechaInicio.value}&fecha_fin=${fechaFinMes.value}`
     const response = await fetch(url)
     if (!response.ok) throw new Error('Error al cargar datos')
     datos.value = await response.json()
