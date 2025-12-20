@@ -1758,9 +1758,10 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
     
     if (fecha_inicio && fecha_fin) {
       // Convertir DD/MM/YYYY a YYYY-MM-DD para comparación
+      // Se aplica sobre la fecha unificada D.Fecha
       dateFilter = `
-        AND (substr(P.DT_BASE_PRODUCAO, 7, 4) || '-' || substr(P.DT_BASE_PRODUCAO, 4, 2) || '-' || substr(P.DT_BASE_PRODUCAO, 1, 2)) >= ?
-        AND (substr(P.DT_BASE_PRODUCAO, 7, 4) || '-' || substr(P.DT_BASE_PRODUCAO, 4, 2) || '-' || substr(P.DT_BASE_PRODUCAO, 1, 2)) <= ?
+        WHERE (substr(D.Fecha, 7, 4) || '-' || substr(D.Fecha, 4, 2) || '-' || substr(D.Fecha, 1, 2)) >= ?
+        AND (substr(D.Fecha, 7, 4) || '-' || substr(D.Fecha, 4, 2) || '-' || substr(D.Fecha, 1, 2)) <= ?
       `;
       params.push(fecha_inicio, fecha_fin);
     }
@@ -1769,24 +1770,62 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
       WITH FichasUnique AS (
           SELECT 
               URDUME, 
-              MAX(CAST(REPLACE([CONS#URD/m], ',', '.') AS REAL)) AS Consumo
+              MAX(CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL)) AS Consumo
           FROM tb_FICHAS 
           WHERE [CONS#URD/m] IS NOT NULL AND [CONS#URD/m] != '0,00'
           GROUP BY URDUME
+      ),
+      ProduccionDiaria AS (
+          SELECT 
+              P.DT_BASE_PRODUCAO as Fecha,
+              SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL)) as TotalMetros,
+              (SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL) * F.Consumo) / 1000.0) * 0.98 as TotalKg
+          FROM tb_PRODUCCION P
+          JOIN FichasUnique F ON P.[BASE URDUME] = F.URDUME
+          WHERE P.SELETOR IN ('INDIGO', 'TECELAGEM')
+          GROUP BY P.DT_BASE_PRODUCAO
+      ),
+      TejeduriaProduccion AS (
+          SELECT 
+              P.DT_BASE_PRODUCAO as Fecha,
+              SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL)) as TejeduriaMetros,
+              SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL) * F.Consumo) / 1000.0 as TejeduriaKg
+          FROM tb_PRODUCCION P
+          JOIN FichasUnique F ON TRIM(P.[BASE URDUME]) = F.URDUME
+          WHERE P.SELETOR = 'TECELAGEM'
+          GROUP BY P.DT_BASE_PRODUCAO
+      ),
+      ResiduosDiarios AS (
+          SELECT 
+              DT_MOV as Fecha,
+              SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as ResiduosKg
+          FROM tb_RESIDUOS_INDIGO
+          WHERE DESCRICAO = 'ESTOPA AZUL'
+          GROUP BY DT_MOV
+      ),
+      AllDates AS (
+          SELECT Fecha FROM ProduccionDiaria
+          UNION
+          SELECT Fecha FROM ResiduosDiarios
+          UNION
+          SELECT Fecha FROM TejeduriaProduccion
       )
       SELECT 
-          P.DT_BASE_PRODUCAO,
-          SUM(CAST(REPLACE(P.METRAGEM, ',', '.') AS REAL)) as TotalMetros,
-          (SUM(CAST(REPLACE(P.METRAGEM, ',', '.') AS REAL) * F.Consumo) / 1000.0) * 0.98 as TotalKg
-      FROM tb_PRODUCCION P
-      JOIN FichasUnique F ON P.[BASE URDUME] = F.URDUME
-      WHERE P.SELETOR IN ('INDIGO', 'TECELAGEM')
+          D.Fecha as DT_BASE_PRODUCAO,
+          COALESCE(P.TotalMetros, 0) as TotalMetros,
+          COALESCE(P.TotalKg, 0) as TotalKg,
+          COALESCE(R.ResiduosKg, 0) as ResiduosKg,
+          COALESCE(T.TejeduriaMetros, 0) as TejeduriaMetros,
+          COALESCE(T.TejeduriaKg, 0) as TejeduriaKg
+      FROM AllDates D
+      LEFT JOIN ProduccionDiaria P ON D.Fecha = P.Fecha
+      LEFT JOIN ResiduosDiarios R ON D.Fecha = R.Fecha
+      LEFT JOIN TejeduriaProduccion T ON D.Fecha = T.Fecha
       ${dateFilter}
-      GROUP BY P.DT_BASE_PRODUCAO
       ORDER BY 
-        substr(P.DT_BASE_PRODUCAO, 7, 4) DESC, 
-        substr(P.DT_BASE_PRODUCAO, 4, 2) DESC, 
-        substr(P.DT_BASE_PRODUCAO, 1, 2) DESC;
+        substr(D.Fecha, 7, 4) ASC, 
+        substr(D.Fecha, 4, 2) ASC, 
+        substr(D.Fecha, 1, 2) ASC;
     `;
 
     const rows = await dbAll(sql, params);

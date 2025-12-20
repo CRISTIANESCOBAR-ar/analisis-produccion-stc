@@ -23,11 +23,18 @@
         </div>
 
         <table class="w-full text-sm text-left text-slate-600">
-          <thead class="text-xs text-slate-700 uppercase bg-slate-50 sticky top-0 z-10 shadow-sm">
+          <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
               <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200">Fecha</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Total Metros</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Total Kg</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Producción Metros</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Producción Kg</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Residuos Kg</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Residuos en %</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Meta %</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Desvío en Kg</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Desvío en Metros</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Tejeduría Metros</th>
+              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Tejeduría Kg</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -35,9 +42,16 @@
               <td class="px-6 py-3 font-medium text-slate-900 whitespace-nowrap">{{ item.DT_BASE_PRODUCAO }}</td>
               <td class="px-6 py-3 text-right font-mono">{{ formatNumber(item.TotalMetros) }}</td>
               <td class="px-6 py-3 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
+              <td class="px-6 py-3 text-right font-mono font-semibold text-red-600">{{ formatNumber(item.ResiduosKg) }}</td>
+              <td class="px-6 py-3 text-right font-mono font-semibold text-orange-600">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-slate-600">{{ formatDecimal(metaPercent) }}</td>
+              <td class="px-6 py-3 text-right font-mono font-semibold text-purple-600">{{ formatDesvio(item.ResiduosKg, item.TotalKg) }}</td>
+              <td class="px-6 py-3 text-right font-mono font-semibold text-indigo-600">{{ formatDesvioMetros(item.TotalMetros, item.TotalKg, item.ResiduosKg) }}</td>
+              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(item.TejeduriaMetros) }}</td>
+              <td class="px-6 py-3 text-right font-mono font-semibold text-cyan-700">{{ formatNumber(item.TejeduriaKg) }}</td>
             </tr>
             <tr v-if="datosCompletos.length === 0 && !cargando">
-              <td colspan="3" class="px-6 py-8 text-center text-slate-500">
+              <td colspan="10" class="px-6 py-8 text-center text-slate-500">
                 No se encontraron datos para el período seleccionado.
               </td>
             </tr>
@@ -47,6 +61,13 @@
               <td class="px-6 py-3">TOTAL</td>
               <td class="px-6 py-3 text-right font-mono">{{ formatNumber(totales.metros) }}</td>
               <td class="px-6 py-3 text-right font-mono text-blue-800">{{ formatNumber(totales.kg) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-red-700">{{ formatNumber(totales.residuos) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-orange-700">{{ formatPercent(totales.residuos, totales.kg) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-slate-700">{{ formatDecimal(metaPercent) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-purple-700">{{ totales.desvioKg > 0 ? formatNumber(totales.desvioKg) : '' }}</td>
+              <td class="px-6 py-3 text-right font-mono text-indigo-700">{{ totales.desvioMetros > 0 ? formatNumber(totales.desvioMetros) : '' }}</td>
+              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(totales.tejeduriaMetros) }}</td>
+              <td class="px-6 py-3 text-right font-mono text-cyan-800">{{ formatNumber(totales.tejeduriaKg) }}</td>
             </tr>
           </tfoot>
         </table>
@@ -63,11 +84,17 @@ const datos = ref([])
 const cargando = ref(false)
 const API_BASE = 'http://localhost:3002' // Ajustar según configuración
 
+// Meta estándar (a futuro se cargará desde BD)
+const metaPercent = ref(1.8)
+
 // Inicializar con la fecha de ayer
 const getYesterday = () => {
   const date = new Date()
   date.setDate(date.getDate() - 1)
-  return date.toISOString().split('T')[0]
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 const fechaSeleccionada = ref(getYesterday())
@@ -94,6 +121,8 @@ const datosCompletos = computed(() => {
   
   const [year, month, day] = fechaSeleccionada.value.split('-')
   const selectedDay = parseInt(day, 10)
+  // Calcular días en el mes
+  const daysInMonth = new Date(year, month, 0).getDate()
   const result = []
   
   // Crear mapa de datos existentes para búsqueda rápida
@@ -102,19 +131,35 @@ const datosCompletos = computed(() => {
     datosMap.set(item.DT_BASE_PRODUCAO, item)
   })
   
-  // Iterar solo hasta el día seleccionado
-  for (let i = 1; i <= selectedDay; i++) {
+  // Iterar por todos los días del mes
+  for (let i = 1; i <= daysInMonth; i++) {
     // Formato DD/MM/YYYY
     const dayStr = i.toString().padStart(2, '0')
     const dateStr = `${dayStr}/${month}/${year}`
     
-    if (datosMap.has(dateStr)) {
-      result.push(datosMap.get(dateStr))
+    // Si el día es menor o igual al seleccionado, buscamos datos reales
+    if (i <= selectedDay) {
+      if (datosMap.has(dateStr)) {
+        result.push(datosMap.get(dateStr))
+      } else {
+        result.push({
+          DT_BASE_PRODUCAO: dateStr,
+          TotalMetros: 0,
+          TotalKg: 0,
+          ResiduosKg: 0,
+          TejeduriaMetros: 0,
+          TejeduriaKg: 0
+        })
+      }
     } else {
+      // Para días futuros en el mes, mostramos ceros
       result.push({
         DT_BASE_PRODUCAO: dateStr,
         TotalMetros: 0,
-        TotalKg: 0
+        TotalKg: 0,
+        ResiduosKg: 0,
+        TejeduriaMetros: 0,
+        TejeduriaKg: 0
       })
     }
   }
@@ -126,17 +171,74 @@ const totales = computed(() => {
   return datosCompletos.value.reduce((acc, item) => {
     acc.metros += Number(item.TotalMetros) || 0
     acc.kg += Number(item.TotalKg) || 0
+    acc.residuos += Number(item.ResiduosKg) || 0
+    acc.tejeduriaMetros += Number(item.TejeduriaMetros) || 0
+    acc.tejeduriaKg += Number(item.TejeduriaKg) || 0
+    
+    // Calcular desvío en Kg para este día
+    if (item.TotalKg > 0) {
+      const residuosPercent = (item.ResiduosKg / item.TotalKg) * 100
+      const desvioKg = ((residuosPercent - metaPercent.value) * item.TotalKg) / 100
+      if (desvioKg > 0) {
+        acc.desvioKg += desvioKg
+        // Calcular desvío en metros para este día
+        const desvioMetros = (item.TotalMetros / item.TotalKg) * desvioKg
+        acc.desvioMetros += desvioMetros
+      }
+    }
+    
     return acc
-  }, { metros: 0, kg: 0 })
+  }, { metros: 0, kg: 0, residuos: 0, desvioKg: 0, desvioMetros: 0, tejeduriaMetros: 0, tejeduriaKg: 0 })
 })
 
 const formatNumber = (num) => {
-  if (num === null || num === undefined) return '-'
+  if (num === null || num === undefined || num === '') return ''
   // Formato entero con separador de miles (#.###0)
   return new Intl.NumberFormat('es-AR', { 
     minimumFractionDigits: 0, 
     maximumFractionDigits: 0 
   }).format(num)
+}
+
+const formatPercent = (residuos, produccion) => {
+  if (!produccion || produccion === 0) return '0,0'
+  const percent = (residuos / produccion) * 100
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  }).format(percent)
+}
+
+const formatDecimal = (num) => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  }).format(num)
+}
+
+const formatDesvio = (residuos, produccion) => {
+  if (!produccion || produccion === 0) return ''
+  const residuosPercent = (residuos / produccion) * 100
+  const desvio = ((residuosPercent - metaPercent.value) * produccion) / 100
+  // No mostrar valores negativos (meta alcanzada o no superada)
+  if (desvio <= 0) return ''
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(desvio)
+}
+
+const formatDesvioMetros = (metros, kg, residuos) => {
+  if (!kg || kg === 0) return ''
+  const residuosPercent = (residuos / kg) * 100
+  const desvioKg = ((residuosPercent - metaPercent.value) * kg) / 100
+  // No mostrar si el desvío en Kg es negativo o cero
+  if (desvioKg <= 0) return ''
+  const desvioMetros = (metros / kg) * desvioKg
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(desvioMetros)
 }
 
 const cargarDatos = async () => {
