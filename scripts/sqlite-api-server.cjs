@@ -1754,6 +1754,10 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
     
     // Filtro de fechas opcional (si no se envían, trae todo)
     let dateFilter = '';
+    let produccionWhere = "WHERE P.SELETOR IN ('INDIGO', 'TECELAGEM')";
+    let tejeduriaWhere = "WHERE P.SELETOR = 'TECELAGEM'";
+    let residuosWhere = "WHERE DESCRICAO = 'ESTOPA AZUL'";
+    
     const params = [];
     
     if (fecha_inicio && fecha_fin) {
@@ -1763,6 +1767,28 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
         WHERE (substr(D.Fecha, 7, 4) || '-' || substr(D.Fecha, 4, 2) || '-' || substr(D.Fecha, 1, 2)) >= ?
         AND (substr(D.Fecha, 7, 4) || '-' || substr(D.Fecha, 4, 2) || '-' || substr(D.Fecha, 1, 2)) <= ?
       `;
+      
+      // Filtros para las CTEs (Push Down Predicates)
+      const dateCondition = `
+        AND (substr(DT_BASE_PRODUCAO, 7, 4) || '-' || substr(DT_BASE_PRODUCAO, 4, 2) || '-' || substr(DT_BASE_PRODUCAO, 1, 2)) >= ?
+        AND (substr(DT_BASE_PRODUCAO, 7, 4) || '-' || substr(DT_BASE_PRODUCAO, 4, 2) || '-' || substr(DT_BASE_PRODUCAO, 1, 2)) <= ?
+      `;
+      
+      const residuosDateCondition = `
+        AND (substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)) >= ?
+        AND (substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)) <= ?
+      `;
+
+      produccionWhere += dateCondition.replace(/DT_BASE_PRODUCAO/g, 'P.DT_BASE_PRODUCAO');
+      tejeduriaWhere += dateCondition.replace(/DT_BASE_PRODUCAO/g, 'P.DT_BASE_PRODUCAO');
+      residuosWhere += residuosDateCondition;
+
+      // Params for CTEs
+      params.push(fecha_inicio, fecha_fin); // ProduccionDiaria
+      params.push(fecha_inicio, fecha_fin); // TejeduriaProduccion
+      params.push(fecha_inicio, fecha_fin); // ResiduosDiarios
+      
+      // Params for outer query
       params.push(fecha_inicio, fecha_fin);
     }
 
@@ -1781,8 +1807,8 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
               SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL)) as TotalMetros,
               (SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL) * F.Consumo) / 1000.0) * 0.98 as TotalKg
           FROM tb_PRODUCCION P
-          JOIN FichasUnique F ON P.[BASE URDUME] = F.URDUME
-          WHERE P.SELETOR IN ('INDIGO', 'TECELAGEM')
+          JOIN FichasUnique F ON TRIM(P.[BASE URDUME]) = F.URDUME
+          ${produccionWhere}
           GROUP BY P.DT_BASE_PRODUCAO
       ),
       TejeduriaProduccion AS (
@@ -1792,7 +1818,7 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
               SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL) * F.Consumo) / 1000.0 as TejeduriaKg
           FROM tb_PRODUCCION P
           JOIN FichasUnique F ON TRIM(P.[BASE URDUME]) = F.URDUME
-          WHERE P.SELETOR = 'TECELAGEM'
+          ${tejeduriaWhere}
           GROUP BY P.DT_BASE_PRODUCAO
       ),
       ResiduosDiarios AS (
@@ -1800,7 +1826,7 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
               DT_MOV as Fecha,
               SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as ResiduosKg
           FROM tb_RESIDUOS_INDIGO
-          WHERE DESCRICAO = 'ESTOPA AZUL'
+          ${residuosWhere}
           GROUP BY DT_MOV
       ),
       AllDates AS (
