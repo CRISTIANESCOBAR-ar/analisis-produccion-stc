@@ -5,26 +5,51 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$tmpCsv = [System.IO.Path]::GetTempFileName()
-$csvPath = $tmpCsv -replace '\\','/'
+
+# CSV directo o XLSX
+$isCsv = [System.IO.Path]::GetExtension($XlsxPath).ToLower() -eq '.csv'
+$tmpCsv = $null
+$csvPath = $null
 
 try {
-  # Usar Python (mucho más rápido que Import-Excel)
-  python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+  if ($isCsv) {
+    Write-Host "Usando archivo CSV directo: $XlsxPath" -ForegroundColor Cyan
+    $csvPath = $XlsxPath
+  } else {
+    $tmpCsv = [System.IO.Path]::GetTempFileName()
+    $csvPath = $tmpCsv -replace '\\','/'
+    Write-Host "Convirtiendo XLSX a CSV con Python..." -ForegroundColor Cyan
+    # Usar Python (mucho más rápido que Import-Excel)
+    python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      throw "Error en la conversión de Excel a CSV (Python script failed)."
+    }
+  }
 
   $cmds = @(
-    "DROP TABLE IF EXISTS temp_residuos_sector;",
-    "CREATE TEMP TABLE temp_residuos_sector AS SELECT * FROM tb_RESIDUOS_POR_SECTOR WHERE 1=0;",
+    "DROP TABLE IF EXISTS temp_residuos_por_sector;",
+    "CREATE TEMP TABLE temp_residuos_por_sector AS SELECT * FROM tb_RESIDUOS_POR_SECTOR WHERE 1=0;",
     ".mode csv",
-    ".import $csvPath temp_residuos_sector",
+    ".import $csvPath temp_residuos_por_sector",
+    
+    # --- LIMPIEZA DE DATOS ---
+    # 1. Eliminar filas vacías o encabezados repetidos en la tabla temporal
+    "DELETE FROM temp_residuos_por_sector WHERE DT_MOV IS NULL OR DT_MOV = '' OR DT_MOV = 'DT_MOV' OR DT_MOV NOT LIKE '__/__/____';",
+    "DELETE FROM temp_residuos_por_sector WHERE FILIAL IS NULL OR FILIAL = '';",
+    
     "BEGIN;",
-    "DELETE FROM tb_RESIDUOS_POR_SECTOR WHERE DATE(DT_MOV) IN (SELECT DISTINCT DATE(DT_MOV) FROM temp_residuos_por_sector);",
+    # 2. Limpieza preventiva de la tabla principal
+    "DELETE FROM tb_RESIDUOS_POR_SECTOR WHERE DT_MOV IS NULL OR DT_MOV = '' OR DT_MOV = 'DT_MOV' OR DT_MOV NOT LIKE '__/__/____';",
+    "DELETE FROM tb_RESIDUOS_POR_SECTOR WHERE FILIAL IS NULL OR FILIAL = '';",
+
+    # 3. Reemplazo por fecha
+    "DELETE FROM tb_RESIDUOS_POR_SECTOR WHERE DT_MOV IN (SELECT DISTINCT DT_MOV FROM temp_residuos_por_sector);",
     "INSERT INTO tb_RESIDUOS_POR_SECTOR SELECT * FROM temp_residuos_por_sector;",
     "COMMIT;",
     "DROP TABLE temp_residuos_por_sector;"
   )
 
-  & sqlite3 $SqlitePath @cmds
+  $cmds | & sqlite3 $SqlitePath
   Write-Host "Importacion RESIDUOS_POR_SECTOR completada (fast csv, date_delete)." -ForegroundColor Green
 
   try {
@@ -50,5 +75,5 @@ ON CONFLICT(tabla_destino) DO UPDATE SET
   }
 }
 finally {
-  Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue
+  if ($tmpCsv) { Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue }
 }

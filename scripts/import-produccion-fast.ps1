@@ -5,15 +5,25 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$tmpCsv = [System.IO.Path]::GetTempFileName()
-$csvPath = $tmpCsv -replace '\\','/'
+
+# CSV directo o XLSX
+$isCsv = [System.IO.Path]::GetExtension($XlsxPath).ToLower() -eq '.csv'
+$tmpCsv = $null
+$csvPath = $null
 
 try {
-  Write-Host "Convirtiendo XLSX a CSV con Python..." -ForegroundColor Cyan
-  # Usar Python (mucho más rápido que Import-Excel)
-  python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
-  if ($LASTEXITCODE -ne 0) {
-    throw "Error en la conversión de Excel a CSV (Python script failed). Verifica si el archivo está abierto o dañado."
+  if ($isCsv) {
+    Write-Host "Usando archivo CSV directo: $XlsxPath" -ForegroundColor Cyan
+    $csvPath = $XlsxPath
+  } else {
+    $tmpCsv = [System.IO.Path]::GetTempFileName()
+    $csvPath = $tmpCsv -replace '\\','/'
+    Write-Host "Convirtiendo XLSX a CSV con Python..." -ForegroundColor Cyan
+    # Usar Python (mucho más rápido que Import-Excel)
+    python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      throw "Error en la conversión de Excel a CSV (Python script failed). Verifica si el archivo está abierto o dañado."
+    }
   }
 
   Write-Host "Importando a SQLite..." -ForegroundColor Cyan
@@ -25,7 +35,16 @@ try {
     "CREATE TEMP TABLE temp_produccion AS SELECT * FROM tb_PRODUCCION WHERE 1=0;",
     ".mode csv",
     ".import $csvPath temp_produccion",
+    
+    # --- LIMPIEZA DE DATOS ---
+    # 1. Eliminar filas vacías o encabezados repetidos en la tabla temporal
+    "DELETE FROM temp_produccion WHERE DT_BASE_PRODUCAO IS NULL OR DT_BASE_PRODUCAO = '' OR DT_BASE_PRODUCAO = 'DT_BASE_PRODUCAO' OR DT_BASE_PRODUCAO NOT LIKE '__/__/____';",
+    
     "BEGIN;",
+    # 2. Limpieza preventiva de la tabla principal (eliminar basura histórica)
+    "DELETE FROM tb_PRODUCCION WHERE DT_BASE_PRODUCAO IS NULL OR DT_BASE_PRODUCAO = '' OR DT_BASE_PRODUCAO = 'DT_BASE_PRODUCAO' OR DT_BASE_PRODUCAO NOT LIKE '__/__/____';",
+
+    # 3. Reemplazo por fecha (Estrategia idempotente)
     "DELETE FROM tb_PRODUCCION WHERE DT_BASE_PRODUCAO IN (SELECT DISTINCT DT_BASE_PRODUCAO FROM temp_produccion);",
     "INSERT INTO tb_PRODUCCION SELECT * FROM temp_produccion;",
     "COMMIT;",
@@ -62,5 +81,5 @@ ON CONFLICT(tabla_destino) DO UPDATE SET
   }
 }
 finally {
-  Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue
+  if ($tmpCsv) { Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue }
 }

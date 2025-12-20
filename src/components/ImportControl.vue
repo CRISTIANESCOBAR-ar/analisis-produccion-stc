@@ -1,36 +1,59 @@
 <template>
   <div class="w-full h-screen flex flex-col p-1">
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
-      <div class="flex justify-between items-center mb-4">
-      <h1 class="text-2xl font-bold text-gray-800">Control de Importaciones</h1>
-      <div class="flex gap-2">
-        <button 
-          @click="fetchStatus" 
-          class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="loading || importing"
-        >
-          <span v-if="loading" class="animate-spin">↻</span>
-          <span v-else>↻</span>
-          Refrescar
-        </button>
-        <button 
-          @click="forceImportAll" 
-          class="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-1.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="importing || loading"
-        >
-          <span>⚡</span>
-          Forzar Importación
-        </button>
-        <button 
-          @click="triggerImport" 
-          class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="importing || loading"
-        >
-          <span>🚀</span>
-          Ejecutar Actualización
-        </button>
+      <div class="flex justify-between items-center mb-4 gap-4">
+        <div class="flex items-center gap-4 flex-1 min-w-0">
+          <h1 class="text-2xl font-bold text-gray-800 whitespace-nowrap">Control de Importaciones</h1>
+          
+          <!-- Configuración de Carpeta CSV (Compacta) -->
+          <div class="flex items-center gap-2 flex-1 max-w-2xl bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+            <label class="text-xs font-bold text-gray-500 whitespace-nowrap uppercase tracking-wide">Carpeta CSV:</label>
+            <input 
+              v-model="csvFolder" 
+              type="text" 
+              class="flex-1 bg-transparent border-none text-sm focus:ring-0 p-0 text-gray-700 placeholder-gray-400"
+              placeholder="Seleccione carpeta..."
+              @change="saveFolder"
+              @keyup.enter="saveFolder"
+            />
+            <button 
+              @click="pickFolder" 
+              class="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors"
+              title="Examinar carpeta..."
+            >
+              📂
+            </button>
+          </div>
+        </div>
+
+        <div class="flex gap-2 shrink-0">
+          <button 
+            @click="fetchStatus" 
+            class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="loading || importing"
+          >
+            <span v-if="loading" class="animate-spin">↻</span>
+            <span v-else>↻</span>
+            Refrescar
+          </button>
+          <button 
+            @click="forceImportAll" 
+            class="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-1.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="importing || loading"
+          >
+            <span>⚡</span>
+            Forzar Todo
+          </button>
+          <button 
+            @click="triggerImport" 
+            class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="importing || loading"
+          >
+            <span>🚀</span>
+            Actualizar
+          </button>
+        </div>
       </div>
-    </div>
 
     <!-- Resumen de Estado -->
     <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
@@ -192,6 +215,35 @@ const toastError = Swal.mixin({
   icon: 'error'
 })
 
+const csvFolder = ref(localStorage.getItem('csvFolder') || 'C:\\STC')
+
+// Abrir diálogo de selección de carpeta
+async function pickFolder() {
+  try {
+    const res = await fetch(`${API_URL}/system/pick-folder`, { method: 'POST' })
+    if (!res.ok) throw new Error('Error al abrir diálogo')
+    
+    const data = await res.json()
+    if (data.path) {
+      csvFolder.value = data.path
+      saveFolder() // Guardar y refrescar automáticamente
+    }
+  } catch (err) {
+    console.error(err)
+    toastError.fire({ title: 'No se pudo abrir el selector de carpetas' })
+  }
+}
+
+// Guardar carpeta en localStorage y refrescar
+const saveFolder = () => {
+  if (!csvFolder.value) return
+  // Normalizar slashes
+  csvFolder.value = csvFolder.value.replace(/\//g, '\\')
+  localStorage.setItem('csvFolder', csvFolder.value)
+  toast.fire({ icon: 'success', title: 'Carpeta guardada' })
+  fetchStatus()
+}
+
 onMounted(() => {
   fetchStatus()
 })
@@ -199,8 +251,9 @@ onMounted(() => {
 async function fetchStatus() {
   loading.value = true
   try {
+    const folderParam = csvFolder.value ? `?csvFolder=${encodeURIComponent(csvFolder.value)}` : ''
     const [resStatus, resDb] = await Promise.all([
-      fetch(`${API_URL}/import-status`),
+      fetch(`${API_URL}/import-status${folderParam}`),
       fetch(`${API_URL}/status`)
     ])
     
@@ -304,7 +357,8 @@ async function triggerImport() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          tables: outdatedTables.map(t => t.table) 
+          tables: outdatedTables.map(t => t.table),
+          csvFolder: csvFolder.value
         }),
         signal: controller.signal
       })
@@ -465,12 +519,14 @@ async function forceImportAll() {
     const t0 = performance.now()
 
     try {
-      // Timeout de 3 minutos por seguridad
+      // Timeout de 5.5 minutos por seguridad (server tiene 5 min)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 180000)
+      const timeoutId = setTimeout(() => controller.abort(), 330000)
 
       const res = await fetch(`${API_URL}/import/force-all`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csvFolder: csvFolder.value }),
         signal: controller.signal
       })
 
@@ -577,14 +633,14 @@ async function forceImportTable(item) {
     const initialTimestamp = item.last_import_date ?? null
     
     try {
-      // Ejecutar importación con timeout de 30 segundos
+      // Ejecutar importación con timeout de 90 segundos
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000)
+      const timeoutId = setTimeout(() => controller.abort(), 90000)
       
       const res = await fetch(`${API_URL}/import/force-table`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: item.table }),
+        body: JSON.stringify({ table: item.table, csvFolder: csvFolder.value }),
         signal: controller.signal
       })
       

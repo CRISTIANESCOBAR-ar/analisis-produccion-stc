@@ -5,12 +5,26 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$tmpCsv = [System.IO.Path]::GetTempFileName()
-$csvPath = $tmpCsv -replace '\\','/'
+
+# CSV directo o XLSX
+$isCsv = [System.IO.Path]::GetExtension($XlsxPath).ToLower() -eq '.csv'
+$tmpCsv = $null
+$csvPath = $null
 
 try {
-  # Usar Python (mucho más rápido que Import-Excel)
-  python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+  if ($isCsv) {
+    Write-Host "Usando archivo CSV directo: $XlsxPath" -ForegroundColor Cyan
+    $csvPath = $XlsxPath
+  } else {
+    $tmpCsv = [System.IO.Path]::GetTempFileName()
+    $csvPath = $tmpCsv -replace '\\','/'
+    Write-Host "Convirtiendo XLSX a CSV con Python..." -ForegroundColor Cyan
+    # Usar Python (mucho más rápido que Import-Excel)
+    python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      throw "Error en la conversión de Excel a CSV (Python script failed)."
+    }
+  }
 
   $cmds = @(
     "DROP TABLE IF EXISTS temp_testes;",
@@ -50,5 +64,5 @@ ON CONFLICT(tabla_destino) DO UPDATE SET
   }
 }
 finally {
-  Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue
+  if ($tmpCsv) { Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue }
 }

@@ -87,6 +87,13 @@
         @click="handleNavClick('/analisis-mesa-test')"
       />
       <SidebarItem 
+        icon="♻️" 
+        label="Residuos INDIGO" 
+        :active="isActive('/residuos-indigo-tejeduria')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/residuos-indigo-tejeduria')"
+      />
+      <SidebarItem 
         icon="⚠️" 
         label="Paradas" 
         :active="isActive('/paradas')" 

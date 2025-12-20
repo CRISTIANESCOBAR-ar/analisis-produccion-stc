@@ -17,16 +17,27 @@ const PORT = 3002;
 const DB_PATH = path.join(__dirname, '../database/produccion.db');
 
 // Configuración de tablas y archivos (Sincronizado con update-all-tables.ps1)
-const TABLE_CONFIGS = [
-  { table: 'tb_FICHAS', xlsxPath: 'C:\\STC\\fichaArtigo.xlsx', sheet: 'lista de tecidos' },
-  { table: 'tb_RESIDUOS_INDIGO', xlsxPath: 'C:\\STC\\RelResIndigo.xlsx', sheet: 'rptResiduosIndigo' },
-  { table: 'tb_RESIDUOS_POR_SECTOR', xlsxPath: 'C:\\STC\\rptResiduosPorSetor.xlsx', sheet: 'rptResiduosPorSetor' },
-  { table: 'tb_TESTES', xlsxPath: 'C:\\STC\\rptPrdTestesFisicos.xlsx', sheet: 'report2' },
-  { table: 'tb_PARADAS', xlsxPath: 'C:\\STC\\rptParadaMaquinaPRD.xlsx', sheet: 'rptpm' },
-  { table: 'tb_PRODUCCION', xlsxPath: 'C:\\STC\\rptProducaoMaquina.xlsx', sheet: 'rptProdMaq' },
-  { table: 'tb_CALIDAD', xlsxPath: 'C:\\STC\\rptAcompDiarioPBI.csv', sheet: 'report5' },
-  { table: 'tb_PROCESO', xlsxPath: 'C:\\STC\\rpsPosicaoEstoquePRD.csv', sheet: 'rptStock' }
+// NOTA: xlsxPath ahora se construye dinámicamente basado en la carpeta elegida por el usuario
+const TABLE_DEFINITIONS = [
+  { table: 'tb_FICHAS', filename: 'fichaArtigo.csv', sheet: 'lista de tecidos' },
+  { table: 'tb_RESIDUOS_INDIGO', filename: 'RelResIndigo.csv', sheet: 'rptResiduosIndigo' },
+  { table: 'tb_RESIDUOS_POR_SECTOR', filename: 'rptResiduosPorSetor.csv', sheet: 'rptResiduosPorSetor' },
+  { table: 'tb_TESTES', filename: 'rptPrdTestesFisicos.csv', sheet: 'report2' },
+  { table: 'tb_PARADAS', filename: 'rptParadaMaquinaPRD.csv', sheet: 'rptpm' },
+  { table: 'tb_PRODUCCION', filename: 'rptProducaoMaquina.csv', sheet: 'rptProdMaq' },
+  { table: 'tb_CALIDAD', filename: 'rptAcompDiarioPBI.csv', sheet: 'report5' },
+  { table: 'tb_PROCESO', filename: 'rpsPosicaoEstoquePRD.csv', sheet: 'rptStock' },
+  { table: 'tb_DEFECTOS', filename: 'rptDefPeca.csv', sheet: 'rptDefPeca' }
 ];
+
+// Helper para obtener configuración con ruta dinámica
+const getTableConfig = (folderPath) => {
+  const root = folderPath || 'C:\\STC';
+  return TABLE_DEFINITIONS.map(def => ({
+    ...def,
+    xlsxPath: path.join(root, def.filename)
+  }));
+};
 
 // Middleware
 app.use(cors());
@@ -82,9 +93,11 @@ const getDateRangeParams = (startDate, endDate) => {
 // GET /api/import-status - Estado detallado de importaciones
 app.get('/api/import-status', async (req, res) => {
   try {
+    const csvFolder = req.query.csvFolder || 'C:\\STC';
+    const configs = getTableConfig(csvFolder);
     const statusList = [];
 
-    for (const config of TABLE_CONFIGS) {
+    for (const config of configs) {
       let fileStatus = 'UNKNOWN';
       let fileModified = null;
       let lastImport = null;
@@ -178,17 +191,23 @@ app.post('/api/import/trigger', (req, res) => {
 
 // POST /api/import/force-all - Forzar importación de todas las tablas (sincrónico)
 app.post('/api/import/force-all', async (req, res) => {
+  let csvFolder = req.body.csvFolder || 'C:\\STC';
+  // Sanitizar ruta: eliminar barra final si existe para evitar problemas de escape en PowerShell
+  if (csvFolder.endsWith('\\')) {
+    csvFolder = csvFolder.slice(0, -1);
+  }
+
   // Usar script secuencial optimizado (paralelo no mejora por limitaciones SQLite)
   const scriptPath = path.join(__dirname, 'import-all-fast.ps1');
-  const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`;
+  const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -CsvFolder "${csvFolder}"`;
 
-  console.log('⚡ Forzando importación completa...');
+  console.log(`⚡ Forzando importación completa desde ${csvFolder}...`);
 
   try {
     const tStart = Date.now();
     // Ejecutar script y esperar resultado
     const { stdout, stderr } = await new Promise((resolve, reject) => {
-      exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 180000 }, (error, stdout, stderr) => {
+      exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 300000 }, (error, stdout, stderr) => { // Timeout aumentado a 5 min
         if (error) {
           reject({ error, stderr });
         } else {
@@ -227,18 +246,21 @@ app.post('/api/import/force-all', async (req, res) => {
 
 // POST /api/import/force-table - Forzar importación de una tabla específica
 app.post('/api/import/force-table', async (req, res) => {
-  const { table } = req.body;
+  const { table, csvFolder } = req.body;
+  const rootFolder = csvFolder || 'C:\\STC';
   
   if (!table) {
     return res.status(400).json({ error: 'Debe especificar una tabla' });
   }
 
-  const config = TABLE_CONFIGS.find(c => c.table === table);
+  const configs = getTableConfig(rootFolder);
+  const config = configs.find(c => c.table === table);
   if (!config) {
     return res.status(404).json({ error: `Tabla ${table} no encontrada en configuración` });
   }
 
-  const fastScripts = {
+  // Mapeo de scripts específicos para force-table
+  const scriptMap = {
     'tb_FICHAS': 'import-fichas-fast.ps1',
     'tb_RESIDUOS_INDIGO': 'import-residuos-indig-fast.ps1',
     'tb_RESIDUOS_POR_SECTOR': 'import-residuos-por-sector-fast.ps1',
@@ -246,19 +268,17 @@ app.post('/api/import/force-table', async (req, res) => {
     'tb_PARADAS': 'import-paradas-fast.ps1',
     'tb_PRODUCCION': 'import-produccion-fast.ps1',
     'tb_CALIDAD': 'import-calidad-fast.ps1',
-    'tb_PROCESO': 'import-proceso-fast.ps1'
+    'tb_PROCESO': 'import-proceso-fast.ps1',
+    'tb_DEFECTOS': 'import-defectos-fast.ps1'
   };
 
-  const scriptFile = fastScripts[table] || 'import-xlsx-to-sqlite.ps1';
+  const scriptFile = scriptMap[table] || 'import-calidad-fast.ps1';
   const scriptPath = path.join(__dirname, scriptFile);
-  const command = (scriptFile === 'import-xlsx-to-sqlite.ps1')
-    ? (() => {
-        const mappingJson = path.join(__dirname, 'mappings', `${config.table}.json`);
-        return `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
-      })()
-    : `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
+  
+  // El script import-calidad-fast.ps1 espera XlsxPath pero maneja CSV si la extensión es .csv
+  const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
 
-  console.log(`⚡ Forzando importación de ${table}...`);
+  console.log(`⚡ Forzando importación de ${table} desde ${config.xlsxPath}...`);
   console.log(`Comando: ${command}`);
   
   try {
@@ -306,22 +326,49 @@ app.post('/api/import/force-table', async (req, res) => {
   }
 });
 
+// POST /api/system/pick-folder - Abrir diálogo de selección de carpeta
+app.post('/api/system/pick-folder', (req, res) => {
+  // Comando PowerShell para abrir FolderBrowserDialog
+  // Requiere modo STA (-sta) para diálogos de Windows Forms
+  const command = `powershell -NoProfile -Sta -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Seleccione la carpeta de archivos CSV'; $f.ShowNewFolderButton = $false; if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath }"`;
+  
+  console.log('📂 Abriendo diálogo de selección de carpeta...');
+  
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error abriendo diálogo: ${error.message}`);
+      return res.status(500).json({ error: error.message });
+    }
+    
+    const selectedPath = stdout.trim();
+    console.log(`📂 Carpeta seleccionada: ${selectedPath || '(Cancelado)'}`);
+    
+    if (selectedPath) {
+      res.json({ path: selectedPath });
+    } else {
+      res.json({ path: null }); // Usuario canceló
+    }
+  });
+});
+
 // POST /api/import/update-outdated - Actualizar solo tablas desactualizadas
 app.post('/api/import/update-outdated', async (req, res) => {
-  const { tables } = req.body;
+  const { tables, csvFolder } = req.body;
+  const rootFolder = csvFolder || 'C:\\STC';
   
   if (!tables || !Array.isArray(tables) || tables.length === 0) {
     return res.status(400).json({ error: 'Debe especificar un array de tablas' });
   }
 
-  console.log(`🔄 Iniciando actualización de ${tables.length} tabla(s): ${tables.join(', ')}`);
+  console.log(`🔄 Iniciando actualización de ${tables.length} tabla(s) desde ${rootFolder}: ${tables.join(', ')}`);
   
   const tStart = Date.now();
   const results = [];
   const errors = [];
-
-  // Mapa de scripts optimizados para cada tabla
-  const fastScripts = {
+  const configs = getTableConfig(rootFolder);
+  
+  // Mapeo de scripts específicos
+  const scriptMap = {
     'tb_FICHAS': 'import-fichas-fast.ps1',
     'tb_RESIDUOS_INDIGO': 'import-residuos-indig-fast.ps1',
     'tb_RESIDUOS_POR_SECTOR': 'import-residuos-por-sector-fast.ps1',
@@ -329,27 +376,25 @@ app.post('/api/import/update-outdated', async (req, res) => {
     'tb_PARADAS': 'import-paradas-fast.ps1',
     'tb_PRODUCCION': 'import-produccion-fast.ps1',
     'tb_CALIDAD': 'import-calidad-fast.ps1',
-    'tb_PROCESO': 'import-proceso-fast.ps1'
+    'tb_PROCESO': 'import-proceso-fast.ps1',
+    'tb_DEFECTOS': 'import-defectos-fast.ps1'
   };
 
   // Importar cada tabla secuencialmente (SQLite no beneficia de paralelización)
   for (const table of tables) {
-    const config = TABLE_CONFIGS.find(c => c.table === table);
+    const config = configs.find(c => c.table === table);
     if (!config) {
       errors.push({ table, error: 'Tabla no encontrada en configuración' });
       continue;
     }
 
-    const scriptFile = fastScripts[table] || 'import-xlsx-to-sqlite.ps1';
+    // Usar script específico o fallback al genérico
+    const scriptFile = scriptMap[table] || 'import-calidad-fast.ps1';
     const scriptPath = path.join(__dirname, scriptFile);
-    const command = (scriptFile === 'import-xlsx-to-sqlite.ps1')
-      ? (() => {
-          const mappingJson = path.join(__dirname, 'mappings', `${config.table}.json`);
-          return `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -Table "${config.table}" -Sheet "${config.sheet}" -SqlitePath "${DB_PATH}" -MappingSource json -MappingJson "${mappingJson}"`;
-        })()
-      : `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
 
-    console.log(`  ⚡ Importando ${table}...`);
+    const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
+
+    console.log(`  ⚡ Importando ${table} desde ${config.xlsxPath} usando ${scriptFile}...`);
     
     const t0 = Date.now();
     try {
@@ -1512,6 +1557,9 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
     // Convertir fechas a formato compatible con SQLite
     const fechaInicio = `${fecha_inicial} 00:00:00`;
     const fechaFin = fecha_final ? `${fecha_final} 23:59:59` : '9999-12-31 23:59:59';
+    
+    const fechaInicioShort = fecha_inicial;
+    const fechaFinShort = fecha_final || '9999-12-31';
 
     // SQL equivalente al query de Excel VBA, adaptado a SQLite
     const sql = `
@@ -1542,15 +1590,15 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
           "%_SKM"
         FROM tb_TESTES
         WHERE ARTIGO = ?
-          AND DATE(DT_PROD) >= DATE(?)
-          AND DATE(DT_PROD) <= DATE(?)
+          AND DT_PROD >= ?
+          AND DT_PROD <= ?
       ),
       
       -- Subconsulta CALIDAD (agregada por PARTIDA)
       -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
       CALIDAD AS (
         SELECT 
-          MIN(DATE(DAT_PROD)) AS DAT_PROD,
+          MIN(DAT_PROD) AS DAT_PROD,
           ARTIGO AS ART_CAL,
           CAST(PARTIDA AS INTEGER) AS PARTIDA,
           ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS METRAGEM,
@@ -1558,8 +1606,8 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
           ROUND(AVG("GR/M2"), 1) AS "GR/M2"
         FROM tb_CALIDAD
         WHERE ARTIGO = ?
-          AND DATE(DAT_PROD) >= DATE(?)
-          AND DATE(DAT_PROD) <= DATE(?)
+          AND DAT_PROD >= ?
+          AND DAT_PROD <= ?
         GROUP BY ARTIGO, PARTIDA
       ),
       
@@ -1584,9 +1632,9 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
           BATIDA,
           "Oz/jd2",
           "Peso/m2",
-          "LARGURA MIN",
-          LARGURA AS ANCHO,
-          "LARGURA MAX",
+          CAST(REPLACE("LARGURA MIN", ',', '.') AS REAL) AS LARGURA_MIN_VAL,
+          CAST(REPLACE(LARGURA, ',', '.') AS REAL) AS ANCHO,
+          CAST(REPLACE("LARGURA MAX", ',', '.') AS REAL) AS LARGURA_MAX_VAL,
           "SKEW MIN",
           ("SKEW MIN" + "SKEW MAX") / 2.0 AS "SKEW STD",
           "SKEW MAX",
@@ -1614,7 +1662,7 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
         E."TRAMA REDUZIDO" AS Trama,
         TC.PARTIDA AS Partida,
         TC.TESTES AS C,
-        DATE(TC.DT_PROD) AS Fecha,
+        TC.DT_PROD AS Fecha,
         TC.APROV AS Ap,
         TC.OBS AS Obs,
         TC.REPROCESSO AS R,
@@ -1622,9 +1670,19 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
         ROUND(TC.CALIDAD_METRAGEM, 0) AS Metros_MESA,
         
         ROUND(TC.CALIDAD_LARGURA, 1) AS Ancho_MESA,
-        ROUND(E."LARGURA MIN", 1) AS Ancho_MIN,
+        
+        ROUND(CASE 
+          WHEN E.LARGURA_MIN_VAL < (E.ANCHO * 0.5) THEN E.ANCHO - E.LARGURA_MIN_VAL
+          ELSE E.LARGURA_MIN_VAL
+        END, 1) AS Ancho_MIN,
+        
         ROUND(E.ANCHO, 1) AS Ancho_STD,
-        ROUND(E."LARGURA MAX", 1) AS Ancho_MAX,
+        
+        ROUND(CASE 
+          WHEN E.LARGURA_MAX_VAL < (E.ANCHO * 0.5) THEN E.ANCHO + E.LARGURA_MAX_VAL
+          ELSE E.LARGURA_MAX_VAL
+        END, 1) AS Ancho_MAX,
+        
         ROUND(TC.LARG_AL, 1) AS Ancho_TEST,
         
         ROUND(TC.CALIDAD_GRM2, 1) AS Peso_MESA,
@@ -1675,14 +1733,66 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
         
       FROM TESTES_CALIDAD TC
       LEFT JOIN ESPECIFICACION E ON TC.ART_TEST = E."ARTIGO CODIGO"
-      ORDER BY DATE(TC.DT_PROD);
+      ORDER BY TC.DT_PROD;
     `;
 
-    const rows = await dbAll(sql, [articulo, fechaInicio, fechaFin, articulo, fechaInicio, fechaFin, articulo]);
+    const rows = await dbAll(sql, [articulo, fechaInicioShort, fechaFinShort, articulo, fechaInicio, fechaFin, articulo]);
     res.json(rows);
 
   } catch (error) {
     console.error('Error en /api/analisis-mesa-test:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT - Residuos de INDIGO y TEJEDURIA
+// =====================================================================
+app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin } = req.query;
+    
+    // Filtro de fechas opcional (si no se envían, trae todo)
+    let dateFilter = '';
+    const params = [];
+    
+    if (fecha_inicio && fecha_fin) {
+      // Convertir DD/MM/YYYY a YYYY-MM-DD para comparación
+      dateFilter = `
+        AND (substr(P.DT_BASE_PRODUCAO, 7, 4) || '-' || substr(P.DT_BASE_PRODUCAO, 4, 2) || '-' || substr(P.DT_BASE_PRODUCAO, 1, 2)) >= ?
+        AND (substr(P.DT_BASE_PRODUCAO, 7, 4) || '-' || substr(P.DT_BASE_PRODUCAO, 4, 2) || '-' || substr(P.DT_BASE_PRODUCAO, 1, 2)) <= ?
+      `;
+      params.push(fecha_inicio, fecha_fin);
+    }
+
+    const sql = `
+      WITH FichasUnique AS (
+          SELECT 
+              URDUME, 
+              MAX(CAST(REPLACE([CONS#URD/m], ',', '.') AS REAL)) AS Consumo
+          FROM tb_FICHAS 
+          WHERE [CONS#URD/m] IS NOT NULL AND [CONS#URD/m] != '0,00'
+          GROUP BY URDUME
+      )
+      SELECT 
+          P.DT_BASE_PRODUCAO,
+          SUM(CAST(REPLACE(P.METRAGEM, ',', '.') AS REAL)) as TotalMetros,
+          (SUM(CAST(REPLACE(P.METRAGEM, ',', '.') AS REAL) * F.Consumo) / 1000.0) * 0.98 as TotalKg
+      FROM tb_PRODUCCION P
+      JOIN FichasUnique F ON P.[BASE URDUME] = F.URDUME
+      WHERE P.SELETOR IN ('INDIGO', 'TECELAGEM')
+      ${dateFilter}
+      GROUP BY P.DT_BASE_PRODUCAO
+      ORDER BY 
+        substr(P.DT_BASE_PRODUCAO, 7, 4) DESC, 
+        substr(P.DT_BASE_PRODUCAO, 4, 2) DESC, 
+        substr(P.DT_BASE_PRODUCAO, 1, 2) DESC;
+    `;
+
+    const rows = await dbAll(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en /api/residuos-indigo-tejeduria:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1707,26 +1817,11 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
 
     // SQL optimizado para listar artículos con métricas agregadas
     // NOTA: Se eliminó DATE() en WHERE para usar índices (idx_calidad_dat_prod, idx_testes_dt_prod)
+    // OPTIMIZACIÓN: Usar MATERIALIZED CTEs para evitar escanear las tablas múltiples veces
     const sql = `
-      -- Obtener artículos únicos de ambas tablas con sus métricas
-      WITH ArticulosUnicos AS (
-        -- Artículos de tb_CALIDAD (excluir artículos sin TRAMA)
-        SELECT DISTINCT ARTIGO
-        FROM tb_CALIDAD
-        WHERE DAT_PROD >= ? AND DAT_PROD <= ?
-          AND TRAMA IS NOT NULL
-        
-        UNION
-        
-        -- Artículos de tb_TESTES
-        SELECT DISTINCT ARTIGO
-        FROM tb_TESTES
-        WHERE DT_PROD >= ? AND DT_PROD <= ?
-      ),
-      
       -- Métricas de CALIDAD (directo, excluir artículos sin TRAMA)
       -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
-      MetricasCalidad AS (
+      WITH MetricasCalidad AS MATERIALIZED (
         SELECT 
           ARTIGO,
           ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS METROS_REV
@@ -1738,7 +1833,7 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
       
       -- Métricas de TESTES (AVG por PARTIDA primero para evitar duplicados)
       -- IMPORTANTE: Convertir formato europeo (1.980,00) a numérico (1980.00)
-      MetricasTestes AS (
+      MetricasTestes AS MATERIALIZED (
         SELECT 
           ARTIGO,
           ROUND(SUM(METRAGEM_AVG), 0) AS METROS_TEST
@@ -1752,6 +1847,13 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
           GROUP BY ARTIGO, PARTIDA
         )
         GROUP BY ARTIGO
+      ),
+
+      -- Obtener lista única de artículos desde las métricas ya calculadas (sin volver a escanear tablas)
+      AllArtigos AS (
+        SELECT ARTIGO FROM MetricasCalidad
+        UNION 
+        SELECT ARTIGO FROM MetricasTestes
       )
       
       -- SELECT FINAL con JOIN a tb_FICHAS
@@ -1762,10 +1864,10 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
         F.COR AS Color,
         F."NOME DE MERCADO" AS Nombre,
         F."TRAMA REDUZIDO" AS Trama,
-        F."PRODUÇÃO" AS Prod,
+        F."PRODUCAO" AS Prod,
         COALESCE(MT.METROS_TEST, 0) AS Metros_TEST,
         COALESCE(MC.METROS_REV, 0) AS Metros_REV
-      FROM ArticulosUnicos AU
+      FROM AllArtigos AU
       LEFT JOIN MetricasTestes MT ON AU.ARTIGO = MT.ARTIGO
       LEFT JOIN MetricasCalidad MC ON AU.ARTIGO = MC.ARTIGO
       LEFT JOIN tb_FICHAS F ON AU.ARTIGO = F."ARTIGO CODIGO"
@@ -1774,8 +1876,6 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
     `;
 
     const rows = await dbAll(sql, [
-      fechaInicioFull, fechaFinFull,   // ArticulosUnicos (CALIDAD)
-      fechaInicioShort, fechaFinShort, // ArticulosUnicos (TESTES)
       fechaInicioFull, fechaFinFull,   // MetricasCalidad
       fechaInicioShort, fechaFinShort  // MetricasTestes
     ]);

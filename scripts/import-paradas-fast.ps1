@@ -5,26 +5,49 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$tmpCsv = [System.IO.Path]::GetTempFileName()
-$csvPath = $tmpCsv -replace '\\','/'
+
+# CSV directo o XLSX
+$isCsv = [System.IO.Path]::GetExtension($XlsxPath).ToLower() -eq '.csv'
+$tmpCsv = $null
+$csvPath = $null
 
 try {
-  # Usar Python (mucho más rápido que Import-Excel)
-  python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+  if ($isCsv) {
+    Write-Host "Usando archivo CSV directo: $XlsxPath" -ForegroundColor Cyan
+    $csvPath = $XlsxPath
+  } else {
+    $tmpCsv = [System.IO.Path]::GetTempFileName()
+    $csvPath = $tmpCsv -replace '\\','/'
+    Write-Host "Convirtiendo XLSX a CSV con Python..." -ForegroundColor Cyan
+    # Usar Python (mucho más rápido que Import-Excel)
+    python "$PSScriptRoot\excel-to-csv.py" $XlsxPath $Sheet $tmpCsv 2 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      throw "Error en la conversión de Excel a CSV (Python script failed)."
+    }
+  }
 
   $cmds = @(
     "DROP TABLE IF EXISTS temp_paradas;",
     "CREATE TEMP TABLE temp_paradas AS SELECT * FROM tb_PARADAS WHERE 1=0;",
     ".mode csv",
     ".import $csvPath temp_paradas",
+    
+    # --- LIMPIEZA DE DATOS ---
+    # 1. Eliminar filas vacías o encabezados repetidos en la tabla temporal
+    "DELETE FROM temp_paradas WHERE DATA_BASE IS NULL OR DATA_BASE = '' OR DATA_BASE = 'DATA_BASE' OR DATA_BASE NOT LIKE '__/__/____';",
+    
     "BEGIN;",
-    "DELETE FROM tb_PARADAS WHERE DATE(DATA_BASE) IN (SELECT DISTINCT DATE(DATA_BASE) FROM temp_paradas);",
+    # 2. Limpieza preventiva de la tabla principal
+    "DELETE FROM tb_PARADAS WHERE DATA_BASE IS NULL OR DATA_BASE = '' OR DATA_BASE = 'DATA_BASE' OR DATA_BASE NOT LIKE '__/__/____';",
+
+    # 3. Reemplazo por fecha
+    "DELETE FROM tb_PARADAS WHERE DATA_BASE IN (SELECT DISTINCT DATA_BASE FROM temp_paradas);",
     "INSERT INTO tb_PARADAS SELECT * FROM temp_paradas;",
     "COMMIT;",
     "DROP TABLE temp_paradas;"
   )
 
-  & sqlite3 $SqlitePath @cmds
+  $cmds | & sqlite3 $SqlitePath
   Write-Host "Importacion PARADAS completada (fast csv, date_delete)." -ForegroundColor Green
 
   try {
@@ -50,5 +73,5 @@ ON CONFLICT(tabla_destino) DO UPDATE SET
   }
 }
 finally {
-  Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue
+  if ($tmpCsv) { Remove-Item -Path $tmpCsv -ErrorAction SilentlyContinue }
 }

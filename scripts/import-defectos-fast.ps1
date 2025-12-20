@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$XlsxPath,
   [Parameter(Mandatory=$true)][string]$SqlitePath,
-  [Parameter(Mandatory=$false)][string]$Sheet = 'rptResiduosIndigo'
+  [Parameter(Mandatory=$false)][string]$Sheet = 'rptDefPeca'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,37 +27,37 @@ try {
   }
 
   $cmds = @(
-    "DROP TABLE IF EXISTS temp_residuos_indigo;",
-    "CREATE TEMP TABLE temp_residuos_indigo AS SELECT * FROM tb_RESIDUOS_INDIGO WHERE 1=0;",
+    "DROP TABLE IF EXISTS temp_defectos;",
+    "CREATE TEMP TABLE temp_defectos AS SELECT * FROM tb_DEFECTOS WHERE 1=0;",
     ".mode csv",
-    ".import $csvPath temp_residuos_indigo",
+    ".import $csvPath temp_defectos",
     
     # --- LIMPIEZA DE DATOS ---
     # 1. Eliminar filas vacías o encabezados repetidos en la tabla temporal
-    "DELETE FROM temp_residuos_indigo WHERE DT_MOV IS NULL OR DT_MOV = '' OR DT_MOV = 'DT_MOV' OR DT_MOV NOT LIKE '__/__/____';",
+    "DELETE FROM temp_defectos WHERE DATA_PROD IS NULL OR DATA_PROD = '' OR DATA_PROD = 'DATA_PROD' OR DATA_PROD NOT LIKE '__/__/____';",
     
     "BEGIN;",
     # 2. Limpieza preventiva de la tabla principal
-    "DELETE FROM tb_RESIDUOS_INDIGO WHERE DT_MOV IS NULL OR DT_MOV = '' OR DT_MOV = 'DT_MOV' OR DT_MOV NOT LIKE '__/__/____';",
+    "DELETE FROM tb_DEFECTOS WHERE DATA_PROD IS NULL OR DATA_PROD = '' OR DATA_PROD = 'DATA_PROD' OR DATA_PROD NOT LIKE '__/__/____';",
 
     # 3. Reemplazo por fecha
-    "DELETE FROM tb_RESIDUOS_INDIGO WHERE DT_MOV IN (SELECT DISTINCT DT_MOV FROM temp_residuos_indigo);",
-    "INSERT INTO tb_RESIDUOS_INDIGO SELECT * FROM temp_residuos_indigo;",
+    "DELETE FROM tb_DEFECTOS WHERE DATA_PROD IN (SELECT DISTINCT DATA_PROD FROM temp_defectos);",
+    "INSERT INTO tb_DEFECTOS SELECT * FROM temp_defectos;",
     "COMMIT;",
-    "DROP TABLE temp_residuos_indigo;"
+    "DROP TABLE temp_defectos;"
   )
 
-  $cmds | & sqlite3 $SqlitePath
-  Write-Host "Importacion RESIDUOS_INDIGO completada (fast csv, date_delete)." -ForegroundColor Green
+  & sqlite3 $SqlitePath @cmds
+  Write-Host "Importacion DEFECTOS completada (fast csv, date_delete)." -ForegroundColor Green
 
   try {
     $xlsxLastModified = (Get-Item $XlsxPath).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')
     $importDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-    $rows = (& sqlite3 $SqlitePath "SELECT COUNT(*) FROM tb_RESIDUOS_INDIGO;").Trim()
+    $rows = (& sqlite3 $SqlitePath "SELECT COUNT(*) FROM tb_DEFECTOS;").Trim()
     $safePath = $XlsxPath.Replace("'", "''")
     $sql = @"
 INSERT INTO import_control (tabla_destino, xlsx_path, xlsx_sheet, last_import_date, xlsx_last_modified, xlsx_hash, rows_imported, import_strategy)
-VALUES ('tb_RESIDUOS_INDIGO', '$safePath', '$Sheet', '$importDate', '$xlsxLastModified', 'NA', $rows, 'fast_csv')
+VALUES ('tb_DEFECTOS', '$safePath', '$Sheet', '$importDate', '$xlsxLastModified', 'NA', $rows, 'fast_csv')
 ON CONFLICT(tabla_destino) DO UPDATE SET
   xlsx_path = excluded.xlsx_path,
   xlsx_sheet = excluded.xlsx_sheet,
@@ -69,7 +69,7 @@ ON CONFLICT(tabla_destino) DO UPDATE SET
 "@
     $sql | & sqlite3 $SqlitePath
   } catch {
-    Write-Warning "No se pudo actualizar import_control para tb_RESIDUOS_INDIGO: $_"
+    Write-Warning "No se pudo actualizar import_control para tb_DEFECTOS: $_"
   }
 }
 finally {

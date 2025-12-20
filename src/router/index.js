@@ -7,6 +7,7 @@ import ImportControl from '../components/ImportControl.vue'
 import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
 import AnalisisMesaTest from '../components/AnalisisMesaTest.vue'
+import ResiduosIndigoTejeduria from '../components/ResiduosIndigoTejeduria.vue'
 
 const routes = [
   {
@@ -56,6 +57,12 @@ const routes = [
     name: 'ImportControl',
     component: ImportControl,
     meta: { title: 'Control de Importaciones - Análisis Producción STC' }
+  },
+  {
+    path: '/residuos-indigo-tejeduria',
+    name: 'ResiduosIndigoTejeduria',
+    component: ResiduosIndigoTejeduria,
+    meta: { title: 'Residuos INDIGO y TEJEDURIA - Análisis Producción STC' }
   }
 ]
 
