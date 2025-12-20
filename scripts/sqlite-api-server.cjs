@@ -1754,9 +1754,10 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
     
     // Filtro de fechas opcional (si no se envían, trae todo)
     let dateFilter = '';
-    let produccionWhere = "WHERE P.SELETOR IN ('INDIGO', 'TECELAGEM')";
+    let produccionWhere = "WHERE P.SELETOR = 'INDIGO'";
     let tejeduriaWhere = "WHERE P.SELETOR = 'TECELAGEM'";
     let residuosWhere = "WHERE DESCRICAO = 'ESTOPA AZUL'";
+    let residuosTejeduriaWhere = "WHERE DESCRICAO = 'ESTOPA AZUL TEJEDURÍA'";
     
     const params = [];
     
@@ -1782,11 +1783,13 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
       produccionWhere += dateCondition.replace(/DT_BASE_PRODUCAO/g, 'P.DT_BASE_PRODUCAO');
       tejeduriaWhere += dateCondition.replace(/DT_BASE_PRODUCAO/g, 'P.DT_BASE_PRODUCAO');
       residuosWhere += residuosDateCondition;
+      residuosTejeduriaWhere += residuosDateCondition;
 
       // Params for CTEs
       params.push(fecha_inicio, fecha_fin); // ProduccionDiaria
       params.push(fecha_inicio, fecha_fin); // TejeduriaProduccion
       params.push(fecha_inicio, fecha_fin); // ResiduosDiarios
+      params.push(fecha_inicio, fecha_fin); // ResiduosTejeduria
       
       // Params for outer query
       params.push(fecha_inicio, fecha_fin);
@@ -1796,10 +1799,21 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
       WITH FichasUnique AS (
           SELECT 
               URDUME, 
-              MAX(CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL)) AS Consumo
+              MAX(CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL)) AS Consumo,
+              AVG(CAST(REPLACE(REPLACE([ENC#TEC#URDUME], '.', ''), ',', '.') AS REAL)) AS Sizing
           FROM tb_FICHAS 
           WHERE [CONS#URD/m] IS NOT NULL AND [CONS#URD/m] != '0,00'
           GROUP BY URDUME
+      ),
+      FichasArtigo AS (
+          SELECT 
+              URDUME, 
+              ARTIGO,
+              MAX(CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL)) AS Consumo,
+              AVG(CAST(REPLACE(REPLACE([ENC#TEC#URDUME], '.', ''), ',', '.') AS REAL)) AS Sizing
+          FROM tb_FICHAS 
+          WHERE [CONS#URD/m] IS NOT NULL AND [CONS#URD/m] != '0,00'
+          GROUP BY URDUME, ARTIGO
       ),
       ProduccionDiaria AS (
           SELECT 
@@ -1811,15 +1825,25 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
           ${produccionWhere}
           GROUP BY P.DT_BASE_PRODUCAO
       ),
+      TejeduriaRaw AS (
+          SELECT 
+              P.DT_BASE_PRODUCAO,
+              MAX(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL)) as Metros,
+              MAX(COALESCE(FA.Consumo, FU.Consumo)) as Consumo,
+              MAX(COALESCE(FA.Sizing, FU.Sizing, 0)) as Sizing
+          FROM tb_PRODUCCION P
+          LEFT JOIN FichasArtigo FA ON TRIM(P.[BASE URDUME]) = FA.URDUME AND P.ARTIGO LIKE FA.ARTIGO || '%'
+          LEFT JOIN FichasUnique FU ON TRIM(P.[BASE URDUME]) = FU.URDUME
+          ${tejeduriaWhere}
+          GROUP BY P.rowid
+      ),
       TejeduriaProduccion AS (
           SELECT 
-              P.DT_BASE_PRODUCAO as Fecha,
-              SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL)) as TejeduriaMetros,
-              SUM(CAST(REPLACE(REPLACE(P.METRAGEM, '.', ''), ',', '.') AS REAL) * F.Consumo) / 1000.0 as TejeduriaKg
-          FROM tb_PRODUCCION P
-          JOIN FichasUnique F ON TRIM(P.[BASE URDUME]) = F.URDUME
-          ${tejeduriaWhere}
-          GROUP BY P.DT_BASE_PRODUCAO
+              DT_BASE_PRODUCAO as Fecha,
+              SUM(Metros) as TejeduriaMetros,
+              SUM(Metros * Consumo / (1 - (Sizing / 100.0))) / 1000.0 as TejeduriaKg
+          FROM TejeduriaRaw
+          GROUP BY DT_BASE_PRODUCAO
       ),
       ResiduosDiarios AS (
           SELECT 
@@ -1829,12 +1853,22 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
           ${residuosWhere}
           GROUP BY DT_MOV
       ),
+      ResiduosTejeduria AS (
+          SELECT 
+              DT_MOV as Fecha,
+              SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as ResiduosTejeduriaKg
+          FROM tb_RESIDUOS_POR_SECTOR
+          ${residuosTejeduriaWhere}
+          GROUP BY DT_MOV
+      ),
       AllDates AS (
           SELECT Fecha FROM ProduccionDiaria
           UNION
           SELECT Fecha FROM ResiduosDiarios
           UNION
           SELECT Fecha FROM TejeduriaProduccion
+          UNION
+          SELECT Fecha FROM ResiduosTejeduria
       )
       SELECT 
           D.Fecha as DT_BASE_PRODUCAO,
@@ -1842,11 +1876,13 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
           COALESCE(P.TotalKg, 0) as TotalKg,
           COALESCE(R.ResiduosKg, 0) as ResiduosKg,
           COALESCE(T.TejeduriaMetros, 0) as TejeduriaMetros,
-          COALESCE(T.TejeduriaKg, 0) as TejeduriaKg
+          COALESCE(T.TejeduriaKg, 0) as TejeduriaKg,
+          COALESCE(RT.ResiduosTejeduriaKg, 0) as ResiduosTejeduriaKg
       FROM AllDates D
       LEFT JOIN ProduccionDiaria P ON D.Fecha = P.Fecha
       LEFT JOIN ResiduosDiarios R ON D.Fecha = R.Fecha
       LEFT JOIN TejeduriaProduccion T ON D.Fecha = T.Fecha
+      LEFT JOIN ResiduosTejeduria RT ON D.Fecha = RT.Fecha
       ${dateFilter}
       ORDER BY 
         substr(D.Fecha, 7, 4) ASC, 
