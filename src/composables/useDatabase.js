@@ -135,6 +135,26 @@ export function useDatabase() {
     return await fetchApi('/residuos/sector')
   }
 
+  // ===================================================================
+  // COSTOS MENSUALES
+  // ===================================================================
+
+  const getCostoItems = async () => {
+    return await fetchApi('/costos/items')
+  }
+
+  const getCostosMensual = async (yyyymm) => {
+    const params = new URLSearchParams({ yyyymm }).toString()
+    return await fetchApi(`/costos/mensual?${params}`)
+  }
+
+  const saveCostosMensual = async (yyyymm, rows) => {
+    return await fetchApi('/costos/mensual', {
+      method: 'PUT',
+      body: JSON.stringify({ yyyymm, rows })
+    })
+  }
+
   return {
     // Estados
     loading: computed(() => loading.value),
@@ -155,6 +175,9 @@ export function useDatabase() {
     getFichaByCodigo,
     getTestes,
     getResiduosIndigo,
-    getResiduosSector
+    getResiduosSector,
+    getCostoItems,
+    getCostosMensual,
+    saveCostosMensual
   }
 }

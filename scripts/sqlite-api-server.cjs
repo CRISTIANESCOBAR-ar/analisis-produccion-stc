@@ -76,6 +76,81 @@ const dbGet = (sql, params = []) => {
   });
 };
 
+const dbRun = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve({ changes: this.changes, lastID: this.lastID });
+    });
+  });
+};
+
+// =====================================================================
+// Inicialización - Costos mensuales (ARS/kg)
+// =====================================================================
+
+const initCostosMensualesSchema = async () => {
+  await dbRun(
+    `CREATE TABLE IF NOT EXISTS tb_COSTO_ITEMS (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      descripcion TEXT NOT NULL,
+      unidad TEXT NOT NULL DEFAULT 'KG',
+      activo INTEGER NOT NULL DEFAULT 1
+    );`
+  );
+
+  await dbRun(
+    `CREATE TABLE IF NOT EXISTS tb_COSTO_ITEM_ALIAS (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL,
+      origen TEXT NOT NULL,
+      nombre_en_origen TEXT NOT NULL,
+      FOREIGN KEY (item_id) REFERENCES tb_COSTO_ITEMS(id),
+      UNIQUE (origen, nombre_en_origen)
+    );`
+  );
+
+  await dbRun(
+    `CREATE TABLE IF NOT EXISTS tb_COSTO_MENSUAL (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      yyyymm TEXT NOT NULL,
+      item_id INTEGER NOT NULL,
+      ars_por_unidad REAL NOT NULL,
+      FOREIGN KEY (item_id) REFERENCES tb_COSTO_ITEMS(id),
+      UNIQUE (yyyymm, item_id)
+    );`
+  );
+
+  await dbRun(`CREATE INDEX IF NOT EXISTS idx_costo_mensual_mes ON tb_COSTO_MENSUAL(yyyymm);`);
+  await dbRun(`CREATE INDEX IF NOT EXISTS idx_costo_alias_item ON tb_COSTO_ITEM_ALIAS(item_id);`);
+
+  // Seed mínimo: ESTOPA_AZUL + alias por origen (Índigo / Tejeduría)
+  await dbRun(
+    `INSERT OR IGNORE INTO tb_COSTO_ITEMS (codigo, descripcion, unidad, activo)
+     VALUES (?, ?, 'KG', 1);`,
+    ['ESTOPA_AZUL', 'Estopa Azul']
+  );
+
+  const estopa = await dbGet(`SELECT id FROM tb_COSTO_ITEMS WHERE codigo = ?`, ['ESTOPA_AZUL']);
+  if (estopa?.id) {
+    await dbRun(
+      `INSERT OR IGNORE INTO tb_COSTO_ITEM_ALIAS (item_id, origen, nombre_en_origen)
+       VALUES (?, ?, ?);`,
+      [estopa.id, 'INDIGO', 'ESTOPA AZUL']
+    );
+    await dbRun(
+      `INSERT OR IGNORE INTO tb_COSTO_ITEM_ALIAS (item_id, origen, nombre_en_origen)
+       VALUES (?, ?, ?);`,
+      [estopa.id, 'TEJEDURIA', 'ESTOPA AZUL TEJEDURÍA']
+    );
+  }
+};
+
+initCostosMensualesSchema().catch((err) => {
+  console.error('❌ Error inicializando esquema de costos mensuales:', err);
+});
+
 // Helper para rangos de fecha (agrega horas para cubrir todo el día)
 const getDateRangeParams = (startDate, endDate) => {
   if (!startDate || !endDate) return null;
@@ -525,6 +600,143 @@ app.get('/api/status', async (req, res) => {
 // =====================================================================
 // ENDPOINTS - Producción
 // =====================================================================
+
+// =====================================================================
+// ENDPOINTS - Costos mensuales (ARS/kg)
+// =====================================================================
+
+// GET /api/costos/items - Catálogo de ítems + alias
+app.get('/api/costos/items', async (req, res) => {
+  try {
+    const rows = await dbAll(
+      `SELECT
+         i.id as item_id,
+         i.codigo,
+         i.descripcion,
+         i.unidad,
+         i.activo,
+         a.id as alias_id,
+         a.origen,
+         a.nombre_en_origen
+       FROM tb_COSTO_ITEMS i
+       LEFT JOIN tb_COSTO_ITEM_ALIAS a ON a.item_id = i.id
+       ORDER BY i.descripcion, a.origen, a.nombre_en_origen;`
+    );
+
+    const byItemId = new Map();
+    for (const row of rows) {
+      if (!byItemId.has(row.item_id)) {
+        byItemId.set(row.item_id, {
+          id: row.item_id,
+          codigo: row.codigo,
+          descripcion: row.descripcion,
+          unidad: row.unidad,
+          activo: row.activo === 1,
+          aliases: []
+        });
+      }
+      if (row.alias_id) {
+        byItemId.get(row.item_id).aliases.push({
+          id: row.alias_id,
+          origen: row.origen,
+          nombre_en_origen: row.nombre_en_origen
+        });
+      }
+    }
+
+    res.json({ items: Array.from(byItemId.values()) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/costos/mensual?yyyymm=YYYY-MM - Costos del mes (items activos)
+app.get('/api/costos/mensual', async (req, res) => {
+  try {
+    const yyyymm = String(req.query.yyyymm || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
+      return res.status(400).json({ error: 'Parámetro yyyymm inválido. Use formato YYYY-MM.' });
+    }
+
+    const rows = await dbAll(
+      `SELECT
+         i.id as item_id,
+         i.codigo,
+         i.descripcion,
+         i.unidad,
+         cm.ars_por_unidad
+       FROM tb_COSTO_ITEMS i
+       LEFT JOIN tb_COSTO_MENSUAL cm
+         ON cm.item_id = i.id AND cm.yyyymm = ?
+       WHERE i.activo = 1
+       ORDER BY i.descripcion;`,
+      [yyyymm]
+    );
+
+    res.json({ yyyymm, rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/costos/mensual - Upsert masivo del mes
+app.put('/api/costos/mensual', async (req, res) => {
+  try {
+    const yyyymm = String(req.body?.yyyymm || '').trim();
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
+
+    if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
+      return res.status(400).json({ error: 'Campo yyyymm inválido. Use formato YYYY-MM.' });
+    }
+    if (!rows) {
+      return res.status(400).json({ error: 'Campo rows inválido. Debe ser un array.' });
+    }
+
+    await dbRun('BEGIN;');
+    let upserts = 0;
+    let deletes = 0;
+
+    for (const row of rows) {
+      const itemId = Number(row?.item_id);
+      const rawValue = row?.ars_por_unidad;
+
+      if (!Number.isFinite(itemId) || itemId <= 0) {
+        throw new Error('rows contiene item_id inválido');
+      }
+
+      // Si viene vacío/null => borrar para ese mes
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        await dbRun(`DELETE FROM tb_COSTO_MENSUAL WHERE yyyymm = ? AND item_id = ?;`, [yyyymm, itemId]);
+        deletes += 1;
+        continue;
+      }
+
+      const value = Number(rawValue);
+      if (!Number.isFinite(value) || value < 0) {
+        throw new Error('rows contiene ars_por_unidad inválido');
+      }
+
+      await dbRun(
+        `INSERT INTO tb_COSTO_MENSUAL (yyyymm, item_id, ars_por_unidad)
+         VALUES (?, ?, ?)
+         ON CONFLICT(yyyymm, item_id)
+         DO UPDATE SET ars_por_unidad = excluded.ars_por_unidad;`,
+        [yyyymm, itemId, value]
+      );
+      upserts += 1;
+    }
+
+    await dbRun('COMMIT;');
+    res.json({ success: true, yyyymm, upserts, deletes });
+  } catch (error) {
+    try {
+      await dbRun('ROLLBACK;');
+    } catch (_) {
+      // ignore
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // GET /api/produccion - Listar producción con paginación
 app.get('/api/produccion', async (req, res) => {
@@ -1758,6 +1970,8 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
     let tejeduriaWhere = "WHERE P.SELETOR = 'TECELAGEM'";
     let residuosWhere = "WHERE DESCRICAO = 'ESTOPA AZUL'";
     let residuosTejeduriaWhere = "WHERE DESCRICAO = 'ESTOPA AZUL TEJEDURÍA'";
+    let anudadosWhere = "WHERE MOTIVO = 101";
+    let prensadaWhere = "WHERE DESCRICAO = 'ESTOPA AZUL'";
     
     const params = [];
     
@@ -1780,16 +1994,25 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
         AND (substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)) <= ?
       `;
 
+      const anudadosDateCondition = `
+        AND (substr(DATA_BASE, 7, 4) || '-' || substr(DATA_BASE, 4, 2) || '-' || substr(DATA_BASE, 1, 2)) >= ?
+        AND (substr(DATA_BASE, 7, 4) || '-' || substr(DATA_BASE, 4, 2) || '-' || substr(DATA_BASE, 1, 2)) <= ?
+      `;
+
       produccionWhere += dateCondition.replace(/DT_BASE_PRODUCAO/g, 'P.DT_BASE_PRODUCAO');
       tejeduriaWhere += dateCondition.replace(/DT_BASE_PRODUCAO/g, 'P.DT_BASE_PRODUCAO');
       residuosWhere += residuosDateCondition;
       residuosTejeduriaWhere += residuosDateCondition;
+      anudadosWhere += anudadosDateCondition;
+      prensadaWhere += residuosDateCondition;
 
       // Params for CTEs
       params.push(fecha_inicio, fecha_fin); // ProduccionDiaria
       params.push(fecha_inicio, fecha_fin); // TejeduriaProduccion
       params.push(fecha_inicio, fecha_fin); // ResiduosDiarios
       params.push(fecha_inicio, fecha_fin); // ResiduosTejeduria
+      params.push(fecha_inicio, fecha_fin); // AnudadosDiarios
+      params.push(fecha_inicio, fecha_fin); // ResiduosPrensada
       
       // Params for outer query
       params.push(fecha_inicio, fecha_fin);
@@ -1861,6 +2084,22 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
           ${residuosTejeduriaWhere}
           GROUP BY DT_MOV
       ),
+      AnudadosDiarios AS (
+          SELECT 
+              DATA_BASE as Fecha,
+              COUNT(*) as AnudadosCount
+          FROM tb_PARADAS
+          ${anudadosWhere}
+          GROUP BY DATA_BASE
+      ),
+      ResiduosPrensada AS (
+          SELECT 
+              DT_MOV as Fecha,
+              SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as ResiduosPrensadaKg
+          FROM tb_RESIDUOS_POR_SECTOR
+          ${prensadaWhere}
+          GROUP BY DT_MOV
+      ),
       AllDates AS (
           SELECT Fecha FROM ProduccionDiaria
           UNION
@@ -1869,6 +2108,10 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
           SELECT Fecha FROM TejeduriaProduccion
           UNION
           SELECT Fecha FROM ResiduosTejeduria
+          UNION
+          SELECT Fecha FROM AnudadosDiarios
+          UNION
+          SELECT Fecha FROM ResiduosPrensada
       )
       SELECT 
           D.Fecha as DT_BASE_PRODUCAO,
@@ -1877,12 +2120,16 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
           COALESCE(R.ResiduosKg, 0) as ResiduosKg,
           COALESCE(T.TejeduriaMetros, 0) as TejeduriaMetros,
           COALESCE(T.TejeduriaKg, 0) as TejeduriaKg,
-          COALESCE(RT.ResiduosTejeduriaKg, 0) as ResiduosTejeduriaKg
+          COALESCE(RT.ResiduosTejeduriaKg, 0) as ResiduosTejeduriaKg,
+          COALESCE(A.AnudadosCount, 0) as AnudadosCount,
+          COALESCE(RP.ResiduosPrensadaKg, 0) as ResiduosPrensadaKg
       FROM AllDates D
       LEFT JOIN ProduccionDiaria P ON D.Fecha = P.Fecha
       LEFT JOIN ResiduosDiarios R ON D.Fecha = R.Fecha
       LEFT JOIN TejeduriaProduccion T ON D.Fecha = T.Fecha
       LEFT JOIN ResiduosTejeduria RT ON D.Fecha = RT.Fecha
+      LEFT JOIN AnudadosDiarios A ON D.Fecha = A.Fecha
+      LEFT JOIN ResiduosPrensada RP ON D.Fecha = RP.Fecha
       ${dateFilter}
       ORDER BY 
         substr(D.Fecha, 7, 4) ASC, 

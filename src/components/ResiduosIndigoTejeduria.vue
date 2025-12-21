@@ -22,64 +22,79 @@
           </div>
         </div>
 
-        <table class="w-full text-sm text-left text-slate-600">
+        <table class="w-full text-sm text-left text-slate-600 font-[Verdana]">
           <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200">Fecha</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Producción Metros</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Producción Kg</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Residuos Kg</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Residuos en %</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Meta %</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Desvío en Kg</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Desvío en Metros</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Tejeduría Metros</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Tejeduría Kg</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Residuos Tejeduría Kg</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Meta Tejeduría %</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Desvío Tejeduría en Kg</th>
-              <th scope="col" class="px-6 py-3 font-bold border-b border-slate-200 text-right">Desvío Tejeduría en Metros</th>
+              <th scope="col" class="pl-2 pr-2 py-1 font-bold border-b border-slate-200">Fecha</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Producción Índigo Metros</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Producción Índigo Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Residuos Índigo Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Residuos Índigo en %</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Meta Índigo %</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Desvío Índigo en Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Desvío Índigo en Metros</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-right">Tejeduría Metros</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Tejeduría Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Residuos Tejeduría Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Meta Tejeduría %</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Desvío Tejeduría en Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Desvío Tejeduría en Metros</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Anudados</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Promedio x Anudado Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">ESTOPA AZUL PRODUCIDA</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">ESTOPA AZUL PRENSADA</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Diferencia</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             <tr v-for="(item, index) in datosCompletos" :key="index" class="bg-white hover:bg-slate-50 transition-colors">
-              <td class="px-6 py-3 font-medium text-slate-900 whitespace-nowrap">{{ item.DT_BASE_PRODUCAO }}</td>
-              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(item.TotalMetros) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-red-600">{{ formatNumber(item.ResiduosKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-orange-600">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-slate-600">{{ formatDecimal(metaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-purple-600">{{ formatDesvio(item.ResiduosKg, item.TotalKg, metaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-indigo-600">{{ formatDesvioMetros(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(item.TejeduriaMetros) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-cyan-700">{{ formatNumber(item.TejeduriaKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-rose-700">{{ formatNumber(item.ResiduosTejeduriaKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-slate-600">{{ formatDecimal(metaTejeduriaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-purple-600">{{ formatDesvio(item.ResiduosTejeduriaKg, item.TejeduriaKg, metaTejeduriaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono font-semibold text-indigo-600">{{ formatDesvioMetros(item.TejeduriaMetros, item.TejeduriaKg, item.ResiduosTejeduriaKg, metaTejeduriaPercent) }}</td>
+              <td class="pl-2 pr-2 py-1 font-medium text-slate-900 whitespace-nowrap">{{ item.DT_BASE_PRODUCAO }}</td>
+              <td class="px-2 py-1 text-right font-mono">{{ formatNumber(item.TotalMetros) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-red-600">{{ formatNumber(item.ResiduosKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-orange-600">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-slate-600">{{ formatDecimal(metaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-purple-600">{{ formatDesvio(item.ResiduosKg, item.TotalKg, metaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-indigo-600">{{ formatDesvioMetros(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.TejeduriaMetros) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-cyan-700">{{ formatNumber(item.TejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-rose-700">{{ formatNumber(item.ResiduosTejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-slate-600">{{ formatDecimal(metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-purple-600">{{ formatDesvio(item.ResiduosTejeduriaKg, item.TejeduriaKg, metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-indigo-600">{{ formatDesvioMetros(item.TejeduriaMetros, item.TejeduriaKg, item.ResiduosTejeduriaKg, metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-amber-600">{{ formatNumber(item.AnudadosCount) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-emerald-600">{{ formatPromedioAnudado(item.ResiduosTejeduriaKg, item.AnudadosCount) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-blue-600">{{ formatNumber(item.EstopaAzulProducida) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-green-600">{{ formatNumber(item.ResiduosPrensadaKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold text-red-500">{{ formatNumber(item.DiferenciaEstopa) }}</td>
             </tr>
             <tr v-if="datosCompletos.length === 0 && !cargando">
-              <td colspan="14" class="px-6 py-8 text-center text-slate-500">
+              <td colspan="19" class="px-6 py-8 text-center text-slate-500">
                 No se encontraron datos para el período seleccionado.
               </td>
             </tr>
           </tbody>
           <tfoot v-if="datosCompletos.length > 0" class="bg-slate-100 font-bold text-slate-800 sticky bottom-0 shadow-inner">
             <tr>
-              <td class="px-6 py-3">TOTAL</td>
-              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(totales.metros) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-blue-800">{{ formatNumber(totales.kg) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-red-700">{{ formatNumber(totales.residuos) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-orange-700">{{ formatPercent(totales.residuos, totales.kg) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-slate-700">{{ formatDecimal(metaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-purple-700">{{ totales.desvioKg > 0 ? formatNumber(totales.desvioKg) : '' }}</td>
-              <td class="px-6 py-3 text-right font-mono text-indigo-700">{{ totales.desvioMetros > 0 ? formatNumber(totales.desvioMetros) : '' }}</td>
-              <td class="px-6 py-3 text-right font-mono">{{ formatNumber(totales.tejeduriaMetros) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-cyan-800">{{ formatNumber(totales.tejeduriaKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-rose-800">{{ formatNumber(totales.residuosTejeduriaKg) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-slate-700">{{ formatDecimal(metaTejeduriaPercent) }}</td>
-              <td class="px-6 py-3 text-right font-mono text-purple-700">{{ totales.desvioTejeduriaKg > 0 ? formatNumber(totales.desvioTejeduriaKg) : '' }}</td>
-              <td class="px-6 py-3 text-right font-mono text-indigo-700">{{ totales.desvioTejeduriaMetros > 0 ? formatNumber(totales.desvioTejeduriaMetros) : '' }}</td>
+              <td class="pl-2 pr-2 py-1">TOTAL</td>
+              <td class="px-2 py-1 text-right font-mono">{{ formatNumber(totales.metros) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-blue-800">{{ formatNumber(totales.kg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-red-700">{{ formatNumber(totales.residuos) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-orange-700">{{ formatPercent(totales.residuos, totales.kg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-slate-700">{{ formatDecimal(metaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-purple-700">{{ totales.desvioKg > 0 ? formatNumber(totales.desvioKg) : '' }}</td>
+              <td class="px-2 py-1 text-right font-mono text-indigo-700">{{ totales.desvioMetros > 0 ? formatNumber(totales.desvioMetros) : '' }}</td>
+              <td class="px-2 py-1 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(totales.tejeduriaMetros) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-cyan-800">{{ formatNumber(totales.tejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-rose-800">{{ formatNumber(totales.residuosTejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-slate-700">{{ formatDecimal(metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-purple-700">{{ totales.desvioTejeduriaKg > 0 ? formatNumber(totales.desvioTejeduriaKg) : '' }}</td>
+              <td class="px-2 py-1 text-right font-mono text-indigo-700">{{ totales.desvioTejeduriaMetros > 0 ? formatNumber(totales.desvioTejeduriaMetros) : '' }}</td>
+              <td class="px-2 py-1 text-right font-mono text-amber-700">{{ formatNumber(totales.anudadosCount) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-emerald-700">{{ formatPromedioAnudadoTotal(totales.residuosTejeduriaKg, totales.anudadosCount) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-blue-700">{{ formatNumber(totales.estopaAzulProducida) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-green-700">{{ formatNumber(totales.residuosPrensadaKg) }}</td>
+              <td class="px-2 py-1 text-right font-mono text-red-600">{{ formatNumber(totales.diferenciaEstopa) }}</td>
             </tr>
           </tfoot>
         </table>
@@ -153,7 +168,20 @@ const datosCompletos = computed(() => {
     // Si el día es menor o igual al seleccionado, buscamos datos reales
     if (i <= selectedDay) {
       if (datosMap.has(dateStr)) {
-        result.push(datosMap.get(dateStr))
+        const data = datosMap.get(dateStr)
+        // Calcular campos derivados
+        const residuosKg = Number(data.ResiduosKg) || 0
+        const residuosTejeduriaKg = Number(data.ResiduosTejeduriaKg) || 0
+        const residuosPrensadaKg = Number(data.ResiduosPrensadaKg) || 0
+        
+        const estopaAzulProducida = residuosKg + residuosTejeduriaKg
+        const diferenciaEstopa = residuosPrensadaKg - estopaAzulProducida
+        
+        result.push({
+          ...data,
+          EstopaAzulProducida: estopaAzulProducida,
+          DiferenciaEstopa: diferenciaEstopa
+        })
       } else {
         result.push({
           DT_BASE_PRODUCAO: dateStr,
@@ -162,19 +190,27 @@ const datosCompletos = computed(() => {
           ResiduosKg: 0,
           TejeduriaMetros: 0,
           TejeduriaKg: 0,
-          ResiduosTejeduriaKg: 0
+          ResiduosTejeduriaKg: 0,
+          AnudadosCount: 0,
+          ResiduosPrensadaKg: 0,
+          EstopaAzulProducida: 0,
+          DiferenciaEstopa: 0
         })
       }
     } else {
-      // Para días futuros en el mes, mostramos ceros
+      // Para días futuros en el mes, mostramos null para que no se renderice nada
       result.push({
         DT_BASE_PRODUCAO: dateStr,
-        TotalMetros: 0,
-        TotalKg: 0,
-        ResiduosKg: 0,
-        TejeduriaMetros: 0,
-        TejeduriaKg: 0,
-        ResiduosTejeduriaKg: 0
+        TotalMetros: null,
+        TotalKg: null,
+        ResiduosKg: null,
+        TejeduriaMetros: null,
+        TejeduriaKg: null,
+        ResiduosTejeduriaKg: null,
+        AnudadosCount: null,
+        ResiduosPrensadaKg: null,
+        EstopaAzulProducida: null,
+        DiferenciaEstopa: null
       })
     }
   }
@@ -190,6 +226,10 @@ const totales = computed(() => {
     acc.tejeduriaMetros += Number(item.TejeduriaMetros) || 0
     acc.tejeduriaKg += Number(item.TejeduriaKg) || 0
     acc.residuosTejeduriaKg += Number(item.ResiduosTejeduriaKg) || 0
+    acc.anudadosCount += Number(item.AnudadosCount) || 0
+    acc.residuosPrensadaKg += Number(item.ResiduosPrensadaKg) || 0
+    acc.estopaAzulProducida += Number(item.EstopaAzulProducida) || 0
+    acc.diferenciaEstopa += Number(item.DiferenciaEstopa) || 0
     
     // Calcular desvío en Kg para este día
     if (item.TotalKg > 0) {
@@ -218,7 +258,8 @@ const totales = computed(() => {
   }, { 
     metros: 0, kg: 0, residuos: 0, desvioKg: 0, desvioMetros: 0, 
     tejeduriaMetros: 0, tejeduriaKg: 0, residuosTejeduriaKg: 0,
-    desvioTejeduriaKg: 0, desvioTejeduriaMetros: 0 
+    desvioTejeduriaKg: 0, desvioTejeduriaMetros: 0, anudadosCount: 0,
+    residuosPrensadaKg: 0, estopaAzulProducida: 0, diferenciaEstopa: 0
   })
 })
 
@@ -232,6 +273,7 @@ const formatNumber = (num) => {
 }
 
 const formatPercent = (residuos, produccion) => {
+  if (produccion === null || produccion === undefined) return ''
   if (!produccion || produccion === 0) return '0,0'
   const percent = (residuos / produccion) * 100
   return new Intl.NumberFormat('es-AR', {
@@ -270,6 +312,30 @@ const formatDesvioMetros = (metros, kg, residuos, meta = metaPercent.value) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(desvioMetros)
+}
+
+const formatPromedioAnudado = (residuos, anudados) => {
+  if (!residuos || residuos === 0) return ''
+  if (!anudados || anudados === 0) return ''
+  
+  const promedio = residuos / anudados
+  
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(promedio)
+}
+
+const formatPromedioAnudadoTotal = (residuos, anudados) => {
+  if (!residuos || residuos <= 0) return ''
+  if (!anudados || anudados === 0) return ''
+  
+  const promedio = residuos / anudados
+  
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(promedio)
 }
 
 const cargarDatos = async () => {

@@ -94,6 +94,13 @@
         @click="handleNavClick('/residuos-indigo-tejeduria')"
       />
       <SidebarItem 
+        icon="💲" 
+        label="Costos mensuales" 
+        :active="isActive('/costos-mensuales')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/costos-mensuales')"
+      />
+      <SidebarItem 
         icon="⚠️" 
         label="Paradas" 
         :active="isActive('/paradas')" 
