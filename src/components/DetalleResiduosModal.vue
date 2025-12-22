@@ -117,21 +117,21 @@
           </div>
 
           <table v-else ref="tablaDetalleRef" class="w-full text-sm border-collapse">
-            <thead class="bg-slate-50 text-xs text-slate-700 sticky top-0 z-10 shadow-sm">
+            <thead class="text-xs text-slate-700 sticky top-0 z-20 shadow-sm">
               <tr>
-                <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
-                <th class="px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
-                <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Tipo</th>
-                <th class="px-3 py-2 font-bold text-right border-b border-slate-200">ID</th>
-                <th class="px-3 py-2 font-bold text-right border-b border-slate-200">Peso Líquido (KG)</th>
-                <th class="px-3 py-2 font-bold text-right border-b border-slate-200">Partida</th>
-                <th class="px-3 py-2 font-bold text-right border-b border-slate-200">Rolada</th>
-                <th class="px-3 py-2 font-bold text-center border-b border-slate-200">Motivo</th>
-                <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Descripción</th>
-                <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Base</th>
-                <th class="px-3 py-2 font-bold text-center border-b border-slate-200">PE DE ROLO</th>
-                <th class="px-3 py-2 font-bold text-center border-b border-slate-200">GAIOLA</th>
-                <th class="px-3 py-2 font-bold text-left border-b border-slate-200">OBS</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Tipo</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">ID</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Peso Líquido (KG)</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Partida</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Rolada</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">Motivo</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Descripción</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Base</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">PE DE ROLO</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">GAIOLA</th>
+                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">OBS</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -157,15 +157,15 @@
           <div v-if="registrosSector.length > 0" class="mt-6 pt-6 border-t-2 border-slate-300">
             <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos por Sector</h3>
             <table ref="tablaSectorRef" class="w-full text-sm border-collapse">
-              <thead class="bg-slate-50 text-xs text-slate-700 sticky top-0 z-10 shadow-sm">
+              <thead class="text-xs text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
-                  <th class="px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
-                  <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Sub-producto</th>
-                  <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Descripción</th>
-                  <th class="px-3 py-2 font-bold text-right border-b border-slate-200">ID</th>
-                  <th class="px-3 py-2 font-bold text-right border-b border-slate-200">Peso Líquido (KG)</th>
-                  <th class="px-3 py-2 font-bold text-left border-b border-slate-200">OBS</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Sub-producto</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Descripción</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">ID</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Peso Líquido (KG)</th>
+                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">OBS</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
