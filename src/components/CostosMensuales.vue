@@ -2,28 +2,15 @@
   <div class="w-full h-screen flex flex-col p-1">
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <div class="flex items-center justify-between gap-4 flex-shrink-0 mb-4">
-        <h3 class="text-lg font-semibold text-slate-800">Costos mensuales (ARS/kg)</h3>
+        <h3 class="text-lg font-semibold text-slate-800">Costos mensuales (ARS por unidad)</h3>
 
         <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-slate-700">Mes:</label>
-          <input
-            type="month"
-            v-model="yyyymm"
-            class="border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-800 bg-white"
-          />
-          <button
-            class="px-3 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            :disabled="cargando"
-            @click="cargar"
-          >
-            Actualizar
-          </button>
           <button
             class="px-3 py-2 text-sm font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-            :disabled="cargando || filas.length === 0"
+            :disabled="cargando || !tieneCambios"
             @click="guardar"
           >
-            Guardar
+            Guardar cambios
           </button>
         </div>
       </div>
@@ -40,55 +27,87 @@
         <table class="w-full text-sm text-left text-slate-700">
           <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200">Ítem</th>
-              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200 text-right">ARS/kg</th>
+              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200">Mes</th>
+              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200 text-right">Urdido Teñido (ARS/m)</th>
+              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200 text-right">Tela Terminada (ARS/m)</th>
+              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200 text-right">Estopa Azul (ARS/kg)</th>
+              <th scope="col" class="px-3 py-2 font-bold border-b border-slate-200">Observaciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
-            <tr v-for="fila in filas" :key="fila.item_id" class="bg-white hover:bg-slate-50">
-              <td class="px-3 py-2 font-medium text-slate-900">{{ fila.descripcion }}</td>
+            <tr v-for="(fila, idx) in filasPorMes" :key="idx" class="bg-white hover:bg-slate-50">
+              <td class="px-3 py-2 font-medium text-slate-900 whitespace-nowrap">{{ fila.yyyymm }}</td>
               <td class="px-3 py-2 text-right">
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  class="w-40 text-right border border-slate-300 rounded-md px-2 py-1 text-sm"
-                  v-model="fila.ars_por_unidad"
+                  class="w-32 text-right border border-slate-300 rounded-md px-2 py-1 text-sm"
+                  v-model="fila.urdido.valor"
+                  @input="marcarCambio"
+                />
+              </td>
+              <td class="px-3 py-2 text-right">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="w-32 text-right border border-slate-300 rounded-md px-2 py-1 text-sm"
+                  v-model="fila.tela.valor"
+                  @input="marcarCambio"
+                />
+              </td>
+              <td class="px-3 py-2 text-right">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="w-32 text-right border border-slate-300 rounded-md px-2 py-1 text-sm"
+                  v-model="fila.estopa.valor"
+                  @input="marcarCambio"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <input
+                  type="text"
+                  class="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+                  v-model="fila.observaciones"
+                  placeholder="Opcional"
+                  @input="marcarCambio"
                 />
               </td>
             </tr>
-            <tr v-if="!cargando && filas.length === 0">
-              <td colspan="2" class="px-3 py-6 text-center text-slate-500">No hay ítems activos para cargar.</td>
+            <tr v-if="!cargando && filasPorMes.length === 0">
+              <td colspan="5" class="px-3 py-6 text-center text-slate-500">No hay datos históricos.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="mt-3 text-xs text-slate-500">
-        Nota: si dejás el valor vacío, se elimina el costo del mes.
+        Mostrando últimos 24 meses. Dejá el valor vacío para eliminarlo.
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useDatabase } from '../composables/useDatabase'
 
 const { getCostosMensual, saveCostosMensual } = useDatabase()
 
-const yyyymm = ref('')
-const filas = ref([])
+const filasPorMes = ref([])
 const cargando = ref(false)
 const mensaje = ref('')
 const mensajeTipo = ref('ok')
+const tieneCambios = ref(false)
 
-function getCurrentYYYYMM() {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
-}
+const itemIds = ref({
+  urdido: null,
+  tela: null,
+  estopa: null
+})
 
 function setMensaje(texto, tipo = 'ok') {
   mensaje.value = texto
@@ -100,17 +119,53 @@ function setMensaje(texto, tipo = 'ok') {
   }
 }
 
+function marcarCambio() {
+  tieneCambios.value = true
+}
+
 async function cargar() {
   cargando.value = true
   try {
-    const data = await getCostosMensual(yyyymm.value)
-    filas.value = (data.rows || []).map(r => ({
-      item_id: r.item_id,
-      codigo: r.codigo,
-      descripcion: r.descripcion,
-      unidad: r.unidad,
-      ars_por_unidad: r.ars_por_unidad ?? ''
-    }))
+    const data = await getCostosMensual(24)
+    const rows = data.rows || []
+    
+    // Agrupar por mes
+    const porMes = new Map()
+    
+    for (const row of rows) {
+      const mes = row.yyyymm
+      if (!porMes.has(mes)) {
+        porMes.set(mes, {
+          yyyymm: mes,
+          urdido: { valor: '', itemId: null },
+          tela: { valor: '', itemId: null },
+          estopa: { valor: '', itemId: null },
+          observaciones: ''
+        })
+      }
+      
+      const fila = porMes.get(mes)
+      
+      if (row.codigo === 'URDIDO_TENIDO') {
+        fila.urdido.valor = row.ars_por_unidad ?? ''
+        fila.urdido.itemId = row.item_id
+        itemIds.value.urdido = row.item_id
+        if (row.observaciones) fila.observaciones = row.observaciones
+      } else if (row.codigo === 'TELA_TERMINADA') {
+        fila.tela.valor = row.ars_por_unidad ?? ''
+        fila.tela.itemId = row.item_id
+        itemIds.value.tela = row.item_id
+        if (row.observaciones) fila.observaciones = row.observaciones
+      } else if (row.codigo === 'ESTOPA_AZUL') {
+        fila.estopa.valor = row.ars_por_unidad ?? ''
+        fila.estopa.itemId = row.item_id
+        itemIds.value.estopa = row.item_id
+        if (row.observaciones) fila.observaciones = row.observaciones
+      }
+    }
+    
+    filasPorMes.value = Array.from(porMes.values()).sort((a, b) => b.yyyymm.localeCompare(a.yyyymm))
+    tieneCambios.value = false
     setMensaje('', 'ok')
   } catch (e) {
     setMensaje(`Error cargando costos: ${e.message || e}`, 'error')
@@ -122,12 +177,43 @@ async function cargar() {
 async function guardar() {
   cargando.value = true
   try {
-    const payload = filas.value.map(f => ({
-      item_id: f.item_id,
-      ars_por_unidad: f.ars_por_unidad
-    }))
-    await saveCostosMensual(yyyymm.value, payload)
+    const payload = []
+    
+    for (const fila of filasPorMes.value) {
+      // Urdido
+      if (fila.urdido.itemId) {
+        payload.push({
+          yyyymm: fila.yyyymm,
+          item_id: fila.urdido.itemId,
+          ars_por_unidad: fila.urdido.valor,
+          observaciones: fila.observaciones || null
+        })
+      }
+      
+      // Tela
+      if (fila.tela.itemId) {
+        payload.push({
+          yyyymm: fila.yyyymm,
+          item_id: fila.tela.itemId,
+          ars_por_unidad: fila.tela.valor,
+          observaciones: fila.observaciones || null
+        })
+      }
+      
+      // Estopa
+      if (fila.estopa.itemId) {
+        payload.push({
+          yyyymm: fila.yyyymm,
+          item_id: fila.estopa.itemId,
+          ars_por_unidad: fila.estopa.valor,
+          observaciones: fila.observaciones || null
+        })
+      }
+    }
+    
+    await saveCostosMensual(payload)
     setMensaje('Guardado OK', 'ok')
+    tieneCambios.value = false
     await cargar()
   } catch (e) {
     setMensaje(`Error guardando costos: ${e.message || e}`, 'error')
@@ -137,7 +223,6 @@ async function guardar() {
 }
 
 onMounted(async () => {
-  yyyymm.value = getCurrentYYYYMM()
   await cargar()
 })
 </script>

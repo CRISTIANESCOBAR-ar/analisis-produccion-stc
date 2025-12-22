@@ -143,15 +143,15 @@ export function useDatabase() {
     return await fetchApi('/costos/items')
   }
 
-  const getCostosMensual = async (yyyymm) => {
-    const params = new URLSearchParams({ yyyymm }).toString()
+  const getCostosMensual = async (limite = 24) => {
+    const params = new URLSearchParams({ limite: String(limite) }).toString()
     return await fetchApi(`/costos/mensual?${params}`)
   }
 
-  const saveCostosMensual = async (yyyymm, rows) => {
+  const saveCostosMensual = async (rows) => {
     return await fetchApi('/costos/mensual', {
       method: 'PUT',
-      body: JSON.stringify({ yyyymm, rows })
+      body: JSON.stringify({ rows })
     })
   }
 

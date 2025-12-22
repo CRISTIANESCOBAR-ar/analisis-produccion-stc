@@ -117,6 +117,7 @@ const initCostosMensualesSchema = async () => {
       yyyymm TEXT NOT NULL,
       item_id INTEGER NOT NULL,
       ars_por_unidad REAL NOT NULL,
+      observaciones TEXT,
       FOREIGN KEY (item_id) REFERENCES tb_COSTO_ITEMS(id),
       UNIQUE (yyyymm, item_id)
     );`
@@ -124,12 +125,36 @@ const initCostosMensualesSchema = async () => {
 
   await dbRun(`CREATE INDEX IF NOT EXISTS idx_costo_mensual_mes ON tb_COSTO_MENSUAL(yyyymm);`);
   await dbRun(`CREATE INDEX IF NOT EXISTS idx_costo_alias_item ON tb_COSTO_ITEM_ALIAS(item_id);`);
+  
+  // Agregar columna observaciones si no existe (para DBs existentes)
+  try {
+    await dbRun(`ALTER TABLE tb_COSTO_MENSUAL ADD COLUMN observaciones TEXT;`);
+  } catch (e) {
+    // Columna ya existe, ignorar
+  }
 
-  // Seed mínimo: ESTOPA_AZUL + alias por origen (Índigo / Tejeduría)
+  // Seed de ítems: ESTOPA_AZUL, URDIDO_TENIDO, TELA_TERMINADA
   await dbRun(
     `INSERT OR IGNORE INTO tb_COSTO_ITEMS (codigo, descripcion, unidad, activo)
      VALUES (?, ?, 'KG', 1);`,
     ['ESTOPA_AZUL', 'Estopa Azul']
+  );
+  
+  await dbRun(
+    `INSERT OR IGNORE INTO tb_COSTO_ITEMS (codigo, descripcion, unidad, activo)
+     VALUES (?, ?, 'M', 1);`,
+    ['URDIDO_TENIDO', 'Urdido Teñido']
+  );
+  
+  // Actualizar unidad de URDIDO_TENIDO si ya existe
+  await dbRun(
+    `UPDATE tb_COSTO_ITEMS SET unidad = 'M' WHERE codigo = 'URDIDO_TENIDO';`
+  );
+  
+  await dbRun(
+    `INSERT OR IGNORE INTO tb_COSTO_ITEMS (codigo, descripcion, unidad, activo)
+     VALUES (?, ?, 'M', 1);`,
+    ['TELA_TERMINADA', 'Tela Terminada']
   );
 
   const estopa = await dbGet(`SELECT id FROM tb_COSTO_ITEMS WHERE codigo = ?`, ['ESTOPA_AZUL']);
@@ -144,6 +169,95 @@ const initCostosMensualesSchema = async () => {
        VALUES (?, ?, ?);`,
       [estopa.id, 'TEJEDURIA', 'ESTOPA AZUL TEJEDURÍA']
     );
+  }
+  
+  // Seed de datos históricos (2023-01 a 2025-12)
+  const urdidoId = (await dbGet(`SELECT id FROM tb_COSTO_ITEMS WHERE codigo = ?`, ['URDIDO_TENIDO']))?.id;
+  const telaId = (await dbGet(`SELECT id FROM tb_COSTO_ITEMS WHERE codigo = ?`, ['TELA_TERMINADA']))?.id;
+  
+  if (urdidoId && telaId) {
+    const historicos = [
+      ['2023-01', urdidoId, 252.48, null],
+      ['2023-01', telaId, 506.2, null],
+      ['2023-02', urdidoId, 232.86, null],
+      ['2023-02', telaId, 454.65, null],
+      ['2023-03', urdidoId, 238.34, null],
+      ['2023-03', telaId, 456.95, null],
+      ['2023-04', urdidoId, 270.19, null],
+      ['2023-04', telaId, 512.52, null],
+      ['2023-05', urdidoId, 274.91, null],
+      ['2023-05', telaId, 544.02, null],
+      ['2023-06', urdidoId, 295.43, null],
+      ['2023-06', telaId, 625.83, null],
+      ['2023-07', urdidoId, 298.85, null],
+      ['2023-07', telaId, 610.33, null],
+      ['2023-08', urdidoId, 336.77, null],
+      ['2023-08', telaId, 651.29, null],
+      ['2023-09', urdidoId, 317.75, null],
+      ['2023-09', telaId, 656.18, null],
+      ['2023-10', urdidoId, 347.79, null],
+      ['2023-10', telaId, 715.11, null],
+      ['2023-11', urdidoId, 375.5, null],
+      ['2023-11', telaId, 743.87, null],
+      ['2023-12', urdidoId, 525.53, null],
+      ['2023-12', telaId, 1016.41, null],
+      ['2024-01', urdidoId, 526.16, null],
+      ['2024-01', telaId, 1104.14, null],
+      ['2024-02', urdidoId, 531.46, null],
+      ['2024-02', telaId, 1077.16, null],
+      ['2024-03', urdidoId, 630.99, null],
+      ['2024-03', telaId, 1291.66, null],
+      ['2024-04', urdidoId, 716.75, null],
+      ['2024-04', telaId, 1426.87, null],
+      ['2024-05', urdidoId, 697.17, null],
+      ['2024-05', telaId, 1504.82, null],
+      ['2024-06', urdidoId, 727.22, null],
+      ['2024-06', telaId, 1643.52, null],
+      ['2024-07', urdidoId, 748.7, null],
+      ['2024-07', telaId, 1637.77, null],
+      ['2024-08', urdidoId, 797.31, null],
+      ['2024-08', telaId, 1777.46, null],
+      ['2024-09', urdidoId, 786.14, null],
+      ['2024-09', telaId, 1822.38, null],
+      ['2024-10', urdidoId, 832.49, null],
+      ['2024-10', telaId, 1849.98, null],
+      ['2024-11', urdidoId, 833.43, 'Costo de oct-24.'],
+      ['2024-11', telaId, 1914.93, 'Costo de oct-24.'],
+      ['2024-12', urdidoId, 989.03, null],
+      ['2024-12', telaId, 2208.08, null],
+      ['2025-01', urdidoId, 1062.57, null],
+      ['2025-01', telaId, 2276.66, null],
+      ['2025-02', urdidoId, 902.61, null],
+      ['2025-02', telaId, 2019.03, null],
+      ['2025-03', urdidoId, 871.83, null],
+      ['2025-03', telaId, 1940.12, null],
+      ['2025-04', urdidoId, 866.25, null],
+      ['2025-04', telaId, 1948.84, null],
+      ['2025-05', urdidoId, 932.15, null],
+      ['2025-05', telaId, 2103.07, null],
+      ['2025-06', urdidoId, 932.15, 'Costo de may-25.'],
+      ['2025-06', telaId, 2103.07, 'Costo de may-25.'],
+      ['2025-07', urdidoId, 1000, null],
+      ['2025-07', telaId, 1500, null],
+      ['2025-08', urdidoId, 1100, null],
+      ['2025-08', telaId, 1600, null],
+      ['2025-09', urdidoId, 1300, null],
+      ['2025-09', telaId, 1700, null],
+      ['2025-10', urdidoId, 1500, null],
+      ['2025-10', telaId, 1800, null],
+      ['2025-11', urdidoId, 2000, null],
+      ['2025-11', telaId, 3000, null],
+      ['2025-12', urdidoId, 2500, null],
+      ['2025-12', telaId, 3100, null]
+    ];
+    
+    for (const [yyyymm, itemId, valor, obs] of historicos) {
+      await dbRun(
+        `INSERT OR IGNORE INTO tb_COSTO_MENSUAL (yyyymm, item_id, ars_por_unidad, observaciones)
+         VALUES (?, ?, ?, ?);`,
+        [yyyymm, itemId, valor, obs]
+      );
+    }
   }
 };
 
@@ -650,44 +764,45 @@ app.get('/api/costos/items', async (req, res) => {
   }
 });
 
-// GET /api/costos/mensual?yyyymm=YYYY-MM - Costos del mes (items activos)
+// GET /api/costos/mensual - Costos de múltiples meses (últimos N meses o rango)
 app.get('/api/costos/mensual', async (req, res) => {
   try {
-    const yyyymm = String(req.query.yyyymm || '').trim();
-    if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
-      return res.status(400).json({ error: 'Parámetro yyyymm inválido. Use formato YYYY-MM.' });
-    }
-
+    const limite = parseInt(req.query.limite) || 24; // Por defecto últimos 24 meses
+    
     const rows = await dbAll(
-      `SELECT
+      `WITH MesesUnicos AS (
+         SELECT DISTINCT yyyymm FROM tb_COSTO_MENSUAL
+         ORDER BY yyyymm DESC
+         LIMIT ?
+       )
+       SELECT
+         mu.yyyymm,
          i.id as item_id,
          i.codigo,
          i.descripcion,
          i.unidad,
-         cm.ars_por_unidad
-       FROM tb_COSTO_ITEMS i
+         cm.ars_por_unidad,
+         cm.observaciones
+       FROM MesesUnicos mu
+       CROSS JOIN tb_COSTO_ITEMS i
        LEFT JOIN tb_COSTO_MENSUAL cm
-         ON cm.item_id = i.id AND cm.yyyymm = ?
+         ON cm.item_id = i.id AND cm.yyyymm = mu.yyyymm
        WHERE i.activo = 1
-       ORDER BY i.descripcion;`,
-      [yyyymm]
+       ORDER BY mu.yyyymm DESC, i.descripcion;`,
+      [limite]
     );
 
-    res.json({ yyyymm, rows });
+    res.json({ rows });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// PUT /api/costos/mensual - Upsert masivo del mes
+// PUT /api/costos/mensual - Upsert masivo de múltiples meses/ítems
 app.put('/api/costos/mensual', async (req, res) => {
   try {
-    const yyyymm = String(req.body?.yyyymm || '').trim();
     const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
 
-    if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
-      return res.status(400).json({ error: 'Campo yyyymm inválido. Use formato YYYY-MM.' });
-    }
     if (!rows) {
       return res.status(400).json({ error: 'Campo rows inválido. Debe ser un array.' });
     }
@@ -697,14 +812,19 @@ app.put('/api/costos/mensual', async (req, res) => {
     let deletes = 0;
 
     for (const row of rows) {
+      const yyyymm = String(row?.yyyymm || '').trim();
       const itemId = Number(row?.item_id);
       const rawValue = row?.ars_por_unidad;
+      const obs = row?.observaciones || null;
 
+      if (!/^\d{4}-\d{2}$/.test(yyyymm)) {
+        throw new Error(`yyyymm inválido: ${yyyymm}`);
+      }
       if (!Number.isFinite(itemId) || itemId <= 0) {
         throw new Error('rows contiene item_id inválido');
       }
 
-      // Si viene vacío/null => borrar para ese mes
+      // Si viene vacío/null => borrar para ese mes/ítem
       if (rawValue === null || rawValue === undefined || rawValue === '') {
         await dbRun(`DELETE FROM tb_COSTO_MENSUAL WHERE yyyymm = ? AND item_id = ?;`, [yyyymm, itemId]);
         deletes += 1;
@@ -717,17 +837,17 @@ app.put('/api/costos/mensual', async (req, res) => {
       }
 
       await dbRun(
-        `INSERT INTO tb_COSTO_MENSUAL (yyyymm, item_id, ars_por_unidad)
-         VALUES (?, ?, ?)
+        `INSERT INTO tb_COSTO_MENSUAL (yyyymm, item_id, ars_por_unidad, observaciones)
+         VALUES (?, ?, ?, ?)
          ON CONFLICT(yyyymm, item_id)
-         DO UPDATE SET ars_por_unidad = excluded.ars_por_unidad;`,
-        [yyyymm, itemId, value]
+         DO UPDATE SET ars_por_unidad = excluded.ars_por_unidad, observaciones = excluded.observaciones;`,
+        [yyyymm, itemId, value, obs]
       );
       upserts += 1;
     }
 
     await dbRun('COMMIT;');
-    res.json({ success: true, yyyymm, upserts, deletes });
+    res.json({ success: true, upserts, deletes });
   } catch (error) {
     try {
       await dbRun('ROLLBACK;');
@@ -2141,6 +2261,81 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
     res.json(rows);
   } catch (error) {
     console.error('Error en /api/residuos-indigo-tejeduria:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT - Detalle de Residuos por Fecha
+// =====================================================================
+// GET /api/detalle-residuos?fecha=DD/MM/YYYY
+app.get('/api/detalle-residuos', async (req, res) => {
+  try {
+    const { fecha } = req.query;
+    
+    if (!fecha) {
+      return res.status(400).json({ error: 'Parámetro "fecha" requerido (formato DD/MM/YYYY)' });
+    }
+
+    const sql = `
+      SELECT 
+        DT_MOV,
+        TURNO,
+        DESCRICAO,
+        ID,
+        [PESO LIQUIDO (KG)],
+        PARTIDA,
+        ROLADA,
+        MOTIVO,
+        DESC_MOTIVO,
+        URDUME,
+        [PE DE ROLO],
+        INDIGO,
+        GAIOLA,
+        OBS
+      FROM tb_RESIDUOS_INDIGO
+      WHERE DT_MOV = ?
+      ORDER BY ID ASC
+    `;
+
+    const rows = await dbAll(sql, [fecha]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en /api/detalle-residuos:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT - Detalle de Residuos por Sector (Por Fecha)
+// =====================================================================
+// GET /api/detalle-residuos-sector?fecha=DD/MM/YYYY
+app.get('/api/detalle-residuos-sector', async (req, res) => {
+  try {
+    const { fecha } = req.query;
+    
+    if (!fecha) {
+      return res.status(400).json({ error: 'Parámetro "fecha" requerido (formato DD/MM/YYYY)' });
+    }
+
+    const sql = `
+      SELECT 
+        DT_MOV,
+        TURNO,
+        SUBPRODUTO,
+        DESCRICAO,
+        ID,
+        [PESO LIQUIDO (KG)],
+        OBS
+      FROM tb_RESIDUOS_POR_SECTOR
+      WHERE DT_MOV = ? AND DESC_SETOR = 'TECELAGEM'
+      ORDER BY ID ASC
+    `;
+
+    const rows = await dbAll(sql, [fecha]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en /api/detalle-residuos-sector:', error);
     res.status(500).json({ error: error.message });
   }
 });

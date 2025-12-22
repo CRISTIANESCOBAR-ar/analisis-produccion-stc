@@ -11,28 +11,25 @@ const app = createApp(App)
 app.directive('tippy', {
   mounted(el, binding) {
     if (binding.value) {
-      tippy(el, {
-        content: binding.value,
-        placement: 'bottom',
-        arrow: true,
-        theme: 'dark'
-      })
+      const options = typeof binding.value === 'string' 
+        ? { content: binding.value, placement: 'bottom', arrow: true, theme: 'dark' }
+        : { ...binding.value, arrow: true, theme: 'dark' }
+      tippy(el, options)
     }
   },
   updated(el, binding) {
     if (el._tippy) {
       if (binding.value) {
-        el._tippy.setContent(binding.value)
+        const content = typeof binding.value === 'string' ? binding.value : binding.value.content
+        el._tippy.setContent(content)
       } else {
         el._tippy.destroy()
       }
     } else if (binding.value) {
-      tippy(el, {
-        content: binding.value,
-        placement: 'bottom',
-        arrow: true,
-        theme: 'dark'
-      })
+      const options = typeof binding.value === 'string' 
+        ? { content: binding.value, placement: 'bottom', arrow: true, theme: 'dark' }
+        : { ...binding.value, arrow: true, theme: 'dark' }
+      tippy(el, options)
     }
   },
   unmounted(el) {

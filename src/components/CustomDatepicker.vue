@@ -15,7 +15,7 @@
       />
       <span class="calendar-icon absolute right-3 top-1/2 -translate-y-1/2 text-lg cursor-pointer select-none" @click="toggleCalendar">📅</span>
 
-      <div v-if="showCalendar" class="calendar-dropdown absolute top-[calc(100%+4px)] left-0 bg-white border border-slate-200 rounded-lg shadow-xl p-3 z-50 min-w-[280px]">
+      <div v-if="showCalendar" class="calendar-dropdown absolute top-[calc(100%+4px)] right-0 bg-white border border-slate-200 rounded-lg shadow-xl p-3 z-50 min-w-[280px]">
         <div class="calendar-header flex justify-between items-center mb-3">
           <button class="calendar-nav-btn w-8 h-8 flex items-center justify-center border border-slate-200 rounded bg-white text-blue-600 hover:bg-blue-600 hover:text-white transition-colors" @click.stop="changeMonth(-1)">&lt;</button>
           <div class="calendar-selects flex gap-1">
@@ -67,18 +67,32 @@
     <div v-if="showButtons" class="flex gap-1">
       <button 
         class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm h-[34px]" 
+        @click="cambiarMes(-1)" 
+        @mousedown.prevent
+        tabindex="-1"
+        v-tippy="{ content: 'Mes anterior', placement: 'bottom' }"
+      >&lt;&lt;</button>
+      <button 
+        class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm h-[34px]" 
         @click="cambiarFecha(-1)" 
         @mousedown.prevent
         tabindex="-1"
-        title="Día anterior (←)"
+        v-tippy="{ content: 'Día anterior (←)', placement: 'bottom' }"
       >&lt;</button>
       <button 
         class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm h-[34px]" 
         @click="cambiarFecha(1)" 
         @mousedown.prevent
         tabindex="-1"
-        title="Día siguiente (→)"
+        v-tippy="{ content: 'Día siguiente (→)', placement: 'bottom' }"
       >&gt;</button>
+      <button 
+        class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm h-[34px]" 
+        @click="cambiarMes(1)" 
+        @mousedown.prevent
+        tabindex="-1"
+        v-tippy="{ content: 'Mes siguiente', placement: 'bottom' }"
+      >&gt;&gt;</button>
     </div>
   </div>
 </template>
@@ -258,6 +272,42 @@ function cambiarFecha(dias) {
   const [year, month, day] = props.modelValue.split('-').map(Number)
   const fecha = new Date(year, month - 1, day)
   fecha.setDate(fecha.getDate() + dias)
+  
+  const y = fecha.getFullYear()
+  const m = (fecha.getMonth() + 1).toString().padStart(2, '0')
+  const d = fecha.getDate().toString().padStart(2, '0')
+  const newDate = `${y}-${m}-${d}`
+  
+  emit('update:modelValue', newDate)
+  emit('change', newDate)
+}
+
+function cambiarMes(meses) {
+  if (!props.modelValue) return
+  const [year, month, day] = props.modelValue.split('-').map(Number)
+  const fecha = new Date(year, month - 1, day)
+  
+  // Cambiar el mes
+  fecha.setMonth(fecha.getMonth() + meses)
+  
+  // Obtener fecha actual (hoy)
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  
+  // Verificar si el mes destino es el mes actual
+  const esMesActual = fecha.getFullYear() === hoy.getFullYear() && 
+                      fecha.getMonth() === hoy.getMonth()
+  
+  if (esMesActual) {
+    // Si es el mes actual, usar fecha actual - 1 día
+    const ayer = new Date(hoy)
+    ayer.setDate(ayer.getDate() - 1)
+    fecha.setDate(ayer.getDate())
+  } else {
+    // Si no es el mes actual, usar el último día del mes
+    const ultimoDiaDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate()
+    fecha.setDate(ultimoDiaDelMes)
+  }
   
   const y = fecha.getFullYear()
   const m = (fecha.getMonth() + 1).toString().padStart(2, '0')
