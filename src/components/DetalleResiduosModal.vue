@@ -117,7 +117,7 @@
           </div>
 
           <table v-else ref="tablaDetalleRef" class="w-full text-sm border-collapse">
-            <thead class="bg-slate-50 text-xs text-slate-700 sticky top-0">
+            <thead class="bg-slate-50 text-xs text-slate-700 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
                 <th class="px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
@@ -157,7 +157,7 @@
           <div v-if="registrosSector.length > 0" class="mt-6 pt-6 border-t-2 border-slate-300">
             <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos por Sector</h3>
             <table ref="tablaSectorRef" class="w-full text-sm border-collapse">
-              <thead class="bg-slate-50 text-xs text-slate-700 sticky top-0">
+              <thead class="bg-slate-50 text-xs text-slate-700 sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th class="px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
                   <th class="px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
