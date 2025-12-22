@@ -285,9 +285,11 @@ function cambiarFecha(dias) {
 function cambiarMes(meses) {
   if (!props.modelValue) return
   const [year, month, day] = props.modelValue.split('-').map(Number)
-  const fecha = new Date(year, month - 1, day)
   
-  // Cambiar el mes
+  // Crear fecha con el primer día del mes actual
+  const fecha = new Date(year, month - 1, 1)
+  
+  // Cambiar el mes (siempre desde el día 1 para evitar problemas con meses de diferente longitud)
   fecha.setMonth(fecha.getMonth() + meses)
   
   // Obtener fecha actual (hoy)
@@ -298,16 +300,19 @@ function cambiarMes(meses) {
   const esMesActual = fecha.getFullYear() === hoy.getFullYear() && 
                       fecha.getMonth() === hoy.getMonth()
   
+  let diaFinal
   if (esMesActual) {
-    // Si es el mes actual, usar fecha actual - 1 día
+    // Si es el mes actual, usar ayer
     const ayer = new Date(hoy)
     ayer.setDate(ayer.getDate() - 1)
-    fecha.setDate(ayer.getDate())
+    diaFinal = ayer.getDate()
   } else {
     // Si no es el mes actual, usar el último día del mes
     const ultimoDiaDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate()
-    fecha.setDate(ultimoDiaDelMes)
+    diaFinal = ultimoDiaDelMes
   }
+  
+  fecha.setDate(diaFinal)
   
   const y = fecha.getFullYear()
   const m = (fecha.getMonth() + 1).toString().padStart(2, '0')
