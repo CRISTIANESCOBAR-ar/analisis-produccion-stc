@@ -116,70 +116,90 @@
             </div>
           </div>
 
-          <table v-else ref="tablaDetalleRef" class="w-full text-sm border-collapse">
-            <thead class="text-xs text-slate-700 sticky top-0 z-20 shadow-sm">
-              <tr>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Tipo</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">ID</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Peso Líquido (KG)</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Partida</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Rolada</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">Motivo</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Descripción</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Base</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">PE DE ROLO</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">GAIOLA</th>
-                <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">OBS</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="(item, index) in registros" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
-                <td class="px-3 py-2 text-slate-900 whitespace-nowrap">{{ item.DT_MOV }}</td>
-                <td class="px-3 py-2 text-center font-semibold">{{ item.TURNO }}</td>
-                <td class="px-3 py-2 text-slate-700">{{ item.DESCRICAO }}</td>
-                <td class="px-3 py-2 text-right font-mono text-slate-600">{{ item.ID }}</td>
-                <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
-                <td class="px-3 py-2 text-right font-mono text-slate-600">{{ item.PARTIDA }}</td>
-                <td class="px-3 py-2 text-right font-mono text-slate-600">{{ item.ROLADA }}</td>
-                <td class="px-3 py-2 text-center text-slate-600">{{ item.MOTIVO }}</td>
-                <td class="px-3 py-2 text-slate-700 text-xs">{{ item.DESC_MOTIVO }}</td>
-                <td class="px-3 py-2 text-slate-700 font-mono text-xs">{{ item.URDUME }}</td>
-                <td class="px-3 py-2 text-center text-slate-600">{{ item['PE DE ROLO'] }}</td>
-                <td class="px-3 py-2 text-center text-slate-600">{{ item.GAIOLA }}</td>
-                <td class="px-3 py-2 text-slate-600 text-xs">{{ item.OBS }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div v-else class="border border-slate-200 rounded-lg overflow-hidden">
+            <!-- Encabezado fijo -->
+            <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
+              <table class="w-full text-sm">
+                <thead class="text-xs text-slate-700">
+                  <tr>
+                    <th class="px-3 py-2 font-bold text-left w-[100px]">Fecha</th>
+                    <th class="px-3 py-2 font-bold text-center w-[60px]">Turno</th>
+                    <th class="px-3 py-2 font-bold text-left w-[140px]">Tipo</th>
+                    <th class="px-3 py-2 font-bold text-right w-[80px]">ID</th>
+                    <th class="px-3 py-2 font-bold text-right w-[120px]">Peso Líquido (KG)</th>
+                    <th class="px-3 py-2 font-bold text-right w-[80px]">Partida</th>
+                    <th class="px-3 py-2 font-bold text-right w-[80px]">Rolada</th>
+                    <th class="px-3 py-2 font-bold text-center w-[70px]">Motivo</th>
+                    <th class="px-3 py-2 font-bold text-left w-[150px]">Descripción</th>
+                    <th class="px-3 py-2 font-bold text-left w-[120px]">Base</th>
+                    <th class="px-3 py-2 font-bold text-center w-[90px]">PE DE ROLO</th>
+                    <th class="px-3 py-2 font-bold text-center w-[70px]">GAIOLA</th>
+                    <th class="px-3 py-2 font-bold text-left flex-1">OBS</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+            <!-- Cuerpo con scroll -->
+            <div class="overflow-auto max-h-96">
+              <table ref="tablaDetalleRef" class="w-full text-sm">
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="(item, index) in registros" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
+                    <td class="px-3 py-2 text-slate-900 whitespace-nowrap w-[100px]">{{ item.DT_MOV }}</td>
+                    <td class="px-3 py-2 text-center font-semibold w-[60px]">{{ item.TURNO }}</td>
+                    <td class="px-3 py-2 text-slate-700 w-[140px]">{{ item.DESCRICAO }}</td>
+                    <td class="px-3 py-2 text-right font-mono text-slate-600 w-[80px]">{{ item.ID }}</td>
+                    <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700 w-[120px]">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
+                    <td class="px-3 py-2 text-right font-mono text-slate-600 w-[80px]">{{ item.PARTIDA }}</td>
+                    <td class="px-3 py-2 text-right font-mono text-slate-600 w-[80px]">{{ item.ROLADA }}</td>
+                    <td class="px-3 py-2 text-center text-slate-600 w-[70px]">{{ item.MOTIVO }}</td>
+                    <td class="px-3 py-2 text-slate-700 text-xs w-[150px]">{{ item.DESC_MOTIVO }}</td>
+                    <td class="px-3 py-2 text-slate-700 font-mono text-xs w-[120px]">{{ item.URDUME }}</td>
+                    <td class="px-3 py-2 text-center text-slate-600 w-[90px]">{{ item['PE DE ROLO'] }}</td>
+                    <td class="px-3 py-2 text-center text-slate-600 w-[70px]">{{ item.GAIOLA }}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">{{ item.OBS }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
           <!-- Separador y segunda tabla -->
           <div v-if="registrosSector.length > 0" class="mt-6 pt-6 border-t-2 border-slate-300">
             <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos por Sector</h3>
-            <table ref="tablaSectorRef" class="w-full text-sm border-collapse">
-              <thead class="text-xs text-slate-700 sticky top-0 z-20 shadow-sm">
-                <tr>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Fecha</th>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-center border-b border-slate-200">Turno</th>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Sub-producto</th>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">Descripción</th>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">ID</th>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-right border-b border-slate-200">Peso Líquido (KG)</th>
-                  <th class="bg-slate-50 px-3 py-2 font-bold text-left border-b border-slate-200">OBS</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr v-for="(item, index) in registrosSector" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
-                  <td class="px-3 py-2 text-slate-900 whitespace-nowrap">{{ item.DT_MOV }}</td>
-                  <td class="px-3 py-2 text-center font-semibold">{{ item.TURNO }}</td>
-                  <td class="px-3 py-2 text-slate-700 font-mono text-xs">{{ item.SUBPRODUTO }}</td>
-                  <td class="px-3 py-2 text-slate-700">{{ item.DESCRICAO }}</td>
-                  <td class="px-3 py-2 text-right font-mono text-slate-600">{{ item.ID }}</td>
-                  <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
-                  <td class="px-3 py-2 text-slate-600 text-xs">{{ item.OBS }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <!-- Encabezado fijo -->
+              <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead class="text-xs text-slate-700">
+                    <tr>
+                      <th class="px-3 py-2 font-bold text-left w-[100px]">Fecha</th>
+                      <th class="px-3 py-2 font-bold text-center w-[60px]">Turno</th>
+                      <th class="px-3 py-2 font-bold text-left w-[120px]">Sub-producto</th>
+                      <th class="px-3 py-2 font-bold text-left flex-1">Descripción</th>
+                      <th class="px-3 py-2 font-bold text-right w-[100px]">ID</th>
+                      <th class="px-3 py-2 font-bold text-right w-[140px]">Peso Líquido (KG)</th>
+                      <th class="px-3 py-2 font-bold text-left w-[150px]">OBS</th>
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              <!-- Cuerpo con scroll -->
+              <div class="overflow-auto max-h-64">
+                <table ref="tablaSectorRef" class="w-full text-sm">
+                  <tbody class="divide-y divide-slate-100">
+                    <tr v-for="(item, index) in registrosSector" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
+                      <td class="px-3 py-2 text-slate-900 whitespace-nowrap w-[100px]">{{ item.DT_MOV }}</td>
+                      <td class="px-3 py-2 text-center font-semibold w-[60px]">{{ item.TURNO }}</td>
+                      <td class="px-3 py-2 text-slate-700 font-mono text-xs w-[120px]">{{ item.SUBPRODUTO }}</td>
+                      <td class="px-3 py-2 text-slate-700">{{ item.DESCRICAO }}</td>
+                      <td class="px-3 py-2 text-right font-mono text-slate-600 w-[100px]">{{ item.ID }}</td>
+                      <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700 w-[140px]">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
+                      <td class="px-3 py-2 text-slate-600 text-xs w-[150px]">{{ item.OBS }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
