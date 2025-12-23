@@ -82,7 +82,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
-            <tr v-for="(item, index) in datosCompletos" :key="index" :class="index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'" class="transition-colors cursor-pointer" @dblclick="abrirDetalle(item.DT_BASE_PRODUCAO)" v-tippy="{ content: 'Doble clic para ver detalle', placement: 'left', delay: [500, 0] }">
+            <tr v-for="(item, index) in datosCompletos" :key="index" :class="index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'" class="transition-colors cursor-pointer" @dblclick="abrirDetalle(item.DT_BASE_PRODUCAO)">
               <td class="pl-2 pr-2 py-0 font-medium text-slate-900 whitespace-nowrap">{{ item.DT_BASE_PRODUCAO }}</td>
               <td class="px-2 py-0 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.TotalMetros) }}</td>
               <td class="px-2 py-0 text-right font-mono text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
@@ -456,7 +456,21 @@ const cargarCostos = async () => {
     costosMensuales.value = costosArray
     
     // Buscar el costo de URDIDO_TENIDO para el mes seleccionado
-    const costoMes = costosArray.find(c => c.yyyymm === yyyymm && c.codigo === 'URDIDO_TENIDO')
+    let costoMes = costosArray.find(c => c.yyyymm === yyyymm && c.codigo === 'URDIDO_TENIDO')
+    
+    // Si no está en los últimos 3 meses, buscar específicamente ese mes en el backend
+    if (!costoMes) {
+      console.log(`🔍 Mes ${yyyymm} no está en los últimos 3 meses, consultando...`)
+      const resultadoEspecifico = await getCostosMensual(100) // Cargar más meses para encontrarlo
+      const costosExtendidos = resultadoEspecifico?.rows || []
+      costoMes = costosExtendidos.find(c => c.yyyymm === yyyymm && c.codigo === 'URDIDO_TENIDO')
+      
+      if (costoMes) {
+        console.log(`✅ Costo encontrado para ${yyyymm}: $${costoMes.ars_por_unidad}`)
+      } else {
+        console.warn(`⚠️ No se encontró costo para ${yyyymm}`)
+      }
+    }
     
     costoUrdidoTenido.value = costoMes ? Number(costoMes.ars_por_unidad) || 0 : 0
   } catch (error) {
@@ -469,17 +483,23 @@ const cargarDatos = async () => {
   if (!fechaSeleccionada.value) return
   
   cargando.value = true
+  console.log(`📅 Cargando datos para el mes: ${mesFormateado.value}`)
+  console.log(`🔍 Rango: ${fechaInicio.value} a ${fechaFinMes.value}`)
+  
   try {
     // Cargar costos y datos en paralelo
     await cargarCostos()
     
     // Solicitar datos para todo el mes
     const url = `${API_BASE}/api/residuos-indigo-tejeduria?fecha_inicio=${fechaInicio.value}&fecha_fin=${fechaFinMes.value}`
+    console.log(`🌐 Consultando: ${url}`)
     const response = await fetch(url)
     if (!response.ok) throw new Error('Error al cargar datos')
-    datos.value = await response.json()
+    const data = await response.json()
+    datos.value = data
+    console.log(`✅ Datos cargados: ${data.length} registros para ${mesFormateado.value}`)
   } catch (error) {
-    console.error('Error:', error)
+    console.error('❌ Error:', error)
     alert('Error al cargar los datos: ' + error.message)
   } finally {
     cargando.value = false
