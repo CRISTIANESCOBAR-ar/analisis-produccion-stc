@@ -2281,6 +2281,7 @@ app.get('/api/detalle-residuos', async (req, res) => {
       SELECT 
         DT_MOV,
         TURNO,
+        SUBPRODUTO,
         DESCRICAO,
         ID,
         [PESO LIQUIDO (KG)],

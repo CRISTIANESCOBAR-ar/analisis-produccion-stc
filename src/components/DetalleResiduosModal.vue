@@ -36,10 +36,17 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01C17.18 3.03 14.69 2 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.39-4.19-1.15l-.3-.17-3.12.82.83-3.04-.2-.32a8.188 8.188 0 0 1-1.26-4.38c.01-4.54 3.7-8.24 8.25-8.24M8.53 7.33c-.16 0-.43.06-.66.31-.22.25-.87.85-.87 2.07 0 1.22.89 2.39 1 2.56.14.17 1.76 2.67 4.25 3.73.59.27 1.05.42 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.46-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.27-.25-.14-1.47-.74-1.69-.82-.23-.08-.37-.12-.56.12-.16.25-.64.81-.78.97-.15.17-.29.19-.53.07-.26-.13-1.06-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.12-.24-.01-.39.11-.5.11-.11.27-.29.37-.44.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.11-.56-1.35-.77-1.84-.2-.48-.4-.42-.56-.43-.14 0-.3-.01-.47-.01z"/>
               </svg>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm0 2v.18l7.12 4.45a1 1 0 0 0 1.05 0L20 7.18V7H4zm16 10v-8.4l-6.38 3.99a3 3 0 0 1-3.24 0L4 8.6V17h16z"/>
+              WhatsApp
+            </button>
+            <button
+              @click="exportarAExcel"
+              class="inline-flex items-center gap-2 px-4 py-0 h-[34px] bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+              v-tippy="{ content: 'Exportar detalle a Excel (hojas separadas)', placement: 'bottom' }"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12.9,14.5L15.8,19H14L12,15.6L10,19H8.2L11.1,14.5L8.2,10H10L12,13.4L14,10H15.8L12.9,14.5Z"/>
               </svg>
-              Exportar
+              Excel
             </button>
             <button 
               class="text-slate-400 hover:text-slate-600 transition-colors" 
@@ -139,20 +146,21 @@
                   <thead class="text-xs text-slate-700">
                     <tr>
                       <th class="px-3 py-2 font-bold text-left w-[100px]">Fecha</th>
-                    <th class="px-3 py-2 font-bold text-center w-[60px]">Turno</th>
-                    <th class="px-3 py-2 font-bold text-left w-[140px]">Tipo</th>
-                    <th class="px-3 py-2 font-bold text-right w-[80px]">ID</th>
-                    <th class="px-3 py-2 font-bold text-right w-[120px]">Peso Líquido (KG)</th>
-                    <th class="px-3 py-2 font-bold text-right w-[80px]">Partida</th>
-                    <th class="px-3 py-2 font-bold text-right w-[80px]">Rolada</th>
-                    <th class="px-3 py-2 font-bold text-center w-[70px]">Motivo</th>
-                    <th class="px-3 py-2 font-bold text-left w-[150px]">Descripción</th>
-                    <th class="px-3 py-2 font-bold text-left w-[120px]">Base</th>
-                    <th class="px-3 py-2 font-bold text-center w-[90px]">PE DE ROLO</th>
-                    <th class="px-3 py-2 font-bold text-center w-[70px]">GAIOLA</th>
-                    <th class="px-3 py-2 font-bold text-left flex-1">OBS</th>
-                  </tr>
-                </thead>
+                      <th class="px-3 py-2 font-bold text-center w-[60px]">Turno</th>
+                      <th class="px-3 py-2 font-bold text-left w-[100px]">Sub-producto</th>
+                      <th class="px-3 py-2 font-bold text-left w-[140px]">Tipo</th>
+                      <th class="px-3 py-2 font-bold text-right w-[80px]">ID</th>
+                      <th class="px-3 py-2 font-bold text-right w-[120px]">Peso Líquido (KG)</th>
+                      <th class="px-3 py-2 font-bold text-right w-[80px]">Partida</th>
+                      <th class="px-3 py-2 font-bold text-right w-[80px]">Rolada</th>
+                      <th class="px-3 py-2 font-bold text-center w-[70px]">Motivo</th>
+                      <th class="px-3 py-2 font-bold text-left w-[150px]">Descripción</th>
+                      <th class="px-3 py-2 font-bold text-left w-[120px]">Base</th>
+                      <th class="px-3 py-2 font-bold text-center w-[90px]">PE DE ROLO</th>
+                      <th class="px-3 py-2 font-bold text-center w-[70px]">GAIOLA</th>
+                      <th class="px-3 py-2 font-bold text-left flex-1">OBS</th>
+                    </tr>
+                  </thead>
               </table>
             </div>
             <!-- Cuerpo con scroll -->
@@ -162,6 +170,7 @@
                   <tr v-for="(item, index) in registrosFiltrados" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
                     <td class="px-3 py-2 text-slate-900 whitespace-nowrap w-[100px]">{{ item.DT_MOV }}</td>
                     <td class="px-3 py-2 text-center font-semibold w-[60px]">{{ item.TURNO }}</td>
+                    <td class="px-3 py-2 text-slate-700 font-mono text-xs w-[100px]">{{ item.SUBPRODUTO || item.subproduto || item.Subproduto }}</td>
                     <td class="px-3 py-2 text-slate-700 w-[140px]">{{ item.DESCRICAO }}</td>
                     <td class="px-3 py-2 text-right font-mono text-slate-600 w-[80px]">{{ item.ID }}</td>
                     <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700 w-[120px]">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
@@ -176,7 +185,7 @@
                   </tr>
                   <!-- Fila de totales -->
                   <tr class="bg-slate-100 border-t-2 border-slate-300">
-                    <td colspan="4" class="px-3 py-2 text-right font-bold text-slate-800">TOTAL:</td>
+                    <td colspan="5" class="px-3 py-2 text-right font-bold text-slate-800">TOTAL:</td>
                     <td class="px-3 py-2 text-right font-mono font-bold text-blue-800 w-[120px]">{{ formatNumber(totalPesoFiltrado) }}</td>
                     <td colspan="8"></td>
                   </tr>
@@ -228,7 +237,7 @@
                     <tr v-for="(item, index) in registrosSectorFiltrados" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
                       <td class="px-3 py-2 text-slate-900 whitespace-nowrap w-[100px]">{{ item.DT_MOV }}</td>
                       <td class="px-3 py-2 text-center font-semibold w-[60px]">{{ item.TURNO }}</td>
-                      <td class="px-3 py-2 text-slate-700 font-mono text-xs w-[120px]">{{ item.SUBPRODUTO }}</td>
+                      <td class="px-3 py-2 text-slate-700 font-mono text-xs w-[120px]">{{ item.SUBPRODUTO || item.subproduto || item.Subproducto }}</td>
                       <td class="px-3 py-2 text-slate-700">{{ item.DESCRICAO }}</td>
                       <td class="px-3 py-2 text-right font-mono text-slate-600 w-[100px]">{{ item.ID }}</td>
                       <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700 w-[140px]">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
@@ -254,6 +263,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { domToPng } from 'modern-screenshot'
+import ExcelJS from 'exceljs'
 import Swal from 'sweetalert2'
 
 const props = defineProps({
@@ -753,6 +763,234 @@ const exportarComoImagen = async () => {
       timer: 4000,
       timerProgressBar: true
     })
+  }
+}
+
+const exportarAExcel = async () => {
+  try {
+    const workbook = new ExcelJS.Workbook()
+    
+    // --- HOJA 1: ÍNDIGO ---
+    const sheetIndigo = workbook.addWorksheet('ÍNDIGO')
+    
+    // Definir columnas
+    sheetIndigo.columns = [
+      { header: 'Fecha', key: 'fecha', width: 12 },
+      { header: 'Turno', key: 'turno', width: 8 },
+      { header: 'Sub-producto', key: 'subproducto', width: 15 },
+      { header: 'Tipo', key: 'tipo', width: 20 },
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Peso Líquido (KG)', key: 'peso', width: 18 },
+      { header: 'Partida', key: 'partida', width: 10 },
+      { header: 'Rolada', key: 'rolada', width: 10 },
+      { header: 'Motivo', key: 'motivo', width: 10 },
+      { header: 'Descripción Motivo', key: 'desc_motivo', width: 25 },
+      { header: 'Base', key: 'base', width: 20 },
+      { header: 'PE DE ROLO', key: 'pe_rolo', width: 12 },
+      { header: 'GAIOLA', key: 'gaiola', width: 10 },
+      { header: 'OBS', key: 'obs', width: 30 }
+    ]
+    
+    // Estilo encabezado
+    const headerRowIndigo = sheetIndigo.getRow(1)
+    headerRowIndigo.height = 30
+    
+    for (let i = 1; i <= 14; i++) {
+      const cell = headerRowIndigo.getCell(i)
+      cell.font = { bold: true, color: { argb: 'FF334155' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      }
+    }
+    
+    // Agregar datos
+    registrosFiltrados.value.forEach(item => {
+      sheetIndigo.addRow({
+        fecha: item.DT_MOV,
+        turno: item.TURNO,
+        subproducto: item.SUBPRODUTO || item.subproduto || item.Subproducto,
+        tipo: item.DESCRICAO,
+        id: item.ID,
+        peso: parseFloat(item['PESO LIQUIDO (KG)']) || 0,
+        partida: item.PARTIDA,
+        rolada: item.ROLADA,
+        motivo: item.MOTIVO,
+        desc_motivo: item.DESC_MOTIVO,
+        base: item.URDUME,
+        pe_rolo: item['PE DE ROLO'],
+        gaiola: item.GAIOLA,
+        obs: item.OBS
+      })
+    })
+    
+    // Fila de total
+    const totalRowIndigo = sheetIndigo.addRow({
+      tipo: 'TOTAL',
+      peso: totalPesoFiltrado.value
+    })
+    totalRowIndigo.height = 25
+    
+    // Aplicar bordes y formatos a toda la hoja
+    sheetIndigo.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return
+      const isTotalRow = (rowNumber === sheetIndigo.rowCount)
+      
+      for (let i = 1; i <= 14; i++) {
+        const cell = row.getCell(i)
+        cell.border = {
+          top: { style: isTotalRow ? 'medium' : 'thin', color: { argb: isTotalRow ? 'FFCBD5E1' : 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        }
+        cell.alignment = { horizontal: 'center', vertical: 'middle' }
+        
+        if (isTotalRow) {
+          cell.font = { bold: true, color: { argb: 'FF1E293B' } }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }
+        }
+      }
+      
+      row.getCell('peso').numFmt = '#,##0'
+      if (isTotalRow) {
+        row.getCell('peso').font = { bold: true, color: { argb: 'FF1D4ED8' } }
+      }
+    })
+
+    // Configuración de impresión
+    sheetIndigo.pageSetup = {
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      printArea: `A1:N${sheetIndigo.rowCount}`,
+      margins: {
+        left: 0.196850393700787,
+        right: 0.196850393700787,
+        top: 0.196850393700787,
+        bottom: 0.393700787401575,
+        header: 0.196850393700787,
+        footer: 0.196850393700787
+      }
+    }
+
+    // --- HOJA 2: TEJEDURÍA ---
+    if (registrosSector.value.length > 0) {
+      const sheetTej = workbook.addWorksheet('TEJEDURÍA')
+      sheetTej.columns = [
+        { header: 'Fecha', key: 'fecha', width: 12 },
+        { header: 'Turno', key: 'turno', width: 8 },
+        { header: 'Sub-producto', key: 'subproducto', width: 15 },
+        { header: 'Descripción', key: 'descripcion', width: 30 },
+        { header: 'ID', key: 'id', width: 10 },
+        { header: 'Peso Líquido (KG)', key: 'peso', width: 18 },
+        { header: 'OBS', key: 'obs', width: 30 }
+      ]
+      
+      const headerRowTej = sheetTej.getRow(1)
+      headerRowTej.height = 30
+      
+      for (let i = 1; i <= 7; i++) {
+        const cell = headerRowTej.getCell(i)
+        cell.font = { bold: true, color: { argb: 'FF334155' } }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
+        cell.alignment = { horizontal: 'center', vertical: 'middle' }
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        }
+      }
+      
+      registrosSectorFiltrados.value.forEach(item => {
+        sheetTej.addRow({
+          fecha: item.DT_MOV,
+          turno: item.TURNO,
+          subproducto: item.SUBPRODUTO || item.subproduto || item.Subproducto,
+          descripcion: item.DESCRICAO,
+          id: item.ID,
+          peso: parseFloat(item['PESO LIQUIDO (KG)']) || 0,
+          obs: item.OBS
+        })
+      })
+      
+      const totalRowTej = sheetTej.addRow({
+        descripcion: 'TOTAL',
+        peso: totalPesoSectorFiltrado.value
+      })
+      totalRowTej.height = 25
+      
+      sheetTej.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return
+        const isTotalRow = (rowNumber === sheetTej.rowCount)
+        
+        for (let i = 1; i <= 7; i++) {
+          const cell = row.getCell(i)
+          cell.border = {
+            top: { style: isTotalRow ? 'medium' : 'thin', color: { argb: isTotalRow ? 'FFCBD5E1' : 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          }
+          cell.alignment = { horizontal: 'center', vertical: 'middle' }
+          
+          if (isTotalRow) {
+            cell.font = { bold: true, color: { argb: 'FF1E293B' } }
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }
+          }
+        }
+        
+        row.getCell('peso').numFmt = '#,##0'
+        if (isTotalRow) {
+          row.getCell('peso').font = { bold: true, color: { argb: 'FFBE123C' } }
+        }
+      })
+
+      // Configuración de impresión
+      sheetTej.pageSetup = {
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        printArea: `A1:G${sheetTej.rowCount}`,
+        margins: {
+          left: 0.196850393700787,
+          right: 0.196850393700787,
+          top: 0.196850393700787,
+          bottom: 0.393700787401575,
+          header: 0.196850393700787,
+          footer: 0.196850393700787
+        }
+      }
+    }
+    
+    // Generar y descargar
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `Detalle_Residuos_${displayDate.value.replace(/\//g, '-')}.xlsx`
+    link.click()
+    URL.revokeObjectURL(url)
+    
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Excel generado',
+      showConfirmButton: false,
+      timer: 2000
+    })
+  } catch (error) {
+    console.error('Error al exportar Excel:', error)
+    Swal.fire('Error', 'No se pudo generar el archivo Excel', 'error')
   }
 }
 </script>

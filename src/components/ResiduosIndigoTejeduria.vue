@@ -1,6 +1,22 @@
 <template>
   <div class="w-full h-screen flex flex-col p-1">
-    <main ref="mainContentRef" class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
+    <main ref="mainContentRef" class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col relative">
+      <!-- Overlay de carga mejorado: cubre todo el panel y no se desplaza con el scroll -->
+      <div v-if="cargando" class="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center z-50 rounded-2xl transition-all duration-300">
+        <div class="flex flex-col items-center gap-4 bg-white/90 px-10 py-8 rounded-2xl shadow-2xl border border-blue-100">
+          <div class="relative">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-50 border-t-blue-600"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="h-8 w-8 bg-blue-600 rounded-full animate-pulse opacity-10"></div>
+            </div>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-slate-500 font-medium tracking-wider uppercase text-[10px]">Cargando datos de</span>
+            <span class="text-xl text-slate-800 font-bold">{{ mesFormateado }}</span>
+          </div>
+        </div>
+      </div>
+
       <div class="flex items-center justify-between gap-4 flex-shrink-0 mb-4">
         <div class="flex items-center gap-6">
           <img src="/LogoSantana.jpg" alt="Santana Textiles" class="h-10 w-auto object-contain" />
@@ -45,16 +61,6 @@
       </div>
 
       <div class="flex-1 overflow-auto min-h-0 border border-slate-200 rounded-lg relative" ref="tablaRef">
-        <div v-if="cargando" class="absolute inset-0 bg-white/90 flex items-center justify-center z-10">
-          <div class="flex flex-col items-center gap-3 bg-white px-8 py-6 rounded-lg shadow-lg border-2 border-blue-500">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-3 border-blue-600"></div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-base text-slate-700 font-semibold">Cargando datos del mes</span>
-              <span class="text-lg text-blue-600 font-bold">{{ mesFormateado }}</span>
-            </div>
-          </div>
-        </div>
-
         <table ref="tableElementRef" class="w-full text-sm text-left text-slate-600 font-[Verdana]">
           <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
@@ -682,42 +688,45 @@ const exportarAExcel = async () => {
     totalRow.font = { bold: true, color: { argb: 'FF1E293B' } }
     totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }
     totalRow.alignment = { horizontal: 'center', vertical: 'middle' }
-    totalRow.border = {
-      top: { style: 'medium', color: { argb: 'FFCBD5E1' } },
-      bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-      left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-      right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+    
+    // Definir formatos comunes
+    const formatos = {
+      1: 'dd/mm/yyyy', // Fecha
+      2: '#,##0', // Producción Metros
+      3: '#,##0', // Producción Kg
+      4: '#,##0', // Residuos Kg
+      5: '0.0%', // Residuos %
+      6: '0.0%', // Meta
+      7: '#,##0', // Desvío Kg
+      8: '#,##0', // Desvío Metros
+      9: '"$"#,##0', // Desvío $
+      10: '#,##0', // Tejeduría Metros
+      11: '#,##0', // Tejeduría Kg
+      12: '#,##0', // Residuos Tej Kg
+      13: '0.0%', // Meta Tej
+      14: '#,##0', // Desvío Tej Kg
+      15: '#,##0', // Desvío Tej Metros
+      16: '#,##0', // Anudados
+      17: '#,##0.00', // Promedio
+      18: '"$"#,##0', // Desvío Tej $
+      19: '#,##0', // Estopa Prod
+      20: '#,##0', // Estopa Prens
+      21: '#,##0'  // Diferencia
     }
-    
-    // Aplicar formatos numéricos a la fila de totales
-    totalRow.eachCell((cell, colNumber) => {
-      const formatos = {
-        2: '#,##0', 3: '#,##0', 4: '#,##0', 5: '0.0%', 6: '0.0%',
-        7: '#,##0', 8: '#,##0', 9: '"$"#,##0', 10: '#,##0', 11: '#,##0',
-        12: '#,##0', 13: '0.0%', 14: '#,##0', 15: '#,##0', 16: '#,##0',
-        17: '#,##0.00', 18: '"$"#,##0', 19: '#,##0', 20: '#,##0', 21: '#,##0'
-      }
-      if (formatos[colNumber]) {
-        cell.numFmt = formatos[colNumber]
-      }
-      
-      // Línea vertical de separación (columnas 2, 10, 19)
-      if (colNumber === 2 || colNumber === 10 || colNumber === 19) {
-        cell.border = {
-          ...cell.border,
-          left: { style: 'medium', color: { argb: 'FF94A3B8' } }
-        }
-      }
-    })
-    
-    // Aplicar colores y estilos a las celdas de datos
+
+    // Aplicar colores y estilos a TODAS las celdas de datos y totales
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1 || rowNumber === worksheet.rowCount) return // Skip header and total
+      if (rowNumber === 1) return // Skip header
       
-      row.eachCell((cell, colNumber) => {
+      const isTotalRow = (rowNumber === worksheet.rowCount)
+      
+      // Iterar por todas las columnas (1 a 21) para asegurar bordes en todas
+      for (let colNumber = 1; colNumber <= 21; colNumber++) {
+        const cell = row.getCell(colNumber)
+        
         // Bordes para todas las celdas
         cell.border = {
-          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          top: { style: isTotalRow ? 'medium' : 'thin', color: { argb: isTotalRow ? 'FFCBD5E1' : 'FFE2E8F0' } },
           bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
           left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
           right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
@@ -725,91 +734,64 @@ const exportarAExcel = async () => {
         
         // Línea vertical de separación (columnas 2, 10, 19)
         if (colNumber === 2 || colNumber === 10 || colNumber === 19) {
-          cell.border = {
-            ...cell.border,
-            left: { style: 'medium', color: { argb: 'FF94A3B8' } }
-          }
+          cell.border.left = { style: 'medium', color: { argb: 'FF94A3B8' } }
         }
         
         // Alineación centrada para todas las celdas
         cell.alignment = { horizontal: 'center', vertical: 'middle' }
         
-        // Formatos numéricos según columna (separador de miles con punto, decimales con coma)
-        const formatos = {
-          1: 'dd/mm/yyyy', // Fecha
-          2: '#,##0', // Producción Metros - entero
-          3: '#,##0', // Producción Kg - entero
-          4: '#,##0', // Residuos Kg - entero
-          5: '0.0%', // Residuos % - porcentaje con 1 decimal
-          6: '0.0%', // Meta - porcentaje con 1 decimal
-          7: '#,##0', // Desvío Kg - entero
-          8: '#,##0', // Desvío Metros - entero
-          9: '"$"#,##0', // Desvío $ - moneda sin decimales
-          10: '#,##0', // Tejeduría Metros - entero
-          11: '#,##0', // Tejeduría Kg - entero
-          12: '#,##0', // Residuos Tej Kg - entero
-          13: '0.0%', // Meta Tej - porcentaje con 1 decimal
-          14: '#,##0', // Desvío Tej Kg - entero
-          15: '#,##0', // Desvío Tej Metros - entero
-          16: '#,##0', // Anudados - entero
-          17: '#,##0.00', // Promedio - con 2 decimales
-          18: '"$"#,##0', // Desvío Tej $ - moneda sin decimales
-          19: '#,##0', // Estopa Prod - entero
-          20: '#,##0', // Estopa Prens - entero
-          21: '#,##0'  // Diferencia - entero
-        }
-        
+        // Formatos numéricos
         if (formatos[colNumber]) {
           cell.numFmt = formatos[colNumber]
         }
+
+        // Lógica de colores (Criterio de la UI)
+        let color = null
+        const val = cell.value
         
-        // Colores según columna
-        const colores = {
-          1: null, // Fecha
-          2: null, // Producción Metros
-          3: 'FF1D4ED8', // Producción Kg - azul
-          4: 'FFDC2626', // Residuos Kg - rojo
-          5: 'FFEA580C', // Residuos % - naranja
-          6: null, // Meta
-          7: 'FF9333EA', // Desvío Kg - púrpura
-          8: 'FF4F46E5', // Desvío Metros - índigo
-          9: 'FF15803D', // Desvío $ - verde
-          10: null, // Tejeduría Metros
-          11: 'FF0E7490', // Tejeduría Kg - cian
-          12: 'FFBE123C', // Residuos Tej Kg - rosa
-          13: null, // Meta Tej
-          14: 'FF9333EA', // Desvío Tej Kg - púrpura
-          15: 'FF4F46E5', // Desvío Tej Metros - índigo
-          16: 'FFD97706', // Anudados - ámbar
-          17: 'FF059669', // Promedio - esmeralda
-          18: 'FF15803D', // Desvío Tej $ - verde
-          19: 'FF2563EB', // Estopa Prod - azul
-          20: 'FF16A34A', // Estopa Prens - verde
-          21: 'FFEF4444'  // Diferencia - rojo
+        if (colNumber === 3 || colNumber === 4) {
+          color = isTotalRow ? 'FF1E40AF' : 'FF1D4ED8' // Azul 800 o 700
         }
-        
-        if (colores[colNumber]) {
-          cell.font = { color: { argb: colores[colNumber] }, bold: true }
+        else if (colNumber === 5) {
+          const meta = row.getCell(6).value
+          // Rojo si supera la meta, verde si no
+          color = (val > meta) ? 'FFDC2626' : 'FF16A34A'
         }
-      })
+        else if (colNumber === 7 || colNumber === 8 || colNumber === 9) {
+          if (val > 0) color = 'FFDC2626' // Rojo para desvíos positivos
+        }
+        else if (colNumber === 11) {
+          color = isTotalRow ? 'FF155E75' : 'FF0E7490' // Cian 800 o 700
+        }
+        else if (colNumber === 12) {
+          color = isTotalRow ? 'FF9F1239' : 'FFBE123C' // Rose 800 o 700
+        }
+        else if (colNumber === 14 || colNumber === 15 || colNumber === 18) {
+          if (val > 0) color = 'FFDC2626' // Rojo para desvíos positivos
+        }
+        else if (colNumber === 16) {
+          color = isTotalRow ? 'FFB45309' : 'FFD97706' // Amber 700 o 600
+        }
+        else if (colNumber === 17) {
+          color = isTotalRow ? 'FF047857' : 'FF059669' // Emerald 700 o 600
+        }
+        else if (colNumber === 19) {
+          color = isTotalRow ? 'FF1D4ED8' : 'FF2563EB' // Blue 700 o 600
+        }
+        else if (colNumber === 20) {
+          color = isTotalRow ? 'FF15803D' : 'FF16A34A' // Green 700 o 600
+        }
+        else if (colNumber === 21) {
+          if (val !== 0 && val !== null) color = 'FFEF4444' // Red 500
+        }
+
+        if (color) {
+          cell.font = { ...row.font, color: { argb: color }, bold: true }
+        } else if (isTotalRow) {
+          cell.font = { bold: true, color: { argb: 'FF1E293B' } }
+        }
+      }
     })
-    
-    // Aplicar líneas verticales de separación a TODAS las filas (incluyendo vacías)
-    for (let rowNum = 2; rowNum < worksheet.rowCount; rowNum++) {
-      const row = worksheet.getRow(rowNum)
-      // Asegurar que las columnas B, J y S tengan el borde izquierdo grueso
-      const columnasConSeparador = [2, 10, 19]
-      columnasConSeparador.forEach(colNum => {
-        const cell = row.getCell(colNum)
-        const borderActual = cell.border || {}
-        cell.border = {
-          top: borderActual.top || { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          bottom: borderActual.bottom || { style: 'thin', color: { argb: 'FFE2E8F0' } },
-          left: { style: 'medium', color: { argb: 'FF94A3B8' } },
-          right: borderActual.right || { style: 'thin', color: { argb: 'FFE2E8F0' } }
-        }
-      })
-    }
     
     // Establecer área de impresión (A1 hasta U[última fila])
     const lastRow = worksheet.rowCount
