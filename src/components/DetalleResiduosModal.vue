@@ -117,14 +117,32 @@
           </div>
 
           <div v-else>
-            <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos Índigo - Detalle por Registro</h3>
+            <!-- Header con título, contador y filtros -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-slate-800">ÍNDIGO</h3>
+                <span class="text-xs text-slate-600 font-medium">{{ registrosFiltrados.length }} registros</span>
+              </div>
+              <!-- Checkboxes de filtros -->
+              <div class="flex flex-wrap gap-3">
+                <label v-for="tipo in tiposDisponibles" :key="tipo" class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:text-blue-600 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    :checked="tiposFiltros.includes(tipo)"
+                    @change="toggleFiltro(tipo)"
+                    class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>{{ tipo }}</span>
+                </label>
+              </div>
+            </div>
             <div class="border border-slate-200 rounded-lg overflow-hidden">
               <!-- Encabezado fijo -->
               <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
-              <table class="w-full text-sm">
-                <thead class="text-xs text-slate-700">
-                  <tr>
-                    <th class="px-3 py-2 font-bold text-left w-[100px]">Fecha</th>
+                <table class="w-full text-sm">
+                  <thead class="text-xs text-slate-700">
+                    <tr>
+                      <th class="px-3 py-2 font-bold text-left w-[100px]">Fecha</th>
                     <th class="px-3 py-2 font-bold text-center w-[60px]">Turno</th>
                     <th class="px-3 py-2 font-bold text-left w-[140px]">Tipo</th>
                     <th class="px-3 py-2 font-bold text-right w-[80px]">ID</th>
@@ -145,7 +163,7 @@
             <div class="overflow-auto max-h-96">
               <table ref="tablaDetalleRef" class="w-full text-sm">
                 <tbody class="divide-y divide-slate-100">
-                  <tr v-for="(item, index) in registros" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
+                  <tr v-for="(item, index) in registrosFiltrados" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
                     <td class="px-3 py-2 text-slate-900 whitespace-nowrap w-[100px]">{{ item.DT_MOV }}</td>
                     <td class="px-3 py-2 text-center font-semibold w-[60px]">{{ item.TURNO }}</td>
                     <td class="px-3 py-2 text-slate-700 w-[140px]">{{ item.DESCRICAO }}</td>
@@ -163,6 +181,7 @@
                 </tbody>
               </table>
             </div>
+          </div>
           </div>
 
           <!-- Separador y segunda tabla -->
@@ -235,6 +254,33 @@ const fechaActual = ref('')
 const mostrarDatepicker = ref(false)
 const tablaDetalleRef = ref(null)
 const tablaSectorRef = ref(null)
+
+// Filtros de tipos de residuos
+const tiposFiltros = ref(['ESTOPA AZUL'])
+
+// Tipos únicos de residuos disponibles
+const tiposDisponibles = computed(() => {
+  const tipos = new Set()
+  registros.value.forEach(item => {
+    if (item.DESCRICAO) tipos.add(item.DESCRICAO)
+  })
+  return Array.from(tipos).sort()
+})
+
+// Registros filtrados
+const registrosFiltrados = computed(() => {
+  if (tiposFiltros.value.length === 0) return registros.value
+  return registros.value.filter(item => tiposFiltros.value.includes(item.DESCRICAO))
+})
+
+const toggleFiltro = (tipo) => {
+  const index = tiposFiltros.value.indexOf(tipo)
+  if (index > -1) {
+    tiposFiltros.value.splice(index, 1)
+  } else {
+    tiposFiltros.value.push(tipo)
+  }
+}
 
 // Calendario
 const mesCalendario = ref(new Date().getMonth())
