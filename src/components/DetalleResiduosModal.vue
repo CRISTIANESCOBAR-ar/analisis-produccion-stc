@@ -183,7 +183,22 @@
 
           <!-- Separador y segunda tabla -->
           <div v-if="registrosSector.length > 0" class="mt-6 pt-6 border-t-2 border-slate-300">
-            <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos por Sector - Tejeduría</h3>
+            <!-- Header compacto en una sola línea -->
+            <div class="flex items-center gap-4 mb-4 flex-wrap">
+              <h3 class="text-sm font-bold text-slate-800">TEJEDURÍA</h3>
+              <!-- Checkboxes con contadores -->
+              <label v-for="tipo in tiposDisponiblesSector" :key="tipo" class="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer hover:text-blue-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  :checked="tiposFiltrosSector.includes(tipo)"
+                  @change="toggleFiltroSector(tipo)"
+                  class="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <span>{{ tipo }} <span class="text-slate-500">({{ contadorPorTipoSector[tipo] || 0 }})</span></span>
+              </label>
+              <!-- Total de registros filtrados -->
+              <span class="text-xs text-slate-600 font-medium ml-auto">{{ registrosSectorFiltrados.length }} registros</span>
+            </div>
             <div class="border border-slate-200 rounded-lg overflow-hidden">
               <!-- Encabezado fijo -->
               <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
@@ -205,7 +220,7 @@
               <div class="overflow-auto max-h-64">
                 <table ref="tablaSectorRef" class="w-full text-sm">
                   <tbody class="divide-y divide-slate-100">
-                    <tr v-for="(item, index) in registrosSector" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
+                    <tr v-for="(item, index) in registrosSectorFiltrados" :key="index" :class="index % 2 === 0 ? 'bg-white' : 'bg-slate-50'" class="hover:bg-blue-50 transition-colors">
                       <td class="px-3 py-2 text-slate-900 whitespace-nowrap w-[100px]">{{ item.DT_MOV }}</td>
                       <td class="px-3 py-2 text-center font-semibold w-[60px]">{{ item.TURNO }}</td>
                       <td class="px-3 py-2 text-slate-700 font-mono text-xs w-[120px]">{{ item.SUBPRODUTO }}</td>
@@ -255,11 +270,23 @@ const tablaSectorRef = ref(null)
 // Filtros de tipos de residuos
 const tiposFiltros = ref(['ESTOPA AZUL'])
 
+// Filtros de tipos de sector (TEJEDURÍA)
+const tiposFiltrosSector = ref([])
+
 // Tipos únicos de residuos disponibles
 const tiposDisponibles = computed(() => {
   const tipos = new Set()
   registros.value.forEach(item => {
     if (item.DESCRICAO) tipos.add(item.DESCRICAO)
+  })
+  return Array.from(tipos).sort()
+})
+
+// Tipos únicos de sub-productos de sector
+const tiposDisponiblesSector = computed(() => {
+  const tipos = new Set()
+  registrosSector.value.forEach(item => {
+    if (item.SUBPRODUTO) tipos.add(item.SUBPRODUTO)
   })
   return Array.from(tipos).sort()
 })
@@ -275,10 +302,27 @@ const contadorPorTipo = computed(() => {
   return contadores
 })
 
+// Contador de registros por sub-producto de sector
+const contadorPorTipoSector = computed(() => {
+  const contadores = {}
+  registrosSector.value.forEach(item => {
+    if (item.SUBPRODUTO) {
+      contadores[item.SUBPRODUTO] = (contadores[item.SUBPRODUTO] || 0) + 1
+    }
+  })
+  return contadores
+})
+
 // Registros filtrados
 const registrosFiltrados = computed(() => {
   if (tiposFiltros.value.length === 0) return registros.value
   return registros.value.filter(item => tiposFiltros.value.includes(item.DESCRICAO))
+})
+
+// Registros de sector filtrados
+const registrosSectorFiltrados = computed(() => {
+  if (tiposFiltrosSector.value.length === 0) return registrosSector.value
+  return registrosSector.value.filter(item => tiposFiltrosSector.value.includes(item.SUBPRODUTO))
 })
 
 const toggleFiltro = (tipo) => {
@@ -287,6 +331,15 @@ const toggleFiltro = (tipo) => {
     tiposFiltros.value.splice(index, 1)
   } else {
     tiposFiltros.value.push(tipo)
+  }
+}
+
+const toggleFiltroSector = (tipo) => {
+  const index = tiposFiltrosSector.value.indexOf(tipo)
+  if (index > -1) {
+    tiposFiltrosSector.value.splice(index, 1)
+  } else {
+    tiposFiltrosSector.value.push(tipo)
   }
 }
 
