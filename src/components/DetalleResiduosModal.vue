@@ -270,8 +270,8 @@ const tablaSectorRef = ref(null)
 // Filtros de tipos de residuos
 const tiposFiltros = ref(['ESTOPA AZUL'])
 
-// Filtros de tipos de sector (TEJEDURÍA)
-const tiposFiltrosSector = ref([])
+// Filtros de tipos de sector (TEJEDURÍA) - por defecto ESTOPA AZUL TEJEDURÍA
+const tiposFiltrosSector = ref(['ESTOPA AZUL TEJEDURÍA'])
 
 // Tipos únicos de residuos disponibles
 const tiposDisponibles = computed(() => {
@@ -282,11 +282,11 @@ const tiposDisponibles = computed(() => {
   return Array.from(tipos).sort()
 })
 
-// Tipos únicos de sub-productos de sector
+// Tipos únicos de descripciones de sector
 const tiposDisponiblesSector = computed(() => {
   const tipos = new Set()
   registrosSector.value.forEach(item => {
-    if (item.SUBPRODUTO) tipos.add(item.SUBPRODUTO)
+    if (item.DESCRICAO) tipos.add(item.DESCRICAO)
   })
   return Array.from(tipos).sort()
 })
@@ -302,12 +302,12 @@ const contadorPorTipo = computed(() => {
   return contadores
 })
 
-// Contador de registros por sub-producto de sector
+// Contador de registros por descripción de sector
 const contadorPorTipoSector = computed(() => {
   const contadores = {}
   registrosSector.value.forEach(item => {
-    if (item.SUBPRODUTO) {
-      contadores[item.SUBPRODUTO] = (contadores[item.SUBPRODUTO] || 0) + 1
+    if (item.DESCRICAO) {
+      contadores[item.DESCRICAO] = (contadores[item.DESCRICAO] || 0) + 1
     }
   })
   return contadores
@@ -322,7 +322,7 @@ const registrosFiltrados = computed(() => {
 // Registros de sector filtrados
 const registrosSectorFiltrados = computed(() => {
   if (tiposFiltrosSector.value.length === 0) return registrosSector.value
-  return registrosSector.value.filter(item => tiposFiltrosSector.value.includes(item.SUBPRODUTO))
+  return registrosSector.value.filter(item => tiposFiltrosSector.value.includes(item.DESCRICAO))
 })
 
 const toggleFiltro = (tipo) => {
