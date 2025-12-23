@@ -116,9 +116,11 @@
             </div>
           </div>
 
-          <div v-else class="border border-slate-200 rounded-lg overflow-hidden">
-            <!-- Encabezado fijo -->
-            <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
+          <div v-else>
+            <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos Índigo - Detalle por Registro</h3>
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <!-- Encabezado fijo -->
+              <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
               <table class="w-full text-sm">
                 <thead class="text-xs text-slate-700">
                   <tr>
@@ -165,7 +167,7 @@
 
           <!-- Separador y segunda tabla -->
           <div v-if="registrosSector.length > 0" class="mt-6 pt-6 border-t-2 border-slate-300">
-            <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos por Sector</h3>
+            <h3 class="text-sm font-bold text-slate-800 mb-3">Residuos por Sector - Tejeduría</h3>
             <div class="border border-slate-200 rounded-lg overflow-hidden">
               <!-- Encabezado fijo -->
               <div class="bg-slate-50 border-b-2 border-slate-300 overflow-hidden">
