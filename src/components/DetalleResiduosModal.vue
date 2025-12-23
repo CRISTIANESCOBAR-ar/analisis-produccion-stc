@@ -117,24 +117,21 @@
           </div>
 
           <div v-else>
-            <!-- Header con título, contador y filtros -->
-            <div class="mb-4">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-bold text-slate-800">ÍNDIGO</h3>
-                <span class="text-xs text-slate-600 font-medium">{{ registrosFiltrados.length }} registros</span>
-              </div>
-              <!-- Checkboxes de filtros -->
-              <div class="flex flex-wrap gap-3">
-                <label v-for="tipo in tiposDisponibles" :key="tipo" class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:text-blue-600 transition-colors">
-                  <input 
-                    type="checkbox" 
-                    :checked="tiposFiltros.includes(tipo)"
-                    @change="toggleFiltro(tipo)"
-                    class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
-                  />
-                  <span>{{ tipo }}</span>
-                </label>
-              </div>
+            <!-- Header compacto en una sola línea -->
+            <div class="flex items-center gap-4 mb-4 flex-wrap">
+              <h3 class="text-sm font-bold text-slate-800">ÍNDIGO</h3>
+              <!-- Checkboxes con contadores -->
+              <label v-for="tipo in tiposDisponibles" :key="tipo" class="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer hover:text-blue-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  :checked="tiposFiltros.includes(tipo)"
+                  @change="toggleFiltro(tipo)"
+                  class="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <span>{{ tipo }} <span class="text-slate-500">({{ contadorPorTipo[tipo] || 0 }})</span></span>
+              </label>
+              <!-- Total de registros filtrados -->
+              <span class="text-xs text-slate-600 font-medium ml-auto">{{ registrosFiltrados.length }} registros</span>
             </div>
             <div class="border border-slate-200 rounded-lg overflow-hidden">
               <!-- Encabezado fijo -->
@@ -265,6 +262,17 @@ const tiposDisponibles = computed(() => {
     if (item.DESCRICAO) tipos.add(item.DESCRICAO)
   })
   return Array.from(tipos).sort()
+})
+
+// Contador de registros por tipo
+const contadorPorTipo = computed(() => {
+  const contadores = {}
+  registros.value.forEach(item => {
+    if (item.DESCRICAO) {
+      contadores[item.DESCRICAO] = (contadores[item.DESCRICAO] || 0) + 1
+    }
+  })
+  return contadores
 })
 
 // Registros filtrados
