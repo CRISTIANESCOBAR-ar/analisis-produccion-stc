@@ -26,7 +26,6 @@
                 v-tippy="{ content: 'Día siguiente', placement: 'bottom' }"
               >&gt;</button>
             </div>
-            <span class="text-sm font-medium text-slate-600">{{ registros.length }} registros</span>
           </div>
           <div class="flex items-center gap-3">
             <button
@@ -175,6 +174,12 @@
                     <td class="px-3 py-2 text-center text-slate-600 w-[70px]">{{ item.GAIOLA }}</td>
                     <td class="px-3 py-2 text-slate-600 text-xs">{{ item.OBS }}</td>
                   </tr>
+                  <!-- Fila de totales -->
+                  <tr class="bg-slate-100 border-t-2 border-slate-300">
+                    <td colspan="4" class="px-3 py-2 text-right font-bold text-slate-800">TOTAL:</td>
+                    <td class="px-3 py-2 text-right font-mono font-bold text-blue-800 w-[120px]">{{ formatNumber(totalPesoFiltrado) }}</td>
+                    <td colspan="8"></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -228,6 +233,12 @@
                       <td class="px-3 py-2 text-right font-mono text-slate-600 w-[100px]">{{ item.ID }}</td>
                       <td class="px-3 py-2 text-right font-mono font-semibold text-blue-700 w-[140px]">{{ formatNumber(item['PESO LIQUIDO (KG)']) }}</td>
                       <td class="px-3 py-2 text-slate-600 text-xs w-[150px]">{{ item.OBS }}</td>
+                    </tr>
+                    <!-- Fila de totales -->
+                    <tr class="bg-slate-100 border-t-2 border-slate-300">
+                      <td colspan="5" class="px-3 py-2 text-right font-bold text-slate-800">TOTAL:</td>
+                      <td class="px-3 py-2 text-right font-mono font-bold text-blue-800 w-[140px]">{{ formatNumber(totalPesoSectorFiltrado) }}</td>
+                      <td></td>
                     </tr>
                   </tbody>
                 </table>
@@ -323,6 +334,22 @@ const registrosFiltrados = computed(() => {
 const registrosSectorFiltrados = computed(() => {
   if (tiposFiltrosSector.value.length === 0) return registrosSector.value
   return registrosSector.value.filter(item => tiposFiltrosSector.value.includes(item.DESCRICAO))
+})
+
+// Total de peso de registros filtrados
+const totalPesoFiltrado = computed(() => {
+  return registrosFiltrados.value.reduce((sum, item) => {
+    const peso = parseFloat(item['PESO LIQUIDO (KG)']) || 0
+    return sum + peso
+  }, 0)
+})
+
+// Total de peso de sector filtrados
+const totalPesoSectorFiltrado = computed(() => {
+  return registrosSectorFiltrados.value.reduce((sum, item) => {
+    const peso = parseFloat(item['PESO LIQUIDO (KG)']) || 0
+    return sum + peso
+  }, 0)
 })
 
 const toggleFiltro = (tipo) => {
