@@ -7,27 +7,27 @@
       <!-- Modal Container -->
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200">
         <!-- Header -->
-        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+        <div class="px-6 py-2 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-              <span class="text-xl">🔄</span>
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
+              <span class="text-lg">🔄</span>
             </div>
             <div>
-              <h2 class="text-xl font-bold text-slate-800">Actualizar Datos de Residuos</h2>
-              <p class="text-xs text-slate-500 font-medium">Sincronización con archivos CSV de origen</p>
+              <h2 class="text-lg font-bold text-slate-800">Actualizar Datos de Residuos</h2>
+              <p class="text-[10px] text-slate-500 font-medium">Sincronización con archivos CSV de origen</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
             <button 
               @click="fetchStatus" 
-              class="p-2 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors"
+              class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-600 transition-colors"
               title="Refrescar estado"
               :disabled="loading || importing"
             >
               <span :class="{ 'animate-spin inline-block': loading }">↻</span>
             </button>
-            <button @click="cerrar" class="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button @click="cerrar" class="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -35,17 +35,17 @@
         </div>
 
         <!-- Content -->
-        <div class="flex-1 overflow-auto p-6">
+        <div class="flex-1 overflow-auto p-4">
           <!-- Alerta de estado -->
-          <div v-if="outdatedCount > 0" class="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <span class="text-xl">⚠️</span>
+          <div v-if="outdatedCount > 0" class="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3">
+            <span class="text-lg">⚠️</span>
             <div class="flex-1">
-              <h3 class="text-sm font-bold text-amber-800">Archivos desactualizados detectados</h3>
-              <p class="text-xs text-amber-700 mt-1">Hay {{ outdatedCount }} archivo(s) con cambios recientes que no han sido importados a la base de datos.</p>
+              <h3 class="text-xs font-bold text-amber-800">Archivos desactualizados detectados</h3>
+              <p class="text-[10px] text-amber-700 mt-0.5">Hay {{ outdatedCount }} archivo(s) con cambios recientes que no han sido importados.</p>
             </div>
             <button 
               @click="triggerUpdate" 
-              class="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-2"
+              class="px-3 py-1.5 bg-amber-600 text-white text-[10px] font-bold rounded-lg hover:bg-amber-700 transition-colors shadow-sm flex items-center gap-2"
               :disabled="importing"
             >
               <span v-if="importing" class="animate-spin">⚙️</span>
@@ -59,43 +59,43 @@
             <table class="w-full text-sm text-left">
               <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                 <tr>
-                  <th class="px-4 py-3">Archivo Origen</th>
-                  <th class="px-4 py-3 text-center">Estado</th>
-                  <th class="px-4 py-3">Última Modif.</th>
-                  <th class="px-4 py-3">Última Import.</th>
-                  <th class="px-4 py-3 text-right">Acciones</th>
+                  <th class="px-4 py-1.5">Archivo Origen</th>
+                  <th class="px-4 py-1.5 text-center">Estado</th>
+                  <th class="px-4 py-1.5">Última Modif.</th>
+                  <th class="px-4 py-1.5">Última Import.</th>
+                  <th class="px-4 py-1.5 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="item in filteredStatusList" :key="item.table" class="hover:bg-slate-50 transition-colors">
-                  <td class="px-4 py-3">
-                    <div class="font-medium text-slate-800">{{ getFileName(item.file) }}</div>
-                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Hoja: {{ item.sheet }}</div>
+                  <td class="px-4 py-1.5">
+                    <div class="font-medium text-slate-800 text-xs">{{ getFileName(item.file) }}</div>
+                    <div class="text-[9px] text-slate-400 uppercase tracking-wider">Hoja: {{ item.sheet }}</div>
                   </td>
-                  <td class="px-4 py-3 text-center">
-                    <div v-if="importing && currentImportTable === item.table" class="space-y-1.5">
-                      <div class="flex items-center justify-center gap-2 text-blue-600 font-bold text-[10px]">
+                  <td class="px-4 py-1.5 text-center">
+                    <div v-if="importing && currentImportTable === item.table" class="space-y-1">
+                      <div class="flex items-center justify-center gap-1.5 text-blue-600 font-bold text-[9px]">
                         <span class="animate-spin">⚙️</span>
                         <span>IMPORTANDO...</span>
                       </div>
-                      <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                      <div class="w-full bg-slate-100 rounded-full h-1 overflow-hidden border border-slate-200">
                         <div class="bg-blue-500 h-full rounded-full animate-pulse" style="width: 100%"></div>
                       </div>
                     </div>
-                    <span v-else :class="getStatusClass(item.status)" class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter">
+                    <span v-else :class="getStatusClass(item.status)" class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter">
                       {{ getStatusLabel(item.status) }}
                     </span>
                   </td>
-                  <td class="px-4 py-3 text-xs text-slate-500">
+                  <td class="px-4 py-1.5 text-[10px] text-slate-500">
                     {{ formatDate(item.file_modified) }}
                   </td>
-                  <td class="px-4 py-3 text-xs text-slate-500">
+                  <td class="px-4 py-1.5 text-[10px] text-slate-500">
                     {{ formatDate(item.last_import_date) }}
                   </td>
-                  <td class="px-4 py-3 text-right">
+                  <td class="px-4 py-1.5 text-right">
                     <button 
                       @click="forceImport(item)" 
-                      class="px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white rounded-lg text-[10px] font-bold transition-all border border-orange-200 flex items-center gap-1 ml-auto disabled:opacity-50"
+                      class="px-2 py-1 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white rounded-lg text-[9px] font-bold transition-all border border-orange-200 flex items-center gap-1 ml-auto disabled:opacity-50"
                       :disabled="importing || loading"
                     >
                       <span>⚡</span>
@@ -109,13 +109,13 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-          <div class="text-[10px] text-slate-400 font-medium">
+        <div class="px-6 py-2 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+          <div class="text-[9px] text-slate-400 font-medium">
             Carpeta de origen: <span class="text-slate-600">{{ csvFolder }}</span>
           </div>
           <button 
             @click="cerrar" 
-            class="px-6 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors text-sm"
+            class="px-4 py-1.5 bg-white border border-slate-300 text-slate-700 font-bold rounded-lg hover:bg-slate-50 transition-colors text-xs"
           >
             Cerrar
           </button>

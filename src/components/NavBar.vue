@@ -94,7 +94,14 @@
         @click="handleNavClick('/residuos-indigo-tejeduria')"
       />
       <SidebarItem 
-        icon="💲" 
+        icon="�" 
+        label="Análisis Residuos" 
+        :active="isActive('/analisis-residuos-indigo')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/analisis-residuos-indigo')"
+      />
+      <SidebarItem 
+        icon="�💲" 
         label="Costos mensuales" 
         :active="isActive('/costos-mensuales')" 
         :collapsed="isCollapsed"

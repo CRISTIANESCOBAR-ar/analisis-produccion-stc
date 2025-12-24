@@ -2342,6 +2342,196 @@ app.get('/api/detalle-residuos-sector', async (req, res) => {
 });
 
 // =====================================================================
+// ENDPOINT - Análisis de Residuos Índigo por Motivo
+// =====================================================================
+// GET /api/residuos-indigo-analisis?fecha_inicio=DD/MM/YYYY&fecha_fin=DD/MM/YYYY
+app.get('/api/residuos-indigo-analisis', async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin } = req.query;
+    
+    if (!fecha_inicio || !fecha_fin) {
+      return res.status(400).json({ error: 'Parámetros "fecha_inicio" y "fecha_fin" requeridos (formato DD/MM/YYYY)' });
+    }
+
+    // Convertir DD/MM/YYYY a YYYY-MM-DD para comparación
+    const [diaIni, mesIni, anioIni] = fecha_inicio.split('/');
+    const [diaFin, mesFin, anioFin] = fecha_fin.split('/');
+    const fechaIniISO = `${anioIni}-${mesIni}-${diaIni}`;
+    const fechaFinISO = `${anioFin}-${mesFin}-${diaFin}`;
+
+    const sql = `
+      SELECT 
+        MOTIVO,
+        DESC_MOTIVO,
+        SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as TotalKg
+      FROM tb_RESIDUOS_INDIGO
+      WHERE TRIM(DESCRICAO) = 'ESTOPA AZUL'
+        AND (
+          substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)
+          BETWEEN ? AND ?
+        )
+      GROUP BY MOTIVO, DESC_MOTIVO
+      HAVING TotalKg > 0
+      ORDER BY TotalKg DESC
+    `;
+
+    const rows = await dbAll(sql, [fechaIniISO, fechaFinISO]);
+    console.log(`📊 Residuos Índigo: ${rows.length} motivos encontrados para ${fecha_inicio} a ${fecha_fin}`);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en /api/residuos-indigo-analisis:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT - Resumen de Residuos Índigo (temporal para análisis)
+// =====================================================================
+// GET /api/residuos-indigo-resumen
+app.get('/api/residuos-indigo-resumen', async (req, res) => {
+  try {
+    console.log('\n========================================');
+    console.log('📋 RESUMEN DE tb_RESIDUOS_INDIGO');
+    console.log('========================================\n');
+
+    // 1. Elementos únicos de DT_BASE_PRODUCAO
+    const fechasQuery = `
+      SELECT DISTINCT DT_BASE_PRODUCAO 
+      FROM tb_RESIDUOS_INDIGO 
+      WHERE SELETOR = 'INDIGO'
+      ORDER BY DT_BASE_PRODUCAO
+    `;
+    const fechas = await dbAll(fechasQuery);
+    console.log(`📅 DT_BASE_PRODUCAO (elementos únicos): ${fechas.length}`);
+    console.log(`   Desde: ${fechas[0]?.DT_BASE_PRODUCAO || 'N/A'}`);
+    console.log(`   Hasta: ${fechas[fechas.length - 1]?.DT_BASE_PRODUCAO || 'N/A'}\n`);
+
+    // 2. Elementos únicos de PARTIDA
+    const partidasQuery = `
+      SELECT DISTINCT PARTIDA 
+      FROM tb_RESIDUOS_INDIGO 
+      WHERE SELETOR = 'INDIGO'
+      ORDER BY PARTIDA
+    `;
+    const partidas = await dbAll(partidasQuery);
+    console.log(`📦 PARTIDA (elementos únicos): ${partidas.length}`);
+    console.log(`   Ejemplos: ${partidas.slice(0, 5).map(p => p.PARTIDA).join(', ')}\n`);
+
+    // 3. Elementos únicos de S
+    const sQuery = `
+      SELECT DISTINCT S 
+      FROM tb_RESIDUOS_INDIGO 
+      WHERE SELETOR = 'INDIGO'
+      ORDER BY S
+    `;
+    const sValues = await dbAll(sQuery);
+    console.log(`🔤 S (elementos únicos): ${sValues.length}`);
+    console.log(`   Valores: ${sValues.map(s => s.S || 'NULL').join(', ')}\n`);
+
+    // 4. Conteo por elementos de la columna S
+    const sCountQuery = `
+      SELECT 
+        S,
+        COUNT(*) as Cantidad,
+        SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as TotalKg
+      FROM tb_RESIDUOS_INDIGO 
+      WHERE SELETOR = 'INDIGO'
+      GROUP BY S
+      ORDER BY Cantidad DESC
+    `;
+    const sCounts = await dbAll(sCountQuery);
+    console.log('📊 CONTEO POR COLUMNA S:');
+    console.log('   Valor S          | Cantidad | Total Kg');
+    console.log('   -----------------|----------|----------');
+    sCounts.forEach(row => {
+      const sValue = (row.S || 'NULL').padEnd(16);
+      const cantidad = String(row.Cantidad).padStart(8);
+      const kg = String(Math.round(row.TotalKg)).padStart(8);
+      console.log(`   ${sValue} | ${cantidad} | ${kg}`);
+    });
+
+    // 5. Total general con SELETOR = INDIGO
+    const totalQuery = `
+      SELECT 
+        COUNT(*) as TotalRegistros,
+        SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as TotalKg
+      FROM tb_RESIDUOS_INDIGO 
+      WHERE SELETOR = 'INDIGO'
+    `;
+    const total = await dbGet(totalQuery);
+    console.log('\n📈 TOTAL GENERAL (SELETOR = INDIGO):');
+    console.log(`   Registros: ${total.TotalRegistros}`);
+    console.log(`   Total Kg: ${Math.round(total.TotalKg)}\n`);
+    console.log('========================================\n');
+
+    res.json({
+      fechas: fechas.length,
+      partidas: partidas.length,
+      sValues: sValues.length,
+      sConteo: sCounts,
+      total: total
+    });
+  } catch (error) {
+    console.error('Error en /api/residuos-indigo-resumen:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT TEMPORAL - Resumen tb_PRODUCCION con SELETOR=INDIGO
+// =====================================================================
+app.get('/api/produccion-indigo-resumen', async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin } = req.query;
+    
+    if (!fecha_inicio || !fecha_fin) {
+      return res.status(400).json({ error: 'Faltan parámetros fecha_inicio y fecha_fin (formato DD/MM/YYYY)' });
+    }
+    
+    // Convertir fechas DD/MM/YYYY a YYYY-MM-DD para comparación
+    const convertirFecha = (fecha) => {
+      const [dia, mes, año] = fecha.split('/');
+      return `${año}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    };
+    
+    const fechaInicioISO = convertirFecha(fecha_inicio);
+    const fechaFinISO = convertirFecha(fecha_fin);
+    
+    console.log(`\n📊 ===== RESUMEN tb_PRODUCCION (SELETOR=INDIGO) ${fecha_inicio} - ${fecha_fin} =====\n`);
+    
+    // Columna S - elementos únicos y cuenta (con filtro de fechas)
+    const sUnicos = await dbAll(`
+      SELECT DISTINCT S, COUNT(*) as count
+      FROM tb_PRODUCCION 
+      WHERE SELETOR = 'INDIGO' 
+        AND S IS NOT NULL
+        AND (
+          substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          substr(DT_BASE_PRODUCAO, 1, 2)
+        ) BETWEEN '${fechaInicioISO}' AND '${fechaFinISO}'
+      GROUP BY S
+      ORDER BY count DESC
+    `);
+    
+    console.log(`\n✓ Valores únicos en columna S (período seleccionado): ${sUnicos.length}`);
+    console.log('\n📋 Cuenta por elementos de columna S:');
+    sUnicos.forEach(item => {
+      console.log(`   "${item.S}": ${item.count} registros`);
+    });
+    
+    console.log('\n===================================================\n');
+    
+    res.json({
+      s_valores: sUnicos
+    });
+  } catch (error) {
+    console.error('Error en resumen produccion-indigo:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
 // ENDPOINT - Lista de Artículos para Análisis Mesa Test
 // =====================================================================
 // GET /api/articulos-mesa-test?fecha_inicial=YYYY-MM-DD&fecha_final=YYYY-MM-DD
