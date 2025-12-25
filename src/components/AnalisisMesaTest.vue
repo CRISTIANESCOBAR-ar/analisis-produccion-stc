@@ -660,10 +660,13 @@ const renderChart = () => {
             data: valoresReales,
             borderColor: 'rgb(37, 99, 235)', // blue-600
             backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            tension: 0.1
+            borderWidth: 2.5,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBorderWidth: 2,
+            pointHoverBackgroundColor: 'rgb(37, 99, 235)',
+            pointHoverBorderColor: 'white',
+            tension: 0.3
           },
           {
             label: 'Límite Mínimo',
@@ -719,16 +722,41 @@ const renderChart = () => {
             font: { size: 16 }
           },
           tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            padding: 12,
+            titleColor: 'white',
+            titleFont: {
+              size: 13,
+              weight: 'bold'
+            },
+            bodyColor: 'white',
+            bodyFont: {
+              size: 12
+            },
+            bodySpacing: 6,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            borderWidth: 1,
+            displayColors: true,
             callbacks: {
               title: (items) => {
                 if (!items || items.length === 0) return ''
                 const lbl = items[0].label
                 return formatFechaCorta(lbl)
               },
-              afterLabel: (context) => {
-                const index = context.dataIndex
+              label: (context) => {
+                const datasetLabel = context.dataset.label || ''
+                const value = context.parsed.y
+                if (datasetLabel === 'Valor Real') {
+                  return `${datasetLabel}: ${value.toFixed(2)}`
+                }
+                return `${datasetLabel}: ${value}`
+              },
+              afterBody: (items) => {
+                if (!items || items.length === 0) return []
+                const index = items[0].dataIndex
                 const dato = datosGrafico.value[index]
                 return [
+                  '',
                   `Partida: ${dato.Partida || '-'}`,
                   `Máquina: ${dato.Maquina || '-'}`
                 ]
