@@ -40,8 +40,20 @@ const getTableConfig = (folderPath) => {
 };
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Permitir todas las IPs de red local
+  credentials: true
+}));
 app.use(express.json());
+
+// ✅ Servir archivos estáticos del frontend (producción)
+const distPath = path.join(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  console.log('✅ Sirviendo frontend desde:', distPath);
+  app.use(express.static(distPath));
+} else {
+  console.log('⚠️  Carpeta dist/ no encontrada. Ejecuta: npm run build');
+}
 
 // Conectar a SQLite
 const db = new sqlite3.Database(DB_PATH, (err) => {
@@ -2665,6 +2677,28 @@ app.get('/api/consulta-rolada-indigo', async (req, res) => {
   }
 });
 
+// ✅ Health check endpoint
+app.get('/api/health', (req, res) => {
+  const dbExists = fs.existsSync(DB_PATH);
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    database: dbExists ? 'connected' : 'error',
+    uptime: process.uptime(),
+    version: '1.0.0'
+  });
+});
+
+// ✅ Catch-all para Vue Router (debe ir al final, después de todas las rutas API)
+app.get('*', (req, res) => {
+  const indexPath = path.join(__dirname, '../dist/index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Frontend no encontrado. Ejecuta: npm run build');
+  }
+});
+
 // Manejo de cierre graceful
 process.on('SIGINT', () => {
   console.log('\n🛑 Cerrando servidor...');
@@ -2673,4 +2707,40 @@ process.on('SIGINT', () => {
     console.log('✓ Conexión SQLite cerrada');
     process.exit(0);
   });
+});
+
+// Iniciar servidor en todas las interfaces de red
+const HOST = '0.0.0.0'; // Escuchar en todas las IPs
+app.listen(PORT, HOST, () => {
+  console.log('');
+  console.log('========================================');
+  console.log('  🚀 Servidor STC Producción Iniciado');
+  console.log('========================================');
+  console.log('');
+  console.log(`📡 Puerto: ${PORT}`);
+  console.log(`📁 Base de datos: ${DB_PATH}`);
+  
+  // Mostrar IP local para acceso en red
+  const os = require('os');
+  const interfaces = os.networkInterfaces();
+  const localIPs = [];
+  
+  Object.keys(interfaces).forEach(name => {
+    interfaces[name].forEach(iface => {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        localIPs.push(iface.address);
+      }
+    });
+  });
+  
+  console.log('');
+  console.log('🌐 Acceso:');
+  console.log(`   Local:     http://localhost:${PORT}`);
+  localIPs.forEach(ip => {
+    console.log(`   Red local: http://${ip}:${PORT}`);
+  });
+  console.log('');
+  console.log('Presiona Ctrl+C para detener');
+  console.log('========================================');
+  console.log('');
 });
