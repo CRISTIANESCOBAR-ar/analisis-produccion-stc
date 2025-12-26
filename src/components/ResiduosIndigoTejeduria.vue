@@ -97,7 +97,7 @@
               <td class="px-2 py-0 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.TotalMetros) }}</td>
               <td class="px-2 py-0 text-right font-mono text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
               <td class="px-2 py-0 text-right font-mono text-blue-700">{{ formatNumber(item.ResiduosKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold" :class="parseFloat(formatPercent(item.ResiduosKg, item.TotalKg)) > metaPercent ? 'text-red-600' : 'text-green-600'">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
+              <td class="px-2 py-0 text-right font-mono font-semibold" :class="(item.TotalKg > 0 && (item.ResiduosKg / item.TotalKg * 100) > metaPercent) ? 'text-red-600' : 'text-green-600'">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
               <td class="px-2 py-0 text-right font-mono text-slate-600">{{ formatDecimal(metaPercent) }}</td>
               <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatDesvio(item.ResiduosKg, item.TotalKg, metaPercent) }}</td>
               <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatDesvioMetros(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent) }}</td>
@@ -127,7 +127,7 @@
               <td class="px-2 py-1 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(totales.metros) }}</td>
               <td class="px-2 py-1 text-right font-mono text-blue-800">{{ formatNumber(totales.kg) }}</td>
               <td class="px-2 py-1 text-right font-mono text-blue-800">{{ formatNumber(totales.residuos) }}</td>
-              <td class="px-2 py-1 text-right font-mono font-semibold" :class="parseFloat(formatPercent(totales.residuos, totales.kg)) > metaPercent ? 'text-red-700' : 'text-green-700'">{{ formatPercent(totales.residuos, totales.kg) }}</td>
+              <td class="px-2 py-1 text-right font-mono font-semibold" :class="(totales.kg > 0 && (totales.residuos / totales.kg * 100) > metaPercent) ? 'text-red-700' : 'text-green-700'">{{ formatPercent(totales.residuos, totales.kg) }}</td>
               <td class="px-2 py-1 text-right font-mono text-slate-700">{{ formatDecimal(metaPercent) }}</td>
               <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioKg > 0 ? formatNumber(totales.desvioKg) : '' }}</td>
               <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioMetros > 0 ? formatNumber(totales.desvioMetros) : '' }}</td>

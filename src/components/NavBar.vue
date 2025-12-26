@@ -65,43 +65,60 @@
         :collapsed="isCollapsed"
         @click="handleNavClick('/calidad')"
       />
-      <SidebarItem 
-        icon="📋" 
-        label="Revisión CQ" 
-        :active="isActive('/revision-cq')" 
+      <SidebarItemWithSubmenu
+        icon="📋"
+        label="Revisión CQ"
         :collapsed="isCollapsed"
-        @click="handleNavClick('/revision-cq')"
+        :items="[
+          { 
+            icon: '📏', 
+            label: 'Metros por Revisor', 
+            path: '/revision-cq',
+            active: isActive('/revision-cq')
+          },
+          { 
+            icon: '📊', 
+            label: 'Histórico por Revisor', 
+            path: '/analisis-historico-revisores',
+            active: isActive('/analisis-historico-revisores')
+          },
+          { 
+            icon: '📉', 
+            label: 'Mesa de Test', 
+            path: '/analisis-mesa-test',
+            active: isActive('/analisis-mesa-test')
+          }
+        ]"
+        @navigate="handleNavClick"
+      />
+      <SidebarItemWithSubmenu
+        icon="💙"
+        label="ÍNDIGO"
+        :collapsed="isCollapsed"
+        :items="[
+          { 
+            icon: '♻️', 
+            label: 'Residuos ÍNDIGO y TEJEDURIA', 
+            path: '/residuos-indigo-tejeduria',
+            active: isActive('/residuos-indigo-tejeduria')
+          },
+          { 
+            icon: '📊', 
+            label: 'Análisis Residuos de Índigo', 
+            path: '/analisis-residuos-indigo',
+            active: isActive('/analisis-residuos-indigo')
+          },
+          { 
+            icon: '🔎', 
+            label: 'Consulta ROLADA', 
+            path: '/consulta-rolada-indigo',
+            active: isActive('/consulta-rolada-indigo')
+          }
+        ]"
+        @navigate="handleNavClick"
       />
       <SidebarItem 
-        icon="📊" 
-        label="Histórico Revisores" 
-        :active="isActive('/analisis-historico-revisores')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/analisis-historico-revisores')"
-      />
-      <SidebarItem 
-        icon="📉" 
-        label="Mesa de Test" 
-        :active="isActive('/analisis-mesa-test')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/analisis-mesa-test')"
-      />
-      <SidebarItem 
-        icon="♻️" 
-        label="Residuos INDIGO" 
-        :active="isActive('/residuos-indigo-tejeduria')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/residuos-indigo-tejeduria')"
-      />
-      <SidebarItem 
-        icon="�" 
-        label="Análisis Residuos" 
-        :active="isActive('/analisis-residuos-indigo')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/analisis-residuos-indigo')"
-      />
-      <SidebarItem 
-        icon="�💲" 
+        icon="💲" 
         label="Costos mensuales" 
         :active="isActive('/costos-mensuales')" 
         :collapsed="isCollapsed"
@@ -151,10 +168,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSidebar } from '../composables/useSidebar'
 import SidebarItem from './SidebarItem.vue'
+import SidebarItemWithSubmenu from './SidebarItemWithSubmenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -167,6 +185,10 @@ const {
   scheduleHideSidebar,
   clearHideTimer
 } = useSidebar()
+
+// Proporcionar las funciones a los componentes hijos
+provide('clearHideTimer', clearHideTimer)
+provide('scheduleHideSidebar', scheduleHideSidebar)
 
 const apiOnline = ref(false)
 let statusInterval = null

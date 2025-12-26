@@ -9,6 +9,7 @@ import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores
 import AnalisisMesaTest from '../components/AnalisisMesaTest.vue'
 import ResiduosIndigoTejeduria from '../components/ResiduosIndigoTejeduria.vue'
 import AnalisisResiduosIndigo from '../components/AnalisisResiduosIndigo.vue'
+import ConsultaRoladaIndigo from '../components/ConsultaRoladaIndigo.vue'
 import CostosMensuales from '../components/CostosMensuales.vue'
 
 const routes = [
@@ -70,6 +71,12 @@ const routes = [
     name: 'AnalisisResiduosIndigo',
     component: AnalisisResiduosIndigo,
     meta: { title: 'Análisis Residuos Índigo - Análisis Producción STC' }
+  },
+  {
+    path: '/consulta-rolada-indigo',
+    name: 'ConsultaRoladaIndigo',
+    component: ConsultaRoladaIndigo,
+    meta: { title: 'Consulta ROLADA ÍNDIGO - Análisis Producción STC' }
   },
   {    path: '/costos-mensuales',
     name: 'CostosMensuales',

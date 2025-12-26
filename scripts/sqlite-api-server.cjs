@@ -2621,6 +2621,50 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
   }
 });
 
+// =====================================================================
+// ENDPOINT - Consulta ROLADA ÍNDIGO
+// =====================================================================
+app.get('/api/consulta-rolada-indigo', async (req, res) => {
+  try {
+    const { rolada } = req.query;
+    
+    if (!rolada) {
+      return res.status(400).json({ error: 'Parámetro ROLADA requerido' });
+    }
+
+    const sql = `
+      SELECT 
+        ROLADA,
+        DT_INICIO,
+        HORA_INICIO,
+        DT_FINAL,
+        HORA_FINAL,
+        TURNO,
+        PARTIDA,
+        ARTIGO,
+        COR,
+        CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) AS METRAGEM,
+        CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) AS VELOC,
+        S,
+        CAST(RUPTURAS AS INTEGER) AS RUPTURAS,
+        CAST(REPLACE(REPLACE(CAVALOS, '.', ''), ',', '.') AS REAL) AS CAVALOS,
+        OPERADOR,
+        [NM OPERADOR] AS NM_OPERADOR
+      FROM tb_PRODUCCION
+      WHERE SELETOR = 'INDIGO'
+        AND ROLADA = ?
+      ORDER BY DT_INICIO, HORA_INICIO
+    `;
+
+    const rows = await dbAll(sql, [rolada]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/consulta-rolada-indigo:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Manejo de cierre graceful
 process.on('SIGINT', () => {
   console.log('\n🛑 Cerrando servidor...');
