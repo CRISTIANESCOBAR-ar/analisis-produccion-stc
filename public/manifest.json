@@ -1,0 +1,80 @@
+{
+  "name": "Análisis Producción STC",
+  "short_name": "STC Producción",
+  "description": "Sistema de análisis de producción textil de Santana Textiles Corporation",
+  "theme_color": "#1E40AF",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Residuos ÍNDIGO",
+      "url": "/residuos-indigo",
+      "description": "Ver análisis de residuos ÍNDIGO"
+    },
+    {
+      "name": "Análisis Residuos",
+      "url": "/analisis-residuos-indigo",
+      "description": "Análisis detallado de residuos"
+    },
+    {
+      "name": "Consulta ROLADA",
+      "url": "/consulta-rolada-indigo",
+      "description": "Buscar por número ROLADA"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": []
+}

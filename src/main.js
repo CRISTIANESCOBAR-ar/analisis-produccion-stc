@@ -40,3 +40,17 @@ app.directive('tippy', {
 })
 
 app.use(router).mount('#app')
+
+// Registrar Service Worker PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      registration => {
+        console.log('SW registrado:', registration.scope)
+      },
+      error => {
+        console.log('SW registro fallido:', error)
+      }
+    )
+  })
+}

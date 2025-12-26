@@ -2,22 +2,22 @@
   <div class="w-full h-screen flex flex-col p-1">
     <main ref="mainContentRef" class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <!-- Header -->
-      <div class="flex items-center justify-between gap-4 flex-shrink-0 mb-4">
-        <div class="flex items-center gap-6">
-          <img src="/LogoSantana.jpg" alt="Santana Textiles" class="h-10 w-auto object-contain" />
-          <h3 class="text-lg font-semibold text-slate-800">Consulta ROLADA ÍNDIGO</h3>
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-4 flex-shrink-0 mb-4">
+        <div class="flex items-center gap-3 lg:gap-6 w-full lg:w-auto">
+          <img src="/LogoSantana.jpg" alt="Santana Textiles" class="h-8 lg:h-10 w-auto object-contain" />
+          <h3 class="text-base lg:text-lg font-semibold text-slate-800">Consulta ROLADA ÍNDIGO</h3>
         </div>
         
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2">
-            <label for="rolada-input" class="text-sm font-medium text-slate-700">ROLADA:</label>
+        <div class="flex flex-wrap items-center gap-2 lg:gap-3 w-full lg:w-auto">
+          <div class="flex items-center gap-2 flex-1 lg:flex-initial">
+            <label for="rolada-input" class="text-sm font-medium text-slate-700 whitespace-nowrap">ROLADA:</label>
             <input
               id="rolada-input"
               v-model.number="roladaInput"
               type="number"
               placeholder="4 dígitos"
               maxlength="4"
-              class="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-28 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              class="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full lg:w-28 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               @input="onRoladaInput"
               @keyup.enter="buscarRolada"
             />
@@ -25,19 +25,19 @@
           <button
             @click="buscarRolada"
             :disabled="!roladaInput || cargando"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-sm"
+            class="inline-flex items-center gap-2 px-3 lg:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors shadow-sm text-sm"
             v-tippy="{ content: 'Buscar datos de la ROLADA', placement: 'bottom' }"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
-            <span>Buscar</span>
+            <span class="hidden sm:inline">Buscar</span>
           </button>
           <button
             v-if="datosAgrupados.length > 0"
             @click="copiarComoImagen"
-            class="inline-flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+            class="inline-flex items-center gap-1 px-2 lg:px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-sm"
             v-tippy="{ content: 'Copiar tabla como imagen al portapapeles', placement: 'bottom' }"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -45,18 +45,18 @@
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
             </svg>
-            <span class="text-sm">Imagen</span>
+            <span class="text-xs lg:text-sm hidden sm:inline">Img</span>
           </button>
           <button
             v-if="datosAgrupados.length > 0"
             @click="exportarAExcel"
-            class="inline-flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+            class="inline-flex items-center gap-1 px-2 lg:px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors shadow-sm"
             v-tippy="{ content: 'Exportar tabla a archivo Excel', placement: 'bottom' }"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12.9,14.5L15.8,19H14L12,15.6L10,19H8.2L11.1,14.5L8.2,10H10L12,13.4L14,10H15.8L12.9,14.5Z"/>
             </svg>
-            <span class="text-sm">Excel</span>
+            <span class="text-xs lg:text-sm hidden sm:inline">Excel</span>
           </button>
         </div>
       </div>
@@ -73,24 +73,24 @@
 
       <!-- Tabla de resultados -->
       <div v-if="datosAgrupados.length > 0" class="flex-1 overflow-auto min-h-0 border border-slate-200 rounded-lg">
-        <table ref="tablaRef" class="w-full text-sm text-left text-slate-600 font-[Verdana]">
+        <table ref="tablaRef" class="w-full min-w-[1200px] text-xs lg:text-sm text-left text-slate-600 font-[Verdana]">
           <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Partida</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">Fecha Inicio</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">Hora Inicio</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">Fecha Final</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">Hora Final</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">Turno</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Base</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Color</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">Metros</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">Veloc.</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">S</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">R103</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">Roturas</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">CV</th>
-              <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Operador</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-left">Partida</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-center">Fecha Inicio</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-center">Hora Inicio</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-center">Fecha Final</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-center">Hora Final</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-center">Turno</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-left">Base</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-left">Color</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-right">Metros</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-right">Veloc.</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-center">S</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-right">R103</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-right">Roturas</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-right">CV</th>
+              <th class="px-2 lg:px-3 py-2 font-bold border-b border-slate-200 text-left">Operador</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -100,40 +100,40 @@
               :class="index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'" 
               class="transition-colors"
             >
-              <td class="px-3 py-2">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
-              <td class="px-3 py-2 text-center">{{ formatDate(item.DT_INICIO) }}</td>
-              <td class="px-3 py-2 text-center font-mono">{{ item.HORA_INICIO }}</td>
-              <td class="px-3 py-2 text-center">{{ formatDate(item.DT_FINAL) }}</td>
-              <td class="px-3 py-2 text-center font-mono">{{ item.HORA_FINAL }}</td>
-              <td class="px-3 py-2 text-center font-semibold text-blue-700">{{ item.TURNO }}</td>
-              <td class="px-3 py-2">{{ item.ARTIGO ? item.ARTIGO.substring(0, 10) : '' }}</td>
-              <td class="px-3 py-2">{{ item.COR }}</td>
-              <td class="px-3 py-2 text-right font-mono">{{ formatNumber(item.METRAGEM) }}</td>
-              <td class="px-3 py-2 text-right font-mono">{{ formatNumber(item.VELOC) }}</td>
-              <td class="px-3 py-2 text-center">{{ item.S }}</td>
-              <td class="px-3 py-2 text-right font-mono text-purple-600">{{ calcularR103(item.RUPTURAS, item.METRAGEM) }}</td>
-              <td class="px-3 py-2 text-right font-mono text-red-600">{{ item.RUPTURAS }}</td>
-              <td class="px-3 py-2 text-right font-mono">{{ formatNumber(item.CAVALOS) }}</td>
-              <td class="px-3 py-2">{{ item.NM_OPERADOR }}</td>
+              <td class="px-2 lg:px-3 py-2">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+              <td class="px-2 lg:px-3 py-2 text-center">{{ formatDate(item.DT_INICIO) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-center font-mono">{{ item.HORA_INICIO }}</td>
+              <td class="px-2 lg:px-3 py-2 text-center">{{ formatDate(item.DT_FINAL) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-center font-mono">{{ item.HORA_FINAL }}</td>
+              <td class="px-2 lg:px-3 py-2 text-center font-semibold text-blue-700">{{ item.TURNO }}</td>
+              <td class="px-2 lg:px-3 py-2">{{ item.ARTIGO ? item.ARTIGO.substring(0, 10) : '' }}</td>
+              <td class="px-2 lg:px-3 py-2">{{ item.COR }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono">{{ formatNumber(item.METRAGEM) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono">{{ formatNumber(item.VELOC) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-center">{{ item.S }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono text-purple-600">{{ calcularR103(item.RUPTURAS, item.METRAGEM) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono text-red-600">{{ item.RUPTURAS }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono">{{ formatNumber(item.CAVALOS) }}</td>
+              <td class="px-2 lg:px-3 py-2">{{ item.NM_OPERADOR }}</td>
             </tr>
           </tbody>
           <tfoot v-if="datosAgrupados.length > 0" class="bg-slate-100 font-bold text-slate-800 sticky bottom-0 shadow-inner">
             <tr>
-              <td class="px-3 py-2 text-left">TOTAL</td>
-              <td class="px-3 py-2 text-center"></td>
-              <td class="px-3 py-2 text-center"></td>
-              <td class="px-3 py-2 text-center"></td>
-              <td class="px-3 py-2 text-center"></td>
-              <td class="px-3 py-2 text-center"></td>
-              <td class="px-3 py-2"></td>
-              <td class="px-3 py-2"></td>
-              <td class="px-3 py-2 text-right font-mono text-slate-900">{{ formatNumber(totales.metros) }}</td>
-              <td class="px-3 py-2 text-right"></td>
-              <td class="px-3 py-2 text-center"></td>
-              <td class="px-3 py-2 text-right font-mono text-purple-700">{{ calcularR103(totales.roturas, totales.metros) }}</td>
-              <td class="px-3 py-2 text-right font-mono text-red-700">{{ totales.roturas }}</td>
-              <td class="px-3 py-2 text-right font-mono text-slate-900">{{ formatNumber(totales.cv) }}</td>
-              <td class="px-3 py-2"></td>
+              <td class="px-2 lg:px-3 py-2 text-left">TOTAL</td>
+              <td class="px-2 lg:px-3 py-2 text-center"></td>
+              <td class="px-2 lg:px-3 py-2 text-center"></td>
+              <td class="px-2 lg:px-3 py-2 text-center"></td>
+              <td class="px-2 lg:px-3 py-2 text-center"></td>
+              <td class="px-2 lg:px-3 py-2 text-center"></td>
+              <td class="px-2 lg:px-3 py-2"></td>
+              <td class="px-2 lg:px-3 py-2"></td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono text-slate-900">{{ formatNumber(totales.metros) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right"></td>
+              <td class="px-2 lg:px-3 py-2 text-center"></td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono text-purple-700">{{ calcularR103(totales.roturas, totales.metros) }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono text-red-700">{{ totales.roturas }}</td>
+              <td class="px-2 lg:px-3 py-2 text-right font-mono text-slate-900">{{ formatNumber(totales.cv) }}</td>
+              <td class="px-2 lg:px-3 py-2"></td>
             </tr>
           </tfoot>
         </table>
