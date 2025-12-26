@@ -137,6 +137,8 @@ function hideSubmenu() {
 function handleSubmenuClick(item) {
   emit('navigate', item.path)
   showSubmenu.value = false
+  // Reprogramar el ocultamiento automático del sidebar después de la navegación
+  scheduleHideSidebar()
 }
 
 function calculateSubmenuPosition() {

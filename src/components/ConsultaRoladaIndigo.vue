@@ -286,6 +286,13 @@ const onRoladaInput = (event) => {
   }
 }
 
+// Convertir hora string (HH:MM) a fracción de día para Excel
+const convertirHoraAExcel = (horaStr) => {
+  if (!horaStr) return null
+  const [horas, minutos] = horaStr.split(':').map(Number)
+  return (horas + minutos / 60) / 24
+}
+
 const buscarRolada = async () => {
   if (!roladaInput.value) {
     Swal.fire({
@@ -348,7 +355,84 @@ const copiarComoImagen = async () => {
   if (!mainContentRef.value || datosAgrupados.value.length === 0) return
   
   try {
-    // Crear contenedor temporal sin clases Tailwind
+    // Crear overlay blanco para cubrir la pantalla durante la captura
+    const overlay = document.createElement('div')
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.95);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-family: system-ui, sans-serif;
+      backdrop-filter: blur(4px);
+    `
+    
+    // Crear contenedor del mensaje
+    const messageContainer = document.createElement('div')
+    messageContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 32px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    `
+    
+    // Spinner animado
+    const spinner = document.createElement('div')
+    spinner.style.cssText = `
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgb(226, 232, 240);
+      border-top-color: rgb(37, 99, 235);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    `
+    
+    // Agregar keyframes para la animación
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `
+    document.head.appendChild(style)
+    
+    // Mensaje
+    const message = document.createElement('div')
+    message.style.cssText = `
+      font-size: 16px;
+      font-weight: 600;
+      color: rgb(15, 23, 42);
+    `
+    message.textContent = 'Capturando imagen...'
+    
+    const subMessage = document.createElement('div')
+    subMessage.style.cssText = `
+      font-size: 14px;
+      color: rgb(100, 116, 139);
+    `
+    subMessage.textContent = 'Por favor espera un momento'
+    
+    messageContainer.appendChild(spinner)
+    messageContainer.appendChild(message)
+    messageContainer.appendChild(subMessage)
+    overlay.appendChild(messageContainer)
+    document.body.appendChild(overlay)
+    
+    // Delay para que el overlay se muestre completamente
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Crear contenedor temporal debajo del overlay
     const tempContainer = document.createElement('div')
     tempContainer.style.cssText = `
       position: fixed;
@@ -356,7 +440,7 @@ const copiarComoImagen = async () => {
       left: 0;
       background: rgb(255, 255, 255);
       padding: 30px;
-      z-index: 9999;
+      z-index: 9998;
       pointer-events: none;
       width: ${mainContentRef.value.scrollWidth + 100}px;
     `
@@ -423,6 +507,13 @@ const copiarComoImagen = async () => {
         height: tempContainer.scrollHeight
       })
     } finally {
+      // Remover overlay y contenedor temporal
+      if (style.isConnected) {
+        document.head.removeChild(style)
+      }
+      if (overlay.isConnected) {
+        document.body.removeChild(overlay)
+      }
       if (tempContainer.isConnected) {
         document.body.removeChild(tempContainer)
       }
@@ -559,12 +650,16 @@ const exportarAExcel = async () => {
       const roturas = parseInt(item.RUPTURAS) || 0
       const r103 = metros > 0 ? (roturas * 1000) / metros : null
       
+      // Convertir horas a formato Excel (fracción de día)
+      const horaInicioExcel = item.HORA_INICIO ? convertirHoraAExcel(item.HORA_INICIO) : null
+      const horaFinalExcel = item.HORA_FINAL ? convertirHoraAExcel(item.HORA_FINAL) : null
+      
       worksheet.addRow({
-        partida: item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+        partida: parseInt(item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '0'),
         fecha_inicio: fechaInicioExcel,
-        hora_inicio: item.HORA_INICIO,
+        hora_inicio: horaInicioExcel,
         fecha_final: fechaFinalExcel,
-        hora_final: item.HORA_FINAL,
+        hora_final: horaFinalExcel,
         turno: item.TURNO,
         base: item.ARTIGO ? item.ARTIGO.substring(0, 10) : '',
         color: item.COR,
@@ -613,8 +708,10 @@ const exportarAExcel = async () => {
     // Definir formatos
     const formatos = {
       2: 'dd/mm/yyyy', // Fecha Inicio
+      3: 'hh:mm', // Hora Inicio
       4: 'dd/mm/yyyy', // Fecha Final
-      9: '#,##0.000', // Metros
+      5: 'hh:mm', // Hora Final
+      9: '#,##0', // Metros
       10: '#,##0', // Veloc
       12: '0.0', // R103
       13: '#,##0', // Roturas
@@ -639,7 +736,7 @@ const exportarAExcel = async () => {
         }
         
         // Alineación
-        if (colNumber === 1 || colNumber === 7 || colNumber === 8 || colNumber === 15) {
+        if (colNumber === 15) { // Solo Operador a la izquierda
           cell.alignment = { horizontal: 'left', vertical: 'middle' }
         } else {
           cell.alignment = { horizontal: 'center', vertical: 'middle' }
