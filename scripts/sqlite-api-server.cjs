@@ -2677,6 +2677,110 @@ app.get('/api/consulta-rolada-indigo', async (req, res) => {
   }
 });
 
+// ====================================
+// 📊 INFORME PRODUCCIÓN INDIGO (ROLADAS DEL MES)
+// ====================================
+app.get('/api/informe-produccion-indigo', async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
+    }
+
+    const sql = `
+      WITH RoladaBase AS (
+        SELECT 
+          ROLADA,
+          COR,
+          MIN(date(substr(DT_INICIO, 7, 4) || '-' || 
+                   substr(DT_INICIO, 4, 2) || '-' || 
+                   substr(DT_INICIO, 1, 2))) AS FECHA_INICIO,
+          ARTIGO
+        FROM tb_PRODUCCION
+        WHERE SELETOR = 'INDIGO'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA, COR, ARTIGO
+      ),
+      RoladaMetrics AS (
+        SELECT
+          ROLADA,
+          COR,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM_TOTAL,
+          SUM(CAST(RUPTURAS AS INTEGER)) AS RUPTURAS_TOTAL,
+          SUM(CAST(REPLACE(REPLACE(CAVALOS, '.', ''), ',', '.') AS REAL)) AS CAVALOS_TOTAL,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL)) AS VELOC_POND_NUM,
+          MIN(datetime(
+            substr(DT_INICIO, 7, 4) || '-' || 
+            substr(DT_INICIO, 4, 2) || '-' || 
+            substr(DT_INICIO, 1, 2) || ' ' || 
+            HORA_INICIO
+          )) AS INICIO_MIN,
+          MAX(datetime(
+            substr(DT_FINAL, 7, 4) || '-' || 
+            substr(DT_FINAL, 4, 2) || '-' || 
+            substr(DT_FINAL, 1, 2) || ' ' || 
+            HORA_FINAL
+          )) AS FIN_MAX
+        FROM tb_PRODUCCION
+        WHERE SELETOR = 'INDIGO'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA, COR
+      ),
+      RoladaCalidad AS (
+        SELECT
+          ROLADA,
+          COR,
+          COUNT(DISTINCT CASE WHEN S = 'N' THEN PARTIDA || '_' || S END) AS N_COUNT,
+          COUNT(DISTINCT CASE WHEN S = 'P' THEN PARTIDA || '_' || S END) AS P_COUNT,
+          COUNT(DISTINCT CASE WHEN S = 'Q' THEN PARTIDA || '_' || S END) AS Q_COUNT,
+          COUNT(DISTINCT PARTIDA || '_' || S) AS TOTAL_COUNT
+        FROM tb_PRODUCCION
+        WHERE SELETOR = 'INDIGO'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+          AND PARTIDA IS NOT NULL
+          AND S IS NOT NULL
+        GROUP BY ROLADA, COR
+      )
+      SELECT
+        rb.ROLADA,
+        substr(rb.FECHA_INICIO, 9, 2) || '/' || 
+        substr(rb.FECHA_INICIO, 6, 2) || '/' || 
+        substr(rb.FECHA_INICIO, 1, 4) AS FECHA_INDIGO,
+        rb.COR,
+        rb.ARTIGO,
+        ROUND(rm.METRAGEM_TOTAL, 3) AS METRAGEM,
+        rm.RUPTURAS_TOTAL AS RUPTURAS,
+        ROUND((CAST(rm.RUPTURAS_TOTAL AS REAL) * 1000.0) / NULLIF(rm.METRAGEM_TOTAL, 0), 2) AS ROT_103,
+        ROUND(rm.CAVALOS_TOTAL, 1) AS CAVALOS,
+        ROUND((rm.VELOC_POND_NUM / NULLIF(rm.METRAGEM_TOTAL, 0)), 2) AS VELOC_PROMEDIO,
+        CAST((julianday(rm.FIN_MAX) - julianday(rm.INICIO_MIN)) * 24 * 60 AS INTEGER) AS TIEMPO_MINUTOS,
+        COALESCE(rc.N_COUNT, 0) AS N_COUNT,
+        ROUND((CAST(COALESCE(rc.N_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS N_PERCENT,
+        COALESCE(rc.P_COUNT, 0) AS P_COUNT,
+        ROUND((CAST(COALESCE(rc.P_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS P_PERCENT,
+        COALESCE(rc.Q_COUNT, 0) AS Q_COUNT,
+        ROUND((CAST(COALESCE(rc.Q_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS Q_PERCENT
+      FROM RoladaBase rb
+      INNER JOIN RoladaMetrics rm ON rb.ROLADA = rm.ROLADA AND rb.COR = rm.COR
+      LEFT JOIN RoladaCalidad rc ON rb.ROLADA = rc.ROLADA AND rb.COR = rc.COR
+      WHERE rb.FECHA_INICIO BETWEEN date(?) AND date(?)
+      ORDER BY rb.FECHA_INICIO DESC, rb.ROLADA DESC, rb.COR
+    `;
+
+    const rows = await dbAll(sql, [fechaInicio, fechaFin]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/informe-produccion-indigo:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ✅ Health check endpoint
 app.get('/api/health', (req, res) => {
   const dbExists = fs.existsSync(DB_PATH);
@@ -2690,7 +2794,13 @@ app.get('/api/health', (req, res) => {
 });
 
 // ✅ Catch-all para Vue Router (debe ir al final, después de todas las rutas API)
-app.get('*', (req, res) => {
+// Express 5 usa use() en lugar de get() para catch-all
+app.use((req, res, next) => {
+  // Solo servir index.html para rutas que no son de API
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  
   const indexPath = path.join(__dirname, '../dist/index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);

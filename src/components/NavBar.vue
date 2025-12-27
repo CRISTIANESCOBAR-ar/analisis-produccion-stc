@@ -133,6 +133,12 @@
             label: 'Consulta ROLADA', 
             path: '/consulta-rolada-indigo',
             active: isActive('/consulta-rolada-indigo')
+          },
+          { 
+            icon: '📅', 
+            label: 'ROLADAS del Mes', 
+            path: '/informe-produccion-indigo',
+            active: isActive('/informe-produccion-indigo')
           }
         ]"
         @navigate="handleNavClick"
