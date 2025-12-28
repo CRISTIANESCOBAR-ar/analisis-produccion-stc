@@ -2703,6 +2703,57 @@ app.get('/api/informe-produccion-indigo', async (req, res) => {
           AND ROLADA != ''
         GROUP BY ROLADA, COR, ARTIGO
       ),
+      NumFiosPorRolada AS (
+        SELECT 
+          ROLADA,
+          SUM(NUM_FIOS_MAX) AS NUM_FIOS_SUM
+        FROM (
+          SELECT 
+            ROLADA,
+            PARTIDA,
+            MAX(CAST(REPLACE(REPLACE(NUM_FIOS, '.', ''), ',', '.') AS REAL)) AS NUM_FIOS_MAX
+          FROM tb_PRODUCCION
+          WHERE SELETOR = 'URDIDEIRA'
+            AND ROLADA IS NOT NULL
+            AND PARTIDA IS NOT NULL
+            AND NUM_FIOS IS NOT NULL
+          GROUP BY ROLADA, PARTIDA
+        )
+        GROUP BY ROLADA
+      ),
+      UrdideiraMetrics AS (
+        SELECT
+          p.ROLADA,
+          MIN(date(substr(p.DT_INICIO, 7, 4) || '-' || 
+                   substr(p.DT_INICIO, 4, 2) || '-' || 
+                   substr(p.DT_INICIO, 1, 2))) AS FECHA_URDIDORA,
+          (SELECT GROUP_CONCAT(DISTINCT CAST(CAST(TRIM(substr("MAQ  FIACAO", -2)) AS INTEGER) AS TEXT))
+           FROM tb_PRODUCCION 
+           WHERE SELETOR = 'URDIDEIRA' AND ROLADA = p.ROLADA AND "MAQ  FIACAO" IS NOT NULL) AS MAQ_OE,
+          (SELECT GROUP_CONCAT(DISTINCT CAST(CAST("LOTE FIACAO" AS INTEGER) AS TEXT))
+           FROM tb_PRODUCCION 
+           WHERE SELETOR = 'URDIDEIRA' AND ROLADA = p.ROLADA AND "LOTE FIACAO" IS NOT NULL) AS LOTE,
+          SUM(CAST(REPLACE(REPLACE(p.METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+            NULLIF(COUNT(DISTINCT p.PARTIDA), 0) AS METRAGEM_AVG,
+          SUM(CAST(p.RUPTURAS AS INTEGER)) AS RUPTURAS_TOTAL,
+          MIN(datetime(
+            substr(p.DT_INICIO, 7, 4) || '-' || 
+            substr(p.DT_INICIO, 4, 2) || '-' || 
+            substr(p.DT_INICIO, 1, 2) || ' ' || 
+            p.HORA_INICIO
+          )) AS INICIO_MIN,
+          MAX(datetime(
+            substr(p.DT_FINAL, 7, 4) || '-' || 
+            substr(p.DT_FINAL, 4, 2) || '-' || 
+            substr(p.DT_FINAL, 1, 2) || ' ' || 
+            p.HORA_FINAL
+          )) AS FIN_MAX
+        FROM tb_PRODUCCION p
+        WHERE p.SELETOR = 'URDIDEIRA'
+          AND p.ROLADA IS NOT NULL
+          AND p.ROLADA != ''
+        GROUP BY p.ROLADA
+      ),
       RoladaMetrics AS (
         SELECT
           ROLADA,
@@ -2745,9 +2796,32 @@ app.get('/api/informe-produccion-indigo', async (req, res) => {
           AND PARTIDA IS NOT NULL
           AND S IS NOT NULL
         GROUP BY ROLADA, COR
+      ),
+      TecelagemMetrics AS (
+        SELECT
+          ROLADA,
+          SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) AS PONTOS_LIDOS_TOTAL,
+          SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) AS PONTOS_100_TOTAL,
+          SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) AS PARADA_TRAMA_TOTAL,
+          SUM(CAST(REPLACE(REPLACE("PARADA TEC URDUME", '.', ''), ',', '.') AS REAL)) AS PARADA_URDUME_TOTAL
+        FROM tb_PRODUCCION
+        WHERE SELETOR = 'TECELAGEM'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA
       )
       SELECT
         rb.ROLADA,
+        substr(um.FECHA_URDIDORA, 9, 2) || '/' || 
+        substr(um.FECHA_URDIDORA, 6, 2) || '/' || 
+        substr(um.FECHA_URDIDORA, 1, 4) AS FECHA_URDIDORA,
+        um.MAQ_OE,
+        um.LOTE,
+        ROUND(um.METRAGEM_AVG, 3) AS URDIDORA_M,
+        um.RUPTURAS_TOTAL AS URDIDORA_ROT_TOT,
+        ROUND((CAST(um.RUPTURAS_TOTAL AS REAL) * 1000000.0) / 
+              NULLIF((um.METRAGEM_AVG * nf.NUM_FIOS_SUM), 0), 6) AS URDIDORA_ROT_106,
+        CAST((julianday(um.FIN_MAX) - julianday(um.INICIO_MIN)) * 24 * 60 AS INTEGER) AS URDIDORA_TIEMPO_MIN,
         substr(rb.FECHA_INICIO, 9, 2) || '/' || 
         substr(rb.FECHA_INICIO, 6, 2) || '/' || 
         substr(rb.FECHA_INICIO, 1, 4) AS FECHA_INDIGO,
@@ -2764,10 +2838,16 @@ app.get('/api/informe-produccion-indigo', async (req, res) => {
         COALESCE(rc.P_COUNT, 0) AS P_COUNT,
         ROUND((CAST(COALESCE(rc.P_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS P_PERCENT,
         COALESCE(rc.Q_COUNT, 0) AS Q_COUNT,
-        ROUND((CAST(COALESCE(rc.Q_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS Q_PERCENT
+        ROUND((CAST(COALESCE(rc.Q_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS Q_PERCENT,
+        ROUND((tm.PONTOS_LIDOS_TOTAL * 100.0) / NULLIF(tm.PONTOS_100_TOTAL, 0), 1) AS TECELAGEM_EFICIENCIA,
+        ROUND((tm.PARADA_TRAMA_TOTAL * 100000.0) / NULLIF((tm.PONTOS_LIDOS_TOTAL * 1000.0), 0), 2) AS RT105,
+        ROUND((tm.PARADA_URDUME_TOTAL * 100000.0) / NULLIF((tm.PONTOS_LIDOS_TOTAL * 1000.0), 0), 2) AS RU105
       FROM RoladaBase rb
+      INNER JOIN UrdideiraMetrics um ON rb.ROLADA = um.ROLADA
+      INNER JOIN NumFiosPorRolada nf ON rb.ROLADA = nf.ROLADA
       INNER JOIN RoladaMetrics rm ON rb.ROLADA = rm.ROLADA AND rb.COR = rm.COR
       LEFT JOIN RoladaCalidad rc ON rb.ROLADA = rc.ROLADA AND rb.COR = rc.COR
+      LEFT JOIN TecelagemMetrics tm ON rb.ROLADA = tm.ROLADA
       WHERE rb.FECHA_INICIO BETWEEN date(?) AND date(?)
       ORDER BY rb.FECHA_INICIO DESC, rb.ROLADA DESC, rb.COR
     `;

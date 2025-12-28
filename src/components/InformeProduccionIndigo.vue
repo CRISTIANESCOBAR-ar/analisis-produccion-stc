@@ -52,7 +52,14 @@
           <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
               <th scope="col" class="pl-2 pr-2 py-1 font-bold border-b border-slate-200 text-center">Rolada</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-center">Fecha ÍNDIGO</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-emerald-300 bg-emerald-50 text-center">Fecha URDIDORA</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-center">Maq. OE</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-center">Lote</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">URDIDORA (m)</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Rot. Tot.</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Rot 10⁶</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Tiempo Total</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-center">Fecha ÍNDIGO</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-center">COR</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-left">Artículo</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-right">ÍNDIGO (m)</th>
@@ -67,31 +74,44 @@
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">%</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Q</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">%</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-purple-300 bg-purple-50 text-right">Tejeduría Eficiencia %</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-purple-50 text-right">RT10⁵</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-purple-50 text-right">RU10⁵</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             <tr v-for="(item, index) in datos" :key="`${item.ROLADA}-${item.COR}`" 
                 :class="index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'" 
                 class="transition-colors cursor-pointer">
-              <td class="pl-2 pr-2 py-0 font-medium text-slate-900 text-center whitespace-nowrap">{{ item.ROLADA }}</td>
-              <td class="px-2 py-0 text-center whitespace-nowrap">{{ item.FECHA_INDIGO }}</td>
-              <td class="px-2 py-0 text-center whitespace-nowrap">{{ item.COR }}</td>
-              <td class="px-2 py-0">{{ item.ARTIGO }}</td>
-              <td class="px-2 py-0 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.METRAGEM, 0) }}</td>
-              <td class="px-2 py-0 text-right font-mono">{{ formatNumber(item.RUPTURAS, 0) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.ROT_103, 2) }}</td>
-              <td class="px-2 py-0 text-right font-mono">{{ formatNumber(item.CAVALOS, 0) }}</td>
-              <td class="px-2 py-0 text-right font-mono">{{ formatTiempo(item.TIEMPO_MINUTOS) }}</td>
-              <td class="px-2 py-0 text-right font-mono">{{ formatNumber(item.VELOC_PROMEDIO, 2) }}</td>
-              <td class="px-2 py-0 text-right font-mono border-l-2 border-slate-200" :class="getCalidadColor(item.N_PERCENT)">{{ item.N_COUNT }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold" :class="getCalidadColor(item.N_PERCENT)">{{ formatNumber(item.N_PERCENT, 1) }}</td>
-              <td class="px-2 py-0 text-right font-mono" :class="getCalidadColor(item.P_PERCENT)">{{ item.P_COUNT }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold" :class="getCalidadColor(item.P_PERCENT)">{{ formatNumber(item.P_PERCENT, 1) }}</td>
-              <td class="px-2 py-0 text-right font-mono" :class="getCalidadColor(item.Q_PERCENT)">{{ item.Q_COUNT }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold" :class="getCalidadColor(item.Q_PERCENT)">{{ formatNumber(item.Q_PERCENT, 1) }}</td>
+              <td class="pl-2 pr-2 py-1.5 font-medium text-slate-900 text-center whitespace-nowrap">{{ item.ROLADA }}</td>
+              <td class="px-2 py-1.5 border-l-2 border-emerald-300 bg-emerald-50 text-center whitespace-nowrap">{{ item.FECHA_URDIDORA }}</td>
+              <td class="px-2 py-1.5 bg-emerald-50 text-center font-mono">{{ formatListaConY(item.MAQ_OE) }}</td>
+              <td class="px-2 py-1.5 bg-emerald-50 text-center font-mono">{{ formatListaConY(item.LOTE) }}</td>
+              <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono">{{ formatNumber(item.URDIDORA_M, 0) }}</td>
+              <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono">{{ item.URDIDORA_ROT_TOT }}</td>
+              <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono font-semibold text-emerald-700">{{ formatNumber(item.URDIDORA_ROT_106, 2) }}</td>
+              <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono">{{ formatTiempo(item.URDIDORA_TIEMPO_MIN) }}</td>
+              <td class="px-2 py-1.5 border-l-2 text-center whitespace-nowrap">{{ item.FECHA_INDIGO }}</td>
+              <td class="px-2 py-1.5 text-center whitespace-nowrap">{{ item.COR }}</td>
+              <td class="px-2 py-1.5">{{ item.ARTIGO }}</td>
+              <td class="px-2 py-1.5 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.METRAGEM, 0) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono">{{ formatNumber(item.RUPTURAS, 0) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.ROT_103, 2) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono">{{ formatNumber(item.CAVALOS, 0) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono">{{ formatTiempo(item.TIEMPO_MINUTOS) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono">{{ formatNumber(item.VELOC_PROMEDIO, 2) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono border-l-2 border-slate-200" :class="getCalidadColor(item.N_PERCENT)">{{ item.N_COUNT }}</td>
+              <td class="px-2 py-1.5 text-right font-mono font-semibold" :class="getCalidadColor(item.N_PERCENT)">{{ formatNumber(item.N_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono" :class="getCalidadColor(item.P_PERCENT)">{{ item.P_COUNT }}</td>
+              <td class="px-2 py-1.5 text-right font-mono font-semibold" :class="getCalidadColor(item.P_PERCENT)">{{ formatNumber(item.P_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 text-right font-mono" :class="getCalidadColor(item.Q_PERCENT)">{{ item.Q_COUNT }}</td>
+              <td class="px-2 py-1.5 text-right font-mono font-semibold" :class="getCalidadColor(item.Q_PERCENT)">{{ formatNumber(item.Q_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 border-l-2 border-purple-300 bg-purple-50 text-right font-mono font-semibold text-purple-700">{{ formatNumber(item.TECELAGEM_EFICIENCIA, 1) }}</td>
+              <td class="px-2 py-1.5 bg-purple-50 text-right font-mono">{{ formatNumber(item.RT105, 2) }}</td>
+              <td class="px-2 py-1.5 bg-purple-50 text-right font-mono">{{ formatNumber(item.RU105, 2) }}</td>
             </tr>
             <tr v-if="datos.length === 0 && !cargando" class="bg-slate-50">
-              <td colspan="16" class="px-4 py-8 text-center text-slate-500">
+              <td colspan="26" class="px-4 py-8 text-center text-slate-500">
                 No hay datos disponibles para el período seleccionado
               </td>
             </tr>
@@ -151,6 +171,18 @@ const getCalidadColor = (percent) => {
   return 'text-red-600';
 };
 
+const formatListaConY = (lista) => {
+  if (!lista || lista === '') return '';
+  // Separar por coma (con o sin espacio)
+  const items = lista.split(',').map(item => item.trim()).filter(item => item !== '');
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return items.join(' y ');
+  const ultimos = items.slice(-2).join(' y ');
+  const primeros = items.slice(0, -2).join(', ');
+  return primeros + ', ' + ultimos;
+};
+
 const cargarDatos = async () => {
   cargando.value = true;
   try {
@@ -203,6 +235,13 @@ const exportarAExcel = async () => {
     // Encabezados
     worksheet.columns = [
       { header: 'Rolada', key: 'ROLADA', width: 10 },
+      { header: 'Fecha URDIDORA', key: 'FECHA_URDIDORA', width: 14 },
+      { header: 'Maq. OE', key: 'MAQ_OE', width: 12 },
+      { header: 'Lote', key: 'LOTE', width: 12 },
+      { header: 'URDIDORA (m)', key: 'URDIDORA_M', width: 14 },
+      { header: 'Rot. Tot.', key: 'URDIDORA_ROT_TOT', width: 10 },
+      { header: 'Rot 10⁶', key: 'URDIDORA_ROT_106', width: 10 },
+      { header: 'Tiempo Total', key: 'URDIDORA_TIEMPO', width: 12 },
       { header: 'Fecha ÍNDIGO', key: 'FECHA_INDIGO', width: 12 },
       { header: 'COR', key: 'COR', width: 8 },
       { header: 'Artículo', key: 'ARTIGO', width: 20 },
@@ -217,7 +256,10 @@ const exportarAExcel = async () => {
       { header: 'P', key: 'P_COUNT', width: 8 },
       { header: 'P %', key: 'P_PERCENT', width: 8 },
       { header: 'Q', key: 'Q_COUNT', width: 8 },
-      { header: 'Q %', key: 'Q_PERCENT', width: 8 }
+      { header: 'Q %', key: 'Q_PERCENT', width: 8 },
+      { header: 'Tejeduría Eficiencia %', key: 'TECELAGEM_EFICIENCIA', width: 18 },
+      { header: 'RT10⁵', key: 'RT105', width: 10 },
+      { header: 'RU10⁵', key: 'RU105', width: 10 }
     ];
     
     // Estilo de encabezados
@@ -225,10 +267,27 @@ const exportarAExcel = async () => {
     worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
     worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
     
+    // Estilo especial para columnas de URDIDORA (columnas 2-8)
+    for (let col = 2; col <= 8; col++) {
+      worksheet.getColumn(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+    }
+    
+    // Estilo especial para columnas de TECELAGEM (columnas 24-26)
+    for (let col = 24; col <= 26; col++) {
+      worksheet.getColumn(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF5FF' } };
+    }
+    
     // Datos
     datos.value.forEach(item => {
       const row = worksheet.addRow({
         ROLADA: item.ROLADA,
+        FECHA_URDIDORA: item.FECHA_URDIDORA,
+        MAQ_OE: formatListaConY(item.MAQ_OE),
+        LOTE: formatListaConY(item.LOTE),
+        URDIDORA_M: item.URDIDORA_M,
+        URDIDORA_ROT_TOT: item.URDIDORA_ROT_TOT,
+        URDIDORA_ROT_106: item.URDIDORA_ROT_106,
+        URDIDORA_TIEMPO: formatTiempo(item.URDIDORA_TIEMPO_MIN),
         FECHA_INDIGO: item.FECHA_INDIGO,
         COR: item.COR,
         ARTIGO: item.ARTIGO,
@@ -243,16 +302,30 @@ const exportarAExcel = async () => {
         P_COUNT: item.P_COUNT,
         P_PERCENT: item.P_PERCENT,
         Q_COUNT: item.Q_COUNT,
-        Q_PERCENT: item.Q_PERCENT
+        Q_PERCENT: item.Q_PERCENT,
+        TECELAGEM_EFICIENCIA: item.TECELAGEM_EFICIENCIA,
+        RT105: item.RT105,
+        RU105: item.RU105
       });
       
       row.alignment = { vertical: 'middle' };
+      
+      // Formato de columnas de URDIDORA
+      row.getCell('URDIDORA_M').numFmt = '#,##0';
+      row.getCell('URDIDORA_ROT_106').numFmt = '#,##0.00';
+      
+      // Formato de columnas de ÍNDIGO
       row.getCell('METRAGEM').numFmt = '#,##0';
       row.getCell('ROT_103').numFmt = '#,##0.00';
       row.getCell('VELOC_PROMEDIO').numFmt = '#,##0.00';
       row.getCell('N_PERCENT').numFmt = '#,##0.0';
       row.getCell('P_PERCENT').numFmt = '#,##0.0';
       row.getCell('Q_PERCENT').numFmt = '#,##0.0';
+      
+      // Formato de columnas de TECELAGEM
+      row.getCell('TECELAGEM_EFICIENCIA').numFmt = '#,##0.0';
+      row.getCell('RT105').numFmt = '#,##0.00';
+      row.getCell('RU105').numFmt = '#,##0.00';
     });
     
     // Generar archivo

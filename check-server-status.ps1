@@ -84,7 +84,7 @@ if ($allOk) {
     
     Write-Host "📱 Acceso local:  http://localhost:$port" -ForegroundColor Cyan
     if ($ipAddress) {
-        Write-Host "🌐 Acceso en red: http://$ipAddress:$port" -ForegroundColor Cyan
+        Write-Host "🌐 Acceso en red: http://${ipAddress}:$port" -ForegroundColor Cyan
     }
 } else {
     Write-Host " ❌ SERVIDOR CON PROBLEMAS" -ForegroundColor Red
