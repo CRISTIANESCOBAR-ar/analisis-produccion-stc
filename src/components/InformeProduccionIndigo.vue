@@ -51,32 +51,41 @@
         <table ref="tableElementRef" class="w-full text-sm text-left text-slate-600 font-[Verdana]">
           <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th scope="col" class="pl-2 pr-2 py-1 font-bold border-b border-slate-200 text-center">Rolada</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-emerald-300 bg-emerald-50 text-center">Fecha URDIDORA</th>
+              <th scope="col" rowspan="2" class="pl-2 pr-2 py-1 font-bold border-b border-slate-200 text-center">Rolada</th>
+              <th scope="col" colspan="7" class="px-2 py-0.5 font-bold border-b border-l-2 border-emerald-300 bg-emerald-50 text-center">URDIDEIRA</th>
+              <th scope="col" colspan="15" class="px-2 py-0.5 font-bold border-b border-l-2 border-blue-300 bg-blue-50 text-center">ÍNDIGO</th>
+              <th scope="col" colspan="3" class="px-2 py-0.5 font-bold border-b border-l-2 border-purple-300 bg-purple-50 text-center">TEJEDURÍA</th>
+              <th scope="col" colspan="3" class="px-2 py-0.5 font-bold border-b border-l-2 border-amber-300 bg-amber-50 text-center">CALIDAD</th>
+            </tr>
+            <tr>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-emerald-300 bg-emerald-50 text-center">Fecha</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-center">Maq. OE</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-center">Lote</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">URDIDORA (m)</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Metros</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Rot. Tot.</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Rot 10⁶</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Tiempo Total</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-center">Fecha ÍNDIGO</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-center">COR</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-left">Artículo</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-right">ÍNDIGO (m)</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Rot. Total</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Rot 10³</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Cav.</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Tiempo Total</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Vel. m/min</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-right">N</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">%</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">P</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">%</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Q</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">%</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-purple-300 bg-purple-50 text-right">Tejeduría Eficiencia %</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-purple-50 text-right">RT10⁵</th>
-              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-purple-50 text-right">RU10⁵</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-emerald-50 text-right">Tiempo</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-blue-300 bg-blue-50 text-center">Fecha</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-left">Base</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-center">Color</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Metros</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Rot. Tot.</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Rot 10³</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Cav.</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Tiempo</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Vel.</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">N</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">%</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">P</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">%</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">Q</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-blue-50 text-right">%</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-purple-300 bg-purple-50 text-right">Efic. %</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-purple-50 text-right">Rot URD 10⁵</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-purple-50 text-right">Rot TRA 10⁵</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 border-amber-300 bg-amber-50 text-right">Metros</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-amber-50 text-right">Cal. %</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 bg-amber-50 text-right">Pts. 100m²</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -91,27 +100,30 @@
               <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono">{{ item.URDIDORA_ROT_TOT }}</td>
               <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono font-semibold text-emerald-700">{{ formatNumber(item.URDIDORA_ROT_106, 2) }}</td>
               <td class="px-2 py-1.5 bg-emerald-50 text-right font-mono">{{ formatTiempo(item.URDIDORA_TIEMPO_MIN) }}</td>
-              <td class="px-2 py-1.5 border-l-2 text-center whitespace-nowrap">{{ item.FECHA_INDIGO }}</td>
-              <td class="px-2 py-1.5 text-center whitespace-nowrap">{{ item.COR }}</td>
-              <td class="px-2 py-1.5">{{ item.ARTIGO }}</td>
-              <td class="px-2 py-1.5 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.METRAGEM, 0) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono">{{ formatNumber(item.RUPTURAS, 0) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.ROT_103, 2) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono">{{ formatNumber(item.CAVALOS, 0) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono">{{ formatTiempo(item.TIEMPO_MINUTOS) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono">{{ formatNumber(item.VELOC_PROMEDIO, 2) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono border-l-2 border-slate-200" :class="getCalidadColor(item.N_PERCENT)">{{ item.N_COUNT }}</td>
-              <td class="px-2 py-1.5 text-right font-mono font-semibold" :class="getCalidadColor(item.N_PERCENT)">{{ formatNumber(item.N_PERCENT, 1) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono" :class="getCalidadColor(item.P_PERCENT)">{{ item.P_COUNT }}</td>
-              <td class="px-2 py-1.5 text-right font-mono font-semibold" :class="getCalidadColor(item.P_PERCENT)">{{ formatNumber(item.P_PERCENT, 1) }}</td>
-              <td class="px-2 py-1.5 text-right font-mono" :class="getCalidadColor(item.Q_PERCENT)">{{ item.Q_COUNT }}</td>
-              <td class="px-2 py-1.5 text-right font-mono font-semibold" :class="getCalidadColor(item.Q_PERCENT)">{{ formatNumber(item.Q_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 border-l-2 border-blue-300 bg-blue-50 text-center whitespace-nowrap">{{ item.FECHA_INDIGO }}</td>
+              <td class="px-2 py-1.5 bg-blue-50">{{ item.ARTIGO ? item.ARTIGO.substring(0, 10) : '' }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-center whitespace-nowrap">{{ item.COR }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono">{{ formatNumber(item.METRAGEM, 0) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono">{{ formatNumber(item.RUPTURAS, 0) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono font-semibold text-blue-700">{{ formatNumber(item.ROT_103, 2) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono">{{ formatNumber(item.CAVALOS, 0) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono">{{ formatTiempo(item.TIEMPO_MINUTOS) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono">{{ formatNumber(item.VELOC_PROMEDIO, 2) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono" :class="getCalidadColor(item.N_PERCENT)">{{ item.N_COUNT }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono font-semibold" :class="getCalidadColor(item.N_PERCENT)">{{ formatNumber(item.N_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono" :class="getCalidadColor(item.P_PERCENT)">{{ item.P_COUNT }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono font-semibold" :class="getCalidadColor(item.P_PERCENT)">{{ formatNumber(item.P_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono" :class="getCalidadColor(item.Q_PERCENT)">{{ item.Q_COUNT }}</td>
+              <td class="px-2 py-1.5 bg-blue-50 text-right font-mono font-semibold" :class="getCalidadColor(item.Q_PERCENT)">{{ formatNumber(item.Q_PERCENT, 1) }}</td>
               <td class="px-2 py-1.5 border-l-2 border-purple-300 bg-purple-50 text-right font-mono font-semibold text-purple-700">{{ formatNumber(item.TECELAGEM_EFICIENCIA, 1) }}</td>
               <td class="px-2 py-1.5 bg-purple-50 text-right font-mono">{{ formatNumber(item.RT105, 2) }}</td>
               <td class="px-2 py-1.5 bg-purple-50 text-right font-mono">{{ formatNumber(item.RU105, 2) }}</td>
+              <td class="px-2 py-1.5 border-l-2 border-amber-300 bg-amber-50 text-right font-mono">{{ formatNumber(item.METROS_CAL, 0) }}</td>
+              <td class="px-2 py-1.5 bg-amber-50 text-right font-mono font-semibold text-amber-700">{{ formatNumber(item.CAL_PERCENT, 1) }}</td>
+              <td class="px-2 py-1.5 bg-amber-50 text-right font-mono">{{ formatNumber(item.PTS_100M2, 1) }}</td>
             </tr>
             <tr v-if="datos.length === 0 && !cargando" class="bg-slate-50">
-              <td colspan="26" class="px-4 py-8 text-center text-slate-500">
+              <td colspan="29" class="px-4 py-8 text-center text-slate-500">
                 No hay datos disponibles para el período seleccionado
               </td>
             </tr>
@@ -153,7 +165,8 @@ const formatNumber = (valor, decimales = 0) => {
   if (isNaN(num)) return '';
   return num.toLocaleString('es-ES', { 
     minimumFractionDigits: decimales, 
-    maximumFractionDigits: decimales 
+    maximumFractionDigits: decimales,
+    useGrouping: true
   });
 };
 
@@ -243,9 +256,9 @@ const exportarAExcel = async () => {
       { header: 'Rot 10⁶', key: 'URDIDORA_ROT_106', width: 10 },
       { header: 'Tiempo Total', key: 'URDIDORA_TIEMPO', width: 12 },
       { header: 'Fecha ÍNDIGO', key: 'FECHA_INDIGO', width: 12 },
-      { header: 'COR', key: 'COR', width: 8 },
-      { header: 'Artículo', key: 'ARTIGO', width: 20 },
-      { header: 'ÍNDIGO (m)', key: 'METRAGEM', width: 12 },
+      { header: 'Base', key: 'ARTIGO', width: 12 },
+      { header: 'Color', key: 'COR', width: 8 },
+      { header: 'Metros', key: 'METRAGEM', width: 12 },
       { header: 'Rot. Total', key: 'RUPTURAS', width: 10 },
       { header: 'Rot 10³', key: 'ROT_103', width: 10 },
       { header: 'Cav.', key: 'CAVALOS', width: 8 },
@@ -259,7 +272,10 @@ const exportarAExcel = async () => {
       { header: 'Q %', key: 'Q_PERCENT', width: 8 },
       { header: 'Tejeduría Eficiencia %', key: 'TECELAGEM_EFICIENCIA', width: 18 },
       { header: 'RT10⁵', key: 'RT105', width: 10 },
-      { header: 'RU10⁵', key: 'RU105', width: 10 }
+      { header: 'RU10⁵', key: 'RU105', width: 10 },
+      { header: 'Metros', key: 'METROS_CAL', width: 12 },
+      { header: 'Cal. %', key: 'CAL_PERCENT', width: 10 },
+      { header: 'Pts. 100m²', key: 'PTS_100M2', width: 12 }
     ];
     
     // Estilo de encabezados
@@ -277,6 +293,11 @@ const exportarAExcel = async () => {
       worksheet.getColumn(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF5FF' } };
     }
     
+    // Estilo especial para columnas de CALIDAD (columnas 27-29)
+    for (let col = 27; col <= 29; col++) {
+      worksheet.getColumn(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+    }
+    
     // Datos
     datos.value.forEach(item => {
       const row = worksheet.addRow({
@@ -289,8 +310,8 @@ const exportarAExcel = async () => {
         URDIDORA_ROT_106: item.URDIDORA_ROT_106,
         URDIDORA_TIEMPO: formatTiempo(item.URDIDORA_TIEMPO_MIN),
         FECHA_INDIGO: item.FECHA_INDIGO,
+        ARTIGO: item.ARTIGO ? item.ARTIGO.substring(0, 10) : '',
         COR: item.COR,
-        ARTIGO: item.ARTIGO,
         METRAGEM: item.METRAGEM,
         RUPTURAS: item.RUPTURAS,
         ROT_103: item.ROT_103,
@@ -305,7 +326,10 @@ const exportarAExcel = async () => {
         Q_PERCENT: item.Q_PERCENT,
         TECELAGEM_EFICIENCIA: item.TECELAGEM_EFICIENCIA,
         RT105: item.RT105,
-        RU105: item.RU105
+        RU105: item.RU105,
+        METROS_CAL: item.METROS_CAL,
+        CAL_PERCENT: item.CAL_PERCENT,
+        PTS_100M2: item.PTS_100M2
       });
       
       row.alignment = { vertical: 'middle' };
@@ -326,6 +350,11 @@ const exportarAExcel = async () => {
       row.getCell('TECELAGEM_EFICIENCIA').numFmt = '#,##0.0';
       row.getCell('RT105').numFmt = '#,##0.00';
       row.getCell('RU105').numFmt = '#,##0.00';
+      
+      // Formato de columnas de CALIDAD
+      row.getCell('METROS_CAL').numFmt = '#,##0';
+      row.getCell('CAL_PERCENT').numFmt = '#,##0.0';
+      row.getCell('PTS_100M2').numFmt = '#,##0.0';
     });
     
     // Generar archivo

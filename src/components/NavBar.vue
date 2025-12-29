@@ -139,6 +139,12 @@
             label: 'ROLADAS del Mes', 
             path: '/informe-produccion-indigo',
             active: isActive('/informe-produccion-indigo')
+          },
+          { 
+            icon: '📈', 
+            label: 'Seguimiento de Roladas', 
+            path: '/seguimiento-roladas',
+            active: isActive('/seguimiento-roladas')
           }
         ]"
         @navigate="handleNavClick"

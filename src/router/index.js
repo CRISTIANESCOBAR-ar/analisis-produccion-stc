@@ -11,6 +11,7 @@ import ResiduosIndigoTejeduria from '../components/ResiduosIndigoTejeduria.vue'
 import AnalisisResiduosIndigo from '../components/AnalisisResiduosIndigo.vue'
 import ConsultaRoladaIndigo from '../components/ConsultaRoladaIndigo.vue'
 import InformeProduccionIndigo from '../components/InformeProduccionIndigo.vue'
+import SeguimientoRoladas from '../components/SeguimientoRoladas.vue'
 import CostosMensuales from '../components/CostosMensuales.vue'
 
 const routes = [
@@ -84,6 +85,12 @@ const routes = [
     name: 'InformeProduccionIndigo',
     component: InformeProduccionIndigo,
     meta: { title: 'ROLADAS del Mes - Análisis Producción STC' }
+  },
+  {
+    path: '/seguimiento-roladas',
+    name: 'SeguimientoRoladas',
+    component: SeguimientoRoladas,
+    meta: { title: 'Seguimiento de Roladas - Análisis Producción STC' }
   },
   {    path: '/costos-mensuales',
     name: 'CostosMensuales',
