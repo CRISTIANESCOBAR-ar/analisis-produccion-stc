@@ -2634,6 +2634,68 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
 });
 
 // =====================================================================
+// ENDPOINT - Consulta ROLADA TECELAGEM (TEJEDURÍA)
+// =====================================================================
+app.get('/api/consulta-rolada-tecelagem', async (req, res) => {
+  try {
+    const { rolada } = req.query;
+    
+    if (!rolada) {
+      return res.status(400).json({ error: 'Parámetro ROLADA requerido' });
+    }
+
+    const sql = `
+      SELECT 
+        PARTIDA,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM,
+        MAQUINA,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) > 0 
+          THEN SUM(CAST(REPLACE(REPLACE("PONTOS_LIDOS", '.', ''), ',', '.') AS REAL)) / 
+               SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) * 100 
+          ELSE 0 
+        END AS EFICIENCIA,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE("PONTOS_LIDOS", '.', ''), ',', '.') AS REAL)) > 0 
+          THEN (SUM(CAST(COALESCE("PARADA TEC TRAMA", 0) AS INTEGER)) * 100000.0) / 
+               (SUM(CAST(REPLACE(REPLACE("PONTOS_LIDOS", '.', ''), ',', '.') AS REAL)) * 1000) 
+          ELSE 0 
+        END AS ROTURAS_TRA_105,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE("PONTOS_LIDOS", '.', ''), ',', '.') AS REAL)) > 0 
+          THEN (SUM(CAST(COALESCE("PARADA TEC URDUME", 0) AS INTEGER)) * 100000.0) / 
+               (SUM(CAST(REPLACE(REPLACE("PONTOS_LIDOS", '.', ''), ',', '.') AS REAL)) * 1000) 
+          ELSE 0 
+        END AS ROTURAS_URD_105,
+        substr(ARTIGO, 1, 10) AS ARTIGO,
+        COR,
+        "NM MERCADO" AS NM_MERCADO,
+        "TRAMA REDUZIDA 1" AS TRAMA,
+        AVG(CAST(BATIDAS AS REAL)) AS PASADAS,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) > 0 
+          THEN SUM(CAST(REPLACE(REPLACE(COALESCE("RPM LEITURA", '0'), '.', ''), ',', '.') AS REAL) * 
+                   CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+               SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) 
+          ELSE 0 
+        END AS RPM
+      FROM tb_PRODUCCION
+      WHERE SELETOR = 'TECELAGEM'
+        AND ROLADA = ?
+      GROUP BY PARTIDA, MAQUINA, ARTIGO, COR, "NM MERCADO", "TRAMA REDUZIDA 1"
+      ORDER BY substr(PARTIDA, -6), PARTIDA
+    `;
+
+    const rows = await dbAll(sql, [rolada]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/consulta-rolada-tecelagem:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
 // ENDPOINT - Consulta ROLADA ÍNDIGO
 // =====================================================================
 app.get('/api/consulta-rolada-indigo', async (req, res) => {

@@ -102,82 +102,82 @@
       </div>
 
       <!-- Tabla de datos -->
-      <div class="flex-1 overflow-auto min-h-0 rounded-lg border border-slate-200/60 relative" ref="tablaRef">
-        <table ref="tableElementRef" class="w-full text-[13px] text-slate-600">
+      <div class="overflow-auto relative bg-white rounded-lg shadow-sm border border-slate-300" ref="tablaRef">
+        <table ref="tableElementRef" class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
           <thead class="sticky top-0 z-10">
             <!-- Fila superior - Grupos -->
-            <tr class="bg-slate-800 text-white">
-              <th scope="col" rowspan="2" class="px-3 py-2 font-semibold text-center text-xs uppercase tracking-wide border-r border-slate-700">Rolada</th>
-              <th scope="col" colspan="2" class="px-3 py-1.5 font-semibold text-center text-xs uppercase tracking-wide border-r border-slate-700 bg-emerald-700">Urdidora</th>
-              <th scope="col" colspan="8" class="px-3 py-1.5 font-semibold text-center text-xs uppercase tracking-wide border-r border-slate-700 bg-blue-700">Índigo</th>
-              <th scope="col" colspan="4" class="px-3 py-1.5 font-semibold text-center text-xs uppercase tracking-wide border-r border-slate-700 bg-violet-700">Tejeduría</th>
-              <th scope="col" colspan="3" class="px-3 py-1.5 font-semibold text-center text-xs uppercase tracking-wide bg-amber-700">Calidad</th>
+            <tr class="text-slate-500 text-[11px] uppercase tracking-wider">
+              <th scope="col" rowspan="2" class="px-3 py-3 font-semibold text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300 text-slate-700 bg-slate-50">Rolada</th>
+              <th scope="col" colspan="2" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Urdidora</th>
+              <th scope="col" colspan="8" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Índigo</th>
+              <th scope="col" colspan="4" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Tejeduría</th>
+              <th scope="col" colspan="3" class="px-3 py-2 font-semibold text-center border-b border-b-slate-300 text-slate-700 bg-slate-50">Calidad</th>
             </tr>
             <!-- Fila inferior - Columnas -->
-            <tr class="bg-slate-700 text-slate-200 text-[11px]">
-              <th scope="col" class="px-2 py-1.5 font-medium text-center border-r border-slate-600 bg-emerald-800/80">Maq. OE</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center border-r border-slate-600 bg-emerald-800/80">Lote</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">Fecha</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">Base</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">Color</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">Metros</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">R10³</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">Cav</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-blue-800/80">Vel. Nom.</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center border-r border-slate-600 bg-blue-800/80">Vel. Prom.</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-violet-800/80">Metros</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-violet-800/80">Efic. %</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-violet-800/80">RU10⁵</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center border-r border-slate-600 bg-violet-800/80">RT10⁵</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-amber-800/80">Metros</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-amber-800/80">Cal. %</th>
-              <th scope="col" class="px-2 py-1.5 font-medium text-center bg-amber-800/80">Pts/100m²</th>
+            <tr class="text-slate-600 text-[11px] bg-slate-50">
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Maq. OE</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">Lote</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Fecha</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Base</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Color</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Metros</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">R10³</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Cav</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Vel. Nom.</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">Vel. Prom.</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Metros</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Efic. %</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">RU10⁵</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">RT10⁵</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Metros</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Cal. %</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300">Pts/100m²</th>
             </tr>
           </thead>
-          <tbody class="bg-white">
+          <tbody>
             <tr v-for="(item, index) in datos" :key="item.ROLADA" 
-                class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
-              <td class="px-3 py-2 font-semibold text-slate-800 text-center tabular-nums border-r border-slate-100">{{ item.ROLADA }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-emerald-50/40">{{ formatListaConY(item.MAQ_OE) }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-emerald-50/40 border-r border-slate-100">{{ formatListaConY(item.LOTE) }}</td>
+                class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors">
+              <td class="px-3 py-2.5 font-semibold text-slate-800 text-center tabular-nums border-r-2 border-slate-300 bg-slate-50/50">{{ item.ROLADA }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatListaConY(item.MAQ_OE) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatListaConY(item.LOTE) }}</td>
               <!-- Celdas ÍNDIGO clickeables -->
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-500 text-xs bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ item.FECHA }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-700 bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ item.BASE }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-600 bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ item.COLOR }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-700 tabular-nums bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ formatNumber(item.MTS_IND, 0) }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-600 tabular-nums bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ formatNumber(item.R103, 1) }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-600 tabular-nums bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ item.CAV || '-' }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-600 tabular-nums bg-blue-50/30 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ formatNumber(item.VEL_NOM, 0) }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2 text-center text-slate-600 tabular-nums bg-blue-50/30 border-r border-slate-100 cursor-pointer hover:bg-blue-100/50 transition-colors">{{ formatNumber(item.VEL_PROM, 0) }}</td>
-              <td class="px-2 py-2 text-center text-slate-700 tabular-nums bg-violet-50/30">{{ formatNumber(item.MTS_CRUDOS, 0) }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-violet-50/30">{{ formatNumber(item.EFI_TEJ, 1) }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-violet-50/30">{{ formatNumber(item.RU105, 1) }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-violet-50/30 border-r border-slate-100">{{ formatNumber(item.RT105, 1) }}</td>
-              <td class="px-2 py-2 text-center text-slate-700 tabular-nums bg-amber-50/30">{{ formatNumber(item.MTS_CAL, 0) }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-amber-50/30">{{ formatNumber(item.CAL_PERCENT, 1) }}</td>
-              <td class="px-2 py-2 text-center text-slate-600 tabular-nums bg-amber-50/30">{{ formatNumber(item.PTS_100M2, 1) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-500 text-xs border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.FECHA }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-700 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.BASE }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.COLOR }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.MTS_IND, 0) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.R103, 1) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.CAV || '-' }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.VEL_NOM, 0) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.VEL_PROM, 0) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_CRUDOS, 0) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.EFI_TEJ, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.RU105, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatNumber(item.RT105, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_CAL, 0) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.CAL_PERCENT, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumber(item.PTS_100M2, 1) }}</td>
             </tr>
           </tbody>
           <!-- Fila de totales del mes -->
-          <tfoot v-if="totalesMes && datos.length > 0" class="bg-slate-100 border-t-2 border-slate-300">
-            <tr class="font-semibold text-slate-800">
-              <td class="px-3 py-2.5 text-center border-r border-slate-200" colspan="3">
-                <span class="text-xs uppercase tracking-wide text-slate-500">Total Mes</span>
+          <tfoot v-if="totalesMes && datos.length > 0" class="sticky bottom-0 z-10 bg-slate-100">
+            <tr class="font-semibold text-slate-700">
+              <td class="px-3 py-3 text-center border-r-2 border-slate-300 border-t-2 border-t-slate-300" colspan="3">
+                <span class="text-xs uppercase tracking-wide text-slate-500">Total</span>
                 <span class="ml-2 text-slate-700">{{ totalesMes.TOTAL_ROLADAS }} roladas</span>
               </td>
-              <td class="px-2 py-2.5 text-center bg-blue-100/60" colspan="3">-</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-blue-100/60">{{ formatNumber(totalesMes.MTS_IND, 0) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-blue-100/60">{{ formatNumber(totalesMes.R103, 1) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-blue-100/60">{{ totalesMes.CAV || '-' }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-blue-100/60">-</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-blue-100/60 border-r border-slate-200">{{ formatNumber(totalesMes.VEL_PROM, 0) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-violet-100/60">{{ formatNumber(totalesMes.MTS_CRUDOS, 0) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-violet-100/60">{{ formatNumber(totalesMes.EFI_TEJ, 1) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-violet-100/60">{{ formatNumber(totalesMes.RU105, 1) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-violet-100/60 border-r border-slate-200">{{ formatNumber(totalesMes.RT105, 1) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-amber-100/60">{{ formatNumber(totalesMes.MTS_CAL, 0) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-amber-100/60">{{ formatNumber(totalesMes.CAL_PERCENT, 1) }}</td>
-              <td class="px-2 py-2.5 text-center tabular-nums bg-amber-100/60">{{ formatNumber(totalesMes.PTS_100M2, 1) }}</td>
+              <td class="px-2 py-3 text-center text-slate-400 border-r border-slate-200 border-t-2 border-t-slate-300" colspan="3">-</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.MTS_IND, 0) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.R103, 1) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesMes.CAV || '-' }}</td>
+              <td class="px-2 py-3 text-center tabular-nums text-slate-400 border-r border-slate-200 border-t-2 border-t-slate-300">-</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r-2 border-slate-300 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.VEL_PROM, 0) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.MTS_CRUDOS, 0) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.EFI_TEJ, 1) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.RU105, 1) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r-2 border-slate-300 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.RT105, 1) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.MTS_CAL, 0) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.CAL_PERCENT, 1) }}</td>
+              <td class="px-2 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.PTS_100M2, 1) }}</td>
             </tr>
           </tfoot>
         </table>
@@ -195,129 +195,256 @@
       </div>
     </main>
     
-    <!-- Modal Detalle ÍNDIGO -->
+    <!-- Modal Detalle Rolada -->
     <div v-if="modalVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @click.self="cerrarModal">
-      <div class="bg-white rounded-xl shadow-2xl w-[95vw] max-w-7xl h-[85vh] flex flex-col overflow-hidden">
+      <div class="bg-white rounded-xl shadow-2xl w-[95vw] max-w-7xl h-[85vh] flex flex-col overflow-hidden border border-slate-300">
         <!-- Header del Modal -->
-        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div class="flex items-center justify-between px-5 py-3 bg-white">
           <div class="flex items-center gap-4">
-            <!-- Botón Anterior -->
+            <!-- Botones de navegación de sección << >> -->
+            <div class="flex items-center">
+              <button 
+                @click="cambiarSeccion('indigo')" 
+                :class="[
+                  'px-3 py-2 rounded-l-md border border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  seccionActiva === 'indigo' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 hover:bg-slate-50'
+                ]"
+                v-tippy="{ content: 'Ver ÍNDIGO', placement: 'bottom' }"
+              >
+                &lt;&lt; ÍNDIGO
+              </button>
+              <button 
+                @click="cambiarSeccion('tecelagem')" 
+                :class="[
+                  'px-3 py-2 rounded-r-md border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  seccionActiva === 'tecelagem' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-500 hover:bg-slate-50'
+                ]"
+                v-tippy="{ content: 'Ver TEJEDURÍA', placement: 'bottom' }"
+              >
+                TEJEDURÍA &gt;&gt;
+              </button>
+            </div>
+            
+            <div>
+              <h3 class="text-base font-semibold text-slate-800">
+                Detalle {{ seccionActiva === 'indigo' ? 'ÍNDIGO' : 'TEJEDURÍA' }} - Rolada {{ roladaSeleccionada }}
+              </h3>
+              <p class="text-xs text-slate-500">{{ indiceRoladaActual + 1 }} de {{ datos.length }} roladas</p>
+            </div>
+            
+            <!-- Botones de navegación entre roladas -->
+            <div class="flex items-center">
+              <!-- Botón Anterior -->
+              <button 
+                @click="navegarRolada(-1)" 
+                :disabled="indiceRoladaActual === 0"
+                class="p-2 rounded-l-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                v-tippy="{ content: 'Rolada anterior', placement: 'bottom' }"
+              >
+                <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <!-- Botón Siguiente -->
+              <button 
+                @click="navegarRolada(1)" 
+                :disabled="indiceRoladaActual === datos.length - 1"
+                class="p-2 rounded-r-md border border-l-0 border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                v-tippy="{ content: 'Rolada siguiente', placement: 'bottom' }"
+              >
+                <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <!-- Botón Copiar Imagen -->
             <button 
-              @click="navegarRolada(-1)" 
-              :disabled="indiceRoladaActual === 0"
-              class="p-2 rounded-lg bg-white/20 hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              v-tippy="{ content: 'Rolada anterior', placement: 'bottom' }"
+              @click="copiarModalComoImagen" 
+              :disabled="copiandoModal || (seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : datosTecelagem.length === 0)"
+              class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              v-tippy="{ content: 'Copiar como imagen', placement: 'bottom' }"
             >
-              <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+              <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </button>
             
-            <div class="text-white">
-              <h3 class="text-lg font-bold">Detalle ÍNDIGO - Rolada {{ roladaSeleccionada }}</h3>
-              <p class="text-sm text-blue-100">{{ indiceRoladaActual + 1 }} de {{ datos.length }} roladas</p>
-            </div>
-            
-            <!-- Botón Siguiente -->
+            <!-- Botón Exportar Excel -->
             <button 
-              @click="navegarRolada(1)" 
-              :disabled="indiceRoladaActual === datos.length - 1"
-              class="p-2 rounded-lg bg-white/20 hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              v-tippy="{ content: 'Rolada siguiente', placement: 'bottom' }"
+              @click="exportarModalAExcel" 
+              :disabled="datosDetalleAgrupados.length === 0"
+              class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              v-tippy="{ content: 'Exportar a Excel', placement: 'bottom' }"
             >
-              <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              <svg class="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12.9,14.5L15.8,19H14L12,15.6L10,19H8.2L11.1,14.5L8.2,10H10L12,13.4L14,10H15.8L12.9,14.5Z"/>
+              </svg>
+            </button>
+            
+            <!-- Botón Cerrar -->
+            <button @click="cerrarModal" class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
+              <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-          
-          <button @click="cerrarModal" class="p-2 rounded-lg hover:bg-white/20 transition-colors">
-            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
         
         <!-- Loading -->
-        <div v-if="cargandoDetalle" class="flex-1 flex items-center justify-center py-20">
+        <div v-if="(seccionActiva === 'indigo' && cargandoDetalle) || (seccionActiva === 'tecelagem' && cargandoTecelagem)" class="flex-1 flex items-center justify-center py-20">
           <div class="flex flex-col items-center gap-3">
-            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-100 border-t-blue-600"></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-600"></div>
             <span class="text-slate-600">Cargando detalles...</span>
           </div>
         </div>
         
-        <!-- Tabla de detalles -->
-        <div v-else-if="datosDetalleAgrupados.length > 0" class="flex-1 overflow-auto">
-          <table class="w-full text-xs text-left text-slate-600">
-            <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10">
-              <tr>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Partida</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">F. Inicio</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">H. Inicio</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">F. Final</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">H. Final</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">Turno</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Base</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Color</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">Metros</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">Veloc.</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-center">S</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">R10³</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">Roturas</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-right">CV</th>
-                <th class="px-3 py-2 font-bold border-b border-slate-200 text-left">Operador</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-              <tr 
-                v-for="(item, index) in datosDetalleAgrupados" 
-                :key="index" 
-                :class="index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'"
-              >
-                <td class="px-3 py-2">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
-                <td class="px-3 py-2 text-center">{{ item.DT_INICIO }}</td>
-                <td class="px-3 py-2 text-center font-mono">{{ item.HORA_INICIO }}</td>
-                <td class="px-3 py-2 text-center">{{ item.DT_FINAL }}</td>
-                <td class="px-3 py-2 text-center font-mono">{{ item.HORA_FINAL }}</td>
-                <td class="px-3 py-2 text-center font-semibold text-blue-700">{{ item.TURNO }}</td>
-                <td class="px-3 py-2">{{ item.ARTIGO ? item.ARTIGO.substring(0, 10) : '' }}</td>
-                <td class="px-3 py-2">{{ item.COR }}</td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumberModal(item.METRAGEM) }}</td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumberModal(item.VELOC) }}</td>
-                <td class="px-3 py-2 text-center">{{ item.S }}</td>
-                <td class="px-3 py-2 text-right font-mono text-purple-600">{{ calcularR103(item.RUPTURAS, item.METRAGEM) }}</td>
-                <td class="px-3 py-2 text-right font-mono text-red-600">{{ item.RUPTURAS }}</td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumberModal(item.CAVALOS) }}</td>
-                <td class="px-3 py-2">{{ item.NM_OPERADOR }}</td>
-              </tr>
-            </tbody>
-            <tfoot class="bg-slate-100 font-bold text-slate-800 sticky bottom-0">
-              <tr>
-                <td class="px-3 py-2 text-left">TOTAL</td>
-                <td class="px-3 py-2" colspan="7"></td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumberModal(totalesDetalle.metros) }}</td>
-                <td class="px-3 py-2"></td>
-                <td class="px-3 py-2"></td>
-                <td class="px-3 py-2 text-right font-mono text-purple-700">{{ calcularR103(totalesDetalle.roturas, totalesDetalle.metros) }}</td>
-                <td class="px-3 py-2 text-right font-mono text-red-700">{{ totalesDetalle.roturas }}</td>
-                <td class="px-3 py-2 text-right font-mono">{{ formatNumberModal(totalesDetalle.cv) }}</td>
-                <td class="px-3 py-2"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        
-        <!-- Sin datos -->
-        <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
-          <div class="text-center">
-            <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-            <p class="font-medium">No se encontraron detalles</p>
-            <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
+        <!-- SECCIÓN ÍNDIGO -->
+        <template v-else-if="seccionActiva === 'indigo'">
+          <div v-if="datosDetalleAgrupados.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableRef">
+            <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
+              <thead class="sticky top-0 z-10">
+                <tr class="text-slate-600 text-[11px] bg-slate-50">
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Inicio</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Hora<br>Inicio</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Final</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Hora<br>Final</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Turno</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Base</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Color</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Veloc.</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">S</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">R10³</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">CV</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Operador</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="(item, index) in datosDetalleAgrupados" 
+                  :key="index" 
+                  class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors"
+                >
+                  <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ item.DT_INICIO }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.HORA_INICIO }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ item.DT_FINAL }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.HORA_FINAL }}</td>
+                  <td class="px-3 py-2.5 text-center font-semibold text-blue-600">{{ item.TURNO }}</td>
+                  <td class="px-3 py-2.5 text-slate-700">{{ item.ARTIGO ? item.ARTIGO.substring(0, 10) : '' }}</td>
+                  <td class="px-3 py-2.5 text-slate-600">{{ item.COR }}</td>
+                  <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumberModal(item.VELOC) }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600">{{ item.S }}</td>
+                  <td class="px-3 py-2.5 text-right text-purple-600 tabular-nums">{{ calcularR103(item.RUPTURAS, item.METRAGEM) }}</td>
+                  <td class="px-3 py-2.5 text-right text-red-600 tabular-nums">{{ item.RUPTURAS }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumberModal(item.CAVALOS) }}</td>
+                  <td class="px-3 py-2.5 text-slate-600">{{ item.NM_OPERADOR }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="sticky bottom-0 z-10 bg-slate-100">
+                <tr class="font-semibold text-slate-700">
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300">TOTAL</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="7"></td>
+                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesDetalle.metros, 0) }}</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                  <td class="px-3 py-3 text-right text-purple-700 tabular-nums border-t-2 border-t-slate-300">{{ calcularR103(totalesDetalle.roturas, totalesDetalle.metros) }}</td>
+                  <td class="px-3 py-3 text-right text-red-700 tabular-nums border-t-2 border-t-slate-300">{{ totalesDetalle.roturas }}</td>
+                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesDetalle.cv) }}</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
-        </div>
+          
+          <!-- Sin datos ÍNDIGO -->
+          <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <p class="font-medium">No se encontraron detalles ÍNDIGO</p>
+              <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
+            </div>
+          </div>
+        </template>
+        
+        <!-- SECCIÓN TEJEDURÍA -->
+        <template v-else-if="seccionActiva === 'tecelagem'">
+          <div v-if="datosTecelagem.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableTecelagemRef">
+            <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
+              <thead class="sticky top-0 z-10">
+                <tr class="text-slate-600 text-[11px] bg-purple-50">
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Telar</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Eficiencia<br>%</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>TRA 10⁵</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>URD 10⁵</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Artículo</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Color</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Nombre</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Trama</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Pasadas</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">RPM</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="(item, index) in datosTecelagem" 
+                  :key="index" 
+                  class="border-b border-slate-200 hover:bg-purple-50/50 transition-colors"
+                >
+                  <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                  <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 2) }}</td>
+                  <td class="px-3 py-2.5 text-center font-semibold text-purple-600">{{ item.MAQUINA ? parseInt(item.MAQUINA.slice(-3)) : '' }}</td>
+                  <td class="px-3 py-2.5 text-right text-green-600 tabular-nums">{{ formatNumberModal(item.EFICIENCIA) }}</td>
+                  <td class="px-3 py-2.5 text-right text-orange-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_TRA_105) }}</td>
+                  <td class="px-3 py-2.5 text-right text-red-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_URD_105) }}</td>
+                  <td class="px-3 py-2.5 text-slate-700">{{ item.ARTIGO }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600">{{ item.COR }}</td>
+                  <td class="px-3 py-2.5 text-slate-600">{{ item.NM_MERCADO }}</td>
+                  <td class="px-3 py-2.5 text-slate-600">{{ item.TRAMA }}</td>
+                  <td class="px-3 py-2.5 text-right text-slate-600 tabular-nums">{{ formatNumberModal(item.PASADAS) }}</td>
+                  <td class="px-3 py-2.5 text-right text-slate-700 tabular-nums">{{ formatNumber(item.RPM, 0) }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="sticky bottom-0 z-10 bg-purple-100">
+                <tr class="font-semibold text-slate-700">
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300">TOTAL</td>
+                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesTecelagem.metros, 2) }}</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                  <td class="px-3 py-3 text-right text-green-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.eficiencia) }}</td>
+                  <td class="px-3 py-3 text-right text-orange-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.roturasTra) }}</td>
+                  <td class="px-3 py-3 text-right text-red-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.roturasUrd) }}</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="4"></td>
+                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.pasadas) }}</td>
+                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesTecelagem.rpm, 0) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <!-- Sin datos TEJEDURÍA -->
+          <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <p class="font-medium">No se encontraron detalles TEJEDURÍA</p>
+              <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -327,13 +454,15 @@
 import { ref, onMounted, computed } from 'vue'
 import * as ExcelJS from 'exceljs'
 import html2canvas from 'html2canvas'
+import Swal from 'sweetalert2'
 import CustomDatepicker from './CustomDatepicker.vue'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = 'http://localhost:3002';
 
 // Estado
 const cargando = ref(false)
 const copiando = ref(false)
+const copiandoModal = ref(false)
 const datos = ref([])
 const totalesMes = ref(null)
 const diasSeleccionados = ref(15)
@@ -345,9 +474,14 @@ const cargandoDetalle = ref(false)
 const roladaSeleccionada = ref(null)
 const indiceRoladaActual = ref(0)
 const datosDetalle = ref([])
+const seccionActiva = ref('indigo') // 'indigo' o 'tecelagem'
+const datosTecelagem = ref([])
+const cargandoTecelagem = ref(false)
 
 // Refs
 const mainContentRef = ref(null)
+const modalTableRef = ref(null)
+const modalTableTecelagemRef = ref(null)
 const tablaRef = ref(null)
 const tableElementRef = ref(null)
 
@@ -454,7 +588,7 @@ const datosDetalleAgrupados = computed(() => {
   });
 });
 
-// Totales del detalle
+// Totales del detalle ÍNDIGO
 const totalesDetalle = computed(() => {
   return datosDetalleAgrupados.value.reduce((acc, item) => {
     acc.metros += parseFloat(item.METRAGEM) || 0;
@@ -464,15 +598,47 @@ const totalesDetalle = computed(() => {
   }, { metros: 0, roturas: 0, cv: 0 });
 });
 
+// Totales del detalle TECELAGEM
+const totalesTecelagem = computed(() => {
+  let totalMetros = 0;
+  let sumEficienciaPonderada = 0;
+  let sumRotTraPonderada = 0;
+  let sumRotUrdPonderada = 0;
+  let sumRpmPonderada = 0;
+  let sumPasadas = 0;
+  let count = 0;
+  
+  datosTecelagem.value.forEach(item => {
+    const metros = parseFloat(item.METRAGEM) || 0;
+    totalMetros += metros;
+    sumEficienciaPonderada += (parseFloat(item.EFICIENCIA) || 0) * metros;
+    sumRotTraPonderada += (parseFloat(item.ROTURAS_TRA_105) || 0) * metros;
+    sumRotUrdPonderada += (parseFloat(item.ROTURAS_URD_105) || 0) * metros;
+    sumRpmPonderada += (parseFloat(item.RPM) || 0) * metros;
+    sumPasadas += parseFloat(item.PASADAS) || 0;
+    count++;
+  });
+  
+  return {
+    metros: totalMetros,
+    eficiencia: totalMetros > 0 ? sumEficienciaPonderada / totalMetros : 0,
+    roturasTra: totalMetros > 0 ? sumRotTraPonderada / totalMetros : 0,
+    roturasUrd: totalMetros > 0 ? sumRotUrdPonderada / totalMetros : 0,
+    rpm: totalMetros > 0 ? sumRpmPonderada / totalMetros : 0,
+    pasadas: count > 0 ? sumPasadas / count : 0
+  };
+});
+
 // Abrir modal con detalle de la rolada
 const abrirModalDetalle = async (rolada, index) => {
   roladaSeleccionada.value = rolada;
   indiceRoladaActual.value = index;
   modalVisible.value = true;
+  seccionActiva.value = 'indigo';
   await cargarDetalleRolada(rolada);
 };
 
-// Cargar detalle de una rolada
+// Cargar detalle de una rolada (ÍNDIGO)
 const cargarDetalleRolada = async (rolada) => {
   cargandoDetalle.value = true;
   datosDetalle.value = [];
@@ -482,10 +648,40 @@ const cargarDetalleRolada = async (rolada) => {
     if (!response.ok) throw new Error('Error al cargar detalle');
     datosDetalle.value = await response.json();
   } catch (error) {
-    console.error('Error cargando detalle:', error);
+    console.error('Error cargando detalle ÍNDIGO:', error);
   } finally {
     cargandoDetalle.value = false;
   }
+};
+
+// Cargar detalle de TECELAGEM
+const cargarDetalleTecelagem = async (rolada) => {
+  cargandoTecelagem.value = true;
+  datosTecelagem.value = [];
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/consulta-rolada-tecelagem?rolada=${rolada}`);
+    if (!response.ok) throw new Error('Error al cargar detalle tecelagem');
+    datosTecelagem.value = await response.json();
+  } catch (error) {
+    console.error('Error cargando detalle TECELAGEM:', error);
+  } finally {
+    cargandoTecelagem.value = false;
+  }
+};
+
+// Cambiar sección del modal
+const cambiarSeccion = async (seccion) => {
+  seccionActiva.value = seccion;
+  if (seccion === 'tecelagem' && datosTecelagem.value.length === 0) {
+    await cargarDetalleTecelagem(roladaSeleccionada.value);
+  }
+};
+
+// Navegar entre secciones con << >>
+const navegarSeccion = async (direccion) => {
+  const nuevaSeccion = seccionActiva.value === 'indigo' ? 'tecelagem' : 'indigo';
+  await cambiarSeccion(nuevaSeccion);
 };
 
 // Navegar entre roladas
@@ -494,7 +690,13 @@ const navegarRolada = async (direccion) => {
   if (nuevoIndice >= 0 && nuevoIndice < datos.value.length) {
     indiceRoladaActual.value = nuevoIndice;
     roladaSeleccionada.value = datos.value[nuevoIndice].ROLADA;
-    await cargarDetalleRolada(roladaSeleccionada.value);
+    // Limpiar datos de tecelagem para recargar si cambia de rolada
+    datosTecelagem.value = [];
+    if (seccionActiva.value === 'indigo') {
+      await cargarDetalleRolada(roladaSeleccionada.value);
+    } else {
+      await cargarDetalleTecelagem(roladaSeleccionada.value);
+    }
   }
 };
 
@@ -502,6 +704,304 @@ const navegarRolada = async (direccion) => {
 const cerrarModal = () => {
   modalVisible.value = false;
   datosDetalle.value = [];
+  datosTecelagem.value = [];
+  seccionActiva.value = 'indigo';
+};
+
+// Copiar modal como imagen
+const copiarModalComoImagen = async () => {
+  if (!modalTableRef.value || datosDetalleAgrupados.value.length === 0) return;
+  
+  copiandoModal.value = true;
+  try {
+    // Crear contenedor temporal para la captura
+    const tempContainer = document.createElement('div');
+    tempContainer.style.cssText = 'position: absolute; left: -9999px; top: 0; background: #ffffff; padding: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+    document.body.appendChild(tempContainer);
+    
+    // Encabezado con logo
+    const headerContainer = document.createElement('div');
+    headerContainer.style.cssText = 'display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #1e40af;';
+    
+    // Logo
+    const logo = document.createElement('img');
+    logo.src = '/LogoSantana.jpg';
+    logo.style.cssText = 'height: 40px; width: auto;';
+    headerContainer.appendChild(logo);
+    
+    // Título
+    const titulo = document.createElement('div');
+    titulo.innerHTML = `
+      <div style="font-size: 16px; font-weight: 600; color: #1e293b;">Detalle ÍNDIGO - Rolada ${roladaSeleccionada.value}</div>
+      <div style="font-size: 12px; color: #64748b;">${datosDetalleAgrupados.value.length} partidas</div>
+    `;
+    headerContainer.appendChild(titulo);
+    tempContainer.appendChild(headerContainer);
+    
+    // Crear tabla manualmente con estilos inline
+    const table = document.createElement('table');
+    table.style.cssText = 'width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;';
+    
+    // Thead
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+      <tr style="background: #f8fafc; font-size: 11px; color: #475569;">
+        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Partida</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Inicio</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Inicio</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Final</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Final</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Turno</th>
+        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Base</th>
+        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Color</th>
+        <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Veloc.</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">S</th>
+        <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">R10³</th>
+        <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas</th>
+        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">CV</th>
+        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Operador</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+    
+    // Tbody
+    const tbody = document.createElement('tbody');
+    datosDetalleAgrupados.value.forEach((item) => {
+      const r103 = (item.RUPTURAS && item.METRAGEM) ? ((item.RUPTURAS * 1000) / item.METRAGEM).toFixed(1) : '';
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
+      tr.innerHTML = `
+        <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : ''}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_INICIO || ''}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_INICIO || ''}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_FINAL || ''}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_FINAL || ''}</td>
+        <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #2563eb;">${item.TURNO || ''}</td>
+        <td style="padding: 10px 12px; color: #334155;">${item.ARTIGO ? item.ARTIGO.substring(0, 10) : ''}</td>
+        <td style="padding: 10px 12px; color: #475569;">${item.COR || ''}</td>
+        <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.VELOC)}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.S || ''}</td>
+        <td style="padding: 10px 12px; text-align: right; color: #9333ea;">${r103}</td>
+        <td style="padding: 10px 12px; text-align: right; color: #dc2626;">${item.RUPTURAS || ''}</td>
+        <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.CAVALOS)}</td>
+        <td style="padding: 10px 12px; color: #475569;">${item.NM_OPERADOR || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    
+    // Tfoot
+    const tfoot = document.createElement('tfoot');
+    const r103Total = totalesDetalle.value.metros > 0 ? ((totalesDetalle.value.roturas * 1000) / totalesDetalle.value.metros).toFixed(1) : '';
+    tfoot.innerHTML = `
+      <tr style="background: #f1f5f9; font-weight: 600; color: #334155;">
+        <td style="padding: 12px; border-top: 2px solid #cbd5e1;">TOTAL</td>
+        <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="7"></td>
+        <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesDetalle.value.metros, 0)}</td>
+        <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+        <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+        <td style="padding: 12px; text-align: right; color: #7c3aed; border-top: 2px solid #cbd5e1;">${r103Total}</td>
+        <td style="padding: 12px; text-align: right; color: #b91c1c; border-top: 2px solid #cbd5e1;">${totalesDetalle.value.roturas}</td>
+        <td style="padding: 12px; text-align: center; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesDetalle.value.cv)}</td>
+        <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+      </tr>
+    `;
+    table.appendChild(tfoot);
+    
+    tempContainer.appendChild(table);
+    
+    // Capturar
+    const canvas = await html2canvas(tempContainer, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+    
+    document.body.removeChild(tempContainer);
+    
+    // Copiar al portapapeles
+    canvas.toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        Swal.fire({
+          icon: 'success',
+          title: 'Copiado',
+          text: 'Imagen copiada al portapapeles',
+          timer: 1000,
+          showConfirmButton: false,
+          timerProgressBar: true
+        });
+      } catch (err) {
+        console.error('Error al copiar:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al copiar la imagen',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    }, 'image/png');
+  } catch (error) {
+    console.error('Error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al generar la imagen',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } finally {
+    copiandoModal.value = false;
+  }
+};
+
+// Exportar modal a Excel
+const exportarModalAExcel = async () => {
+  if (datosDetalleAgrupados.value.length === 0) return;
+  
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Rolada ${roladaSeleccionada.value}`);
+    
+    // Colores
+    const colors = {
+      headerBg: 'FFF8FAFC',
+      headerText: '1e293b',
+      border: 'FFcbd5e1',
+      totalsBg: 'FFF1F5F9',
+      purple: 'FF9333ea',
+      red: 'FFdc2626',
+      blue: 'FF2563eb'
+    };
+    
+    // Título
+    worksheet.mergeCells('A1:O1');
+    worksheet.getCell('A1').value = `Detalle ÍNDIGO - Rolada ${roladaSeleccionada.value}`;
+    worksheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF1e293b' } };
+    worksheet.getCell('A1').alignment = { horizontal: 'left', vertical: 'middle' };
+    worksheet.getRow(1).height = 24;
+    
+    // Subtítulo
+    worksheet.mergeCells('A2:O2');
+    worksheet.getCell('A2').value = `${datosDetalleAgrupados.value.length} partidas`;
+    worksheet.getCell('A2').font = { size: 10, color: { argb: 'FF64748b' } };
+    worksheet.getRow(2).height = 18;
+    
+    // Encabezados
+    const headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Turno', 'Base', 'Color', 'Metros', 'Veloc.', 'S', 'R10³', 'Roturas', 'CV', 'Operador'];
+    const headerRow = worksheet.addRow(headers);
+    headerRow.height = 24;
+    headerRow.eachCell((cell, colNumber) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBg } };
+      cell.font = { bold: true, size: 10, color: { argb: 'FF475569' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        bottom: { style: 'medium', color: { argb: colors.border } }
+      };
+    });
+    
+    // Datos
+    datosDetalleAgrupados.value.forEach((item, idx) => {
+      const row = worksheet.addRow([
+        item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+        item.DT_INICIO || '',
+        item.HORA_INICIO || '',
+        item.DT_FINAL || '',
+        item.HORA_FINAL || '',
+        item.TURNO || '',
+        item.ARTIGO ? item.ARTIGO.substring(0, 10) : '',
+        item.COR || '',
+        item.METRAGEM || 0,
+        item.VELOC || '',
+        item.S || '',
+        (item.RUPTURAS && item.METRAGEM) ? ((item.RUPTURAS * 1000) / item.METRAGEM).toFixed(1) : '',
+        item.RUPTURAS || 0,
+        item.CAVALOS || 0,
+        item.NM_OPERADOR || ''
+      ]);
+      
+      row.height = 22;
+      row.eachCell((cell, colNumber) => {
+        cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || colNumber === 7 || colNumber === 8 || colNumber === 15 ? 'left' : 'center' };
+        cell.font = { size: 10 };
+        cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+        
+        // Colores especiales
+        if (colNumber === 6) cell.font = { size: 10, bold: true, color: { argb: colors.blue } }; // Turno
+        if (colNumber === 12) cell.font = { size: 10, color: { argb: colors.purple } }; // R10³
+        if (colNumber === 13) cell.font = { size: 10, color: { argb: colors.red } }; // Roturas
+      });
+      
+      // Formato numérico para Metros
+      row.getCell(9).numFmt = '#,##0';
+      row.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+    });
+    
+    // Fila de totales
+    const totalesRow = worksheet.addRow([
+      'TOTAL', '', '', '', '', '', '', '',
+      totalesDetalle.value.metros,
+      '', '',
+      totalesDetalle.value.metros > 0 ? ((totalesDetalle.value.roturas * 1000) / totalesDetalle.value.metros).toFixed(1) : '',
+      totalesDetalle.value.roturas,
+      totalesDetalle.value.cv,
+      ''
+    ]);
+    totalesRow.height = 26;
+    totalesRow.eachCell((cell, colNumber) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+      cell.font = { bold: true, size: 10 };
+      cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      
+      if (colNumber === 12) cell.font = { bold: true, size: 10, color: { argb: colors.purple } };
+      if (colNumber === 13) cell.font = { bold: true, size: 10, color: { argb: colors.red } };
+    });
+    totalesRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    totalesRow.getCell(9).numFmt = '#,##0';
+    totalesRow.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+    
+    // Anchos de columna
+    worksheet.columns = [
+      { width: 10 }, // Partida
+      { width: 12 }, // Fecha Inicio
+      { width: 10 }, // Hora Inicio
+      { width: 12 }, // Fecha Final
+      { width: 10 }, // Hora Final
+      { width: 7 },  // Turno
+      { width: 12 }, // Base
+      { width: 8 },  // Color
+      { width: 10 }, // Metros
+      { width: 8 },  // Veloc
+      { width: 5 },  // S
+      { width: 8 },  // R10³
+      { width: 9 },  // Roturas
+      { width: 6 },  // CV
+      { width: 30 }  // Operador
+    ];
+    
+    // Generar archivo
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    link.href = url;
+    link.download = `Detalle_Rolada_${roladaSeleccionada.value}_${fecha}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    Swal.fire({ icon: 'success', title: 'Exportado', text: 'Excel generado correctamente', timer: 1000, showConfirmButton: false, timerProgressBar: true });
+  } catch (error) {
+    console.error('Error exportando Excel:', error);
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al exportar a Excel', timer: 2000, showConfirmButton: false });
+  }
 };
 
 // Cargar datos
@@ -534,7 +1034,7 @@ const cargarDatos = async () => {
     console.log('Totales:', totalesMes.value);
   } catch (error) {
     console.error('Error cargando datos:', error);
-    alert('Error al cargar los datos');
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al cargar los datos', timer: 2000, showConfirmButton: false });
   } finally {
     cargando.value = false;
   }
@@ -543,7 +1043,7 @@ const cargarDatos = async () => {
 // Copiar tabla como imagen al portapapeles
 const copiarComoImagen = async () => {
   if (datos.value.length === 0) {
-    alert('No hay datos para copiar');
+    Swal.fire({ icon: 'warning', title: 'Sin datos', text: 'No hay datos para copiar', timer: 1500, showConfirmButton: false });
     return;
   }
   
@@ -557,80 +1057,103 @@ const copiarComoImagen = async () => {
     
     const formatFecha = (d) => d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     
-    // Crear contenedor temporal con estilos inline (sin Tailwind/oklch)
+    // Crear contenedor temporal con estilos inline
     const container = document.createElement('div');
     container.style.cssText = 'position: absolute; left: -9999px; background: #ffffff; padding: 16px; font-family: system-ui, -apple-system, sans-serif;';
     
-    // Crear encabezado
+    // Crear encabezado con logo
     const header = document.createElement('div');
-    header.style.cssText = 'margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #1e40af;';
-    header.innerHTML = `
-      <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
-        📊 Seguimiento de Roladas ÍNDIGO
+    header.style.cssText = 'display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;';
+    
+    // Logo
+    const logo = document.createElement('img');
+    logo.src = '/LogoSantana.jpg';
+    logo.style.cssText = 'height: 36px; width: auto;';
+    header.appendChild(logo);
+    
+    // Texto del encabezado
+    const headerText = document.createElement('div');
+    headerText.innerHTML = `
+      <div style="font-size: 16px; font-weight: 600; color: #1e293b;">
+        Seguimiento de Roladas
       </div>
-      <div style="font-size: 13px; color: #64748b;">
-        Período: ${formatFecha(fechaInicio)} al ${formatFecha(fechaFin)} • ${datos.value.length} roladas
+      <div style="font-size: 12px; color: #94a3b8;">
+        Producción ÍNDIGO
       </div>
     `;
+    header.appendChild(headerText);
+    
+    // Info de registros y período
+    const headerInfo = document.createElement('div');
+    headerInfo.style.cssText = 'margin-left: auto; display: flex; align-items: center; gap: 16px;';
+    headerInfo.innerHTML = `
+      <div style="background: #f1f5f9; padding: 4px 10px; border-radius: 6px;">
+        <span style="font-size: 11px; color: #64748b;">Registros:</span>
+        <span style="font-size: 13px; font-weight: 600; color: #334155; margin-left: 4px;">${datos.value.length}</span>
+      </div>
+      <div style="font-size: 12px; color: #64748b;">
+        Período: ${formatFecha(fechaInicio)} al ${formatFecha(fechaFin)}
+      </div>
+    `;
+    header.appendChild(headerInfo);
     container.appendChild(header);
     
-    // Colores para la tabla (hex, compatibles con html2canvas)
+    // Colores para la tabla (estilo minimalista como la UI)
     const colors = {
-      headerDark: '#1e293b',
-      urdidoraHeader: '#047857',
-      indigoHeader: '#1d4ed8',
-      tejeduriaHeader: '#7c3aed',
-      calidadHeader: '#b45309',
-      urdidoraLight: '#d1fae5',
-      indigoLight: '#dbeafe',
-      tejeduriaLight: '#ede9fe',
-      calidadLight: '#fef3c7',
-      white: '#ffffff',
-      border: '#e2e8f0',
+      headerBg: '#f8fafc',
+      headerText: '#64748b',
+      headerTextDark: '#334155',
+      border: '#cbd5e1',
+      borderLight: '#e2e8f0',
       text: '#334155',
-      textLight: '#64748b'
+      textLight: '#64748b',
+      white: '#ffffff',
+      blue: '#2563eb',
+      green: '#16a34a',
+      orange: '#ea580c',
+      cyan: '#0891b2'
     };
     
-    // Crear tabla HTML manualmente con estilos inline
+    // Crear tabla HTML con estilo minimalista
     const table = document.createElement('table');
-    table.style.cssText = 'border-collapse: collapse; font-size: 12px; width: 100%;';
+    table.style.cssText = 'border-collapse: collapse; font-size: 12px; width: 100%; border: 1px solid ' + colors.border + ';';
     
     // Thead - Fila de grupos
     const thead = document.createElement('thead');
     const headerRow1 = document.createElement('tr');
     headerRow1.innerHTML = `
-      <th rowspan="2" style="background: ${colors.headerDark}; color: white; padding: 8px; text-align: center; border: 1px solid ${colors.border}; font-size: 11px;">ROLADA</th>
-      <th colspan="2" style="background: ${colors.urdidoraHeader}; color: white; padding: 6px; text-align: center; border: 1px solid ${colors.border}; font-size: 10px;">URDIDORA</th>
-      <th colspan="8" style="background: ${colors.indigoHeader}; color: white; padding: 6px; text-align: center; border: 1px solid ${colors.border}; font-size: 10px;">ÍNDIGO</th>
-      <th colspan="4" style="background: ${colors.tejeduriaHeader}; color: white; padding: 6px; text-align: center; border: 1px solid ${colors.border}; font-size: 10px;">TEJEDURÍA</th>
-      <th colspan="3" style="background: ${colors.calidadHeader}; color: white; padding: 6px; text-align: center; border: 1px solid ${colors.border}; font-size: 10px;">CALIDAD</th>
+      <th rowspan="2" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 10px 12px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 2px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">ROLADA</th>
+      <th colspan="2" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">URDIDORA</th>
+      <th colspan="8" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">ÍNDIGO</th>
+      <th colspan="4" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">TEJEDURÍA</th>
+      <th colspan="3" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">CALIDAD</th>
     `;
     thead.appendChild(headerRow1);
     
     // Thead - Fila de columnas
     const headerRow2 = document.createElement('tr');
     const subHeaders = [
-      { text: 'Maq.OE', bg: colors.urdidoraHeader },
-      { text: 'Lote', bg: colors.urdidoraHeader },
-      { text: 'Fecha', bg: colors.indigoHeader },
-      { text: 'Base', bg: colors.indigoHeader },
-      { text: 'Color', bg: colors.indigoHeader },
-      { text: 'Metros', bg: colors.indigoHeader },
-      { text: 'R10³', bg: colors.indigoHeader },
-      { text: 'Cav', bg: colors.indigoHeader },
-      { text: 'V.Nom', bg: colors.indigoHeader },
-      { text: 'V.Prom', bg: colors.indigoHeader },
-      { text: 'Metros', bg: colors.tejeduriaHeader },
-      { text: 'Efic.%', bg: colors.tejeduriaHeader },
-      { text: 'RU10⁵', bg: colors.tejeduriaHeader },
-      { text: 'RT10⁵', bg: colors.tejeduriaHeader },
-      { text: 'Metros', bg: colors.calidadHeader },
-      { text: 'Cal.%', bg: colors.calidadHeader },
-      { text: 'Pts/100m²', bg: colors.calidadHeader }
+      { text: 'Maq. OE', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Lote', borderRight: '2px solid ' + colors.border },
+      { text: 'Fecha', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Base', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Color', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Metros', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'R10³', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Cav', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Vel. Nom.', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Vel. Prom.', borderRight: '2px solid ' + colors.border },
+      { text: 'Metros', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Efic. %', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'RU10⁵', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'RT10⁵', borderRight: '2px solid ' + colors.border },
+      { text: 'Metros', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Cal. %', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Pts/100m²', borderRight: 'none' }
     ];
     subHeaders.forEach(h => {
       const th = document.createElement('th');
-      th.style.cssText = `background: ${h.bg}; color: white; padding: 5px 6px; text-align: center; border: 1px solid ${colors.border}; font-size: 9px; font-weight: 600;`;
+      th.style.cssText = `background: ${colors.headerBg}; color: ${colors.headerText}; padding: 0 8px; height: 32px; line-height: 32px; text-align: center; vertical-align: middle; border-bottom: 2px solid ${colors.border}; border-right: ${h.borderRight}; font-size: 11px; font-weight: 500;`;
       th.textContent = h.text;
       headerRow2.appendChild(th);
     });
@@ -640,33 +1163,33 @@ const copiarComoImagen = async () => {
     // Tbody - Filas de datos
     const tbody = document.createElement('tbody');
     datos.value.forEach((item, idx) => {
-      const isEven = idx % 2 === 0;
       const row = document.createElement('tr');
+      row.style.cssText = 'border-bottom: 1px solid ' + colors.borderLight + ';';
       
       const cellData = [
-        { value: item.ROLADA, bg: colors.white, bold: true },
-        { value: formatListaConY(item.MAQ_OE), bg: isEven ? colors.urdidoraLight : colors.white },
-        { value: formatListaConY(item.LOTE), bg: isEven ? colors.urdidoraLight : colors.white },
-        { value: item.FECHA || '-', bg: isEven ? colors.indigoLight : colors.white, small: true },
-        { value: item.BASE || '-', bg: isEven ? colors.indigoLight : colors.white },
-        { value: item.COLOR || '-', bg: isEven ? colors.indigoLight : colors.white },
-        { value: formatNumber(item.MTS_IND, 0), bg: isEven ? colors.indigoLight : colors.white },
-        { value: formatNumber(item.R103, 1), bg: isEven ? colors.indigoLight : colors.white },
-        { value: item.CAV || '-', bg: isEven ? colors.indigoLight : colors.white },
-        { value: formatNumber(item.VEL_NOM, 0), bg: isEven ? colors.indigoLight : colors.white },
-        { value: formatNumber(item.VEL_PROM, 0), bg: isEven ? colors.indigoLight : colors.white },
-        { value: formatNumber(item.MTS_CRUDOS, 0), bg: isEven ? colors.tejeduriaLight : colors.white },
-        { value: formatNumber(item.EFI_TEJ, 1), bg: isEven ? colors.tejeduriaLight : colors.white },
-        { value: formatNumber(item.RU105, 1), bg: isEven ? colors.tejeduriaLight : colors.white },
-        { value: formatNumber(item.RT105, 1), bg: isEven ? colors.tejeduriaLight : colors.white },
-        { value: formatNumber(item.MTS_CAL, 0), bg: isEven ? colors.calidadLight : colors.white },
-        { value: formatNumber(item.CAL_PERCENT, 1), bg: isEven ? colors.calidadLight : colors.white },
-        { value: formatNumber(item.PTS_100M2, 1), bg: isEven ? colors.calidadLight : colors.white }
+        { value: item.ROLADA, bold: true, color: colors.text, borderRight: '2px solid ' + colors.border },
+        { value: formatListaConY(item.MAQ_OE), color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatListaConY(item.LOTE), color: colors.textLight, borderRight: '2px solid ' + colors.border },
+        { value: item.FECHA || '-', color: colors.textLight, borderRight: '1px solid ' + colors.borderLight, small: true },
+        { value: item.BASE || '-', color: colors.cyan, borderRight: '1px solid ' + colors.borderLight },
+        { value: item.COLOR || '-', color: colors.text, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.MTS_IND, 0), color: colors.text, bold: true, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.R103, 1), color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
+        { value: item.CAV || '-', color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.VEL_NOM, 0), color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.VEL_PROM, 0), color: colors.textLight, borderRight: '2px solid ' + colors.border },
+        { value: formatNumber(item.MTS_CRUDOS, 0), color: colors.text, bold: true, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.EFI_TEJ, 1), color: colors.green, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.RU105, 1), color: colors.cyan, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.RT105, 1), color: colors.cyan, borderRight: '2px solid ' + colors.border },
+        { value: formatNumber(item.MTS_CAL, 0), color: colors.text, bold: true, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.CAL_PERCENT, 1), color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.PTS_100M2, 1), color: colors.textLight, borderRight: 'none' }
       ];
       
       cellData.forEach(cell => {
         const td = document.createElement('td');
-        td.style.cssText = `background: ${cell.bg}; color: ${colors.text}; padding: 5px 6px; text-align: center; border: 1px solid ${colors.border}; ${cell.bold ? 'font-weight: 600;' : ''} ${cell.small ? 'font-size: 10px;' : ''}`;
+        td.style.cssText = `background: ${colors.white}; color: ${cell.color}; padding: 0 8px; height: 36px; line-height: 36px; text-align: center; vertical-align: middle; border-right: ${cell.borderRight}; ${cell.bold ? 'font-weight: 600;' : ''} ${cell.small ? 'font-size: 11px;' : ''}`;
         td.textContent = cell.value;
         row.appendChild(td);
       });
@@ -678,28 +1201,29 @@ const copiarComoImagen = async () => {
     if (totalesMes.value) {
       const tfoot = document.createElement('tfoot');
       const totalRow = document.createElement('tr');
-      totalRow.style.cssText = 'background: #f1f5f9; font-weight: 600;';
+      totalRow.style.cssText = 'background: #f8fafc; font-weight: 600;';
       
       const totalCellData = [
-        { value: `Total (${totalesMes.value.TOTAL_ROLADAS})`, colspan: 3 },
-        { value: '-', colspan: 3 },
-        { value: formatNumber(totalesMes.value.MTS_IND, 0) },
-        { value: formatNumber(totalesMes.value.R103, 1) },
-        { value: totalesMes.value.CAV || '-' },
-        { value: '-' },
-        { value: formatNumber(totalesMes.value.VEL_PROM, 0) },
-        { value: formatNumber(totalesMes.value.MTS_CRUDOS, 0) },
-        { value: formatNumber(totalesMes.value.EFI_TEJ, 1) },
-        { value: formatNumber(totalesMes.value.RU105, 1) },
-        { value: formatNumber(totalesMes.value.RT105, 1) },
-        { value: formatNumber(totalesMes.value.MTS_CAL, 0) },
-        { value: formatNumber(totalesMes.value.CAL_PERCENT, 1) },
-        { value: formatNumber(totalesMes.value.PTS_100M2, 1) }
+        { value: 'TOTAL', bold: true, borderRight: '2px solid ' + colors.border },
+        { value: totalesMes.value.TOTAL_ROLADAS + ' roladas', colspan: 2, borderRight: '2px solid ' + colors.border },
+        { value: '-', colspan: 3, borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.MTS_IND, 0), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.R103, 1), borderRight: '1px solid ' + colors.borderLight },
+        { value: totalesMes.value.CAV || '-', borderRight: '1px solid ' + colors.borderLight },
+        { value: '-', borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.VEL_PROM, 0), borderRight: '2px solid ' + colors.border },
+        { value: formatNumber(totalesMes.value.MTS_CRUDOS, 0), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.EFI_TEJ, 1), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.RU105, 1), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.RT105, 1), borderRight: '2px solid ' + colors.border },
+        { value: formatNumber(totalesMes.value.MTS_CAL, 0), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.CAL_PERCENT, 1), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(totalesMes.value.PTS_100M2, 1), borderRight: 'none' }
       ];
       
       totalCellData.forEach(cell => {
         const td = document.createElement('td');
-        td.style.cssText = `background: #f1f5f9; color: ${colors.text}; padding: 6px; text-align: center; border: 1px solid ${colors.border}; border-top: 2px solid #94a3b8;`;
+        td.style.cssText = `background: #f8fafc; color: ${colors.text}; padding: 0 8px; height: 40px; line-height: 40px; text-align: center; vertical-align: middle; border-top: 2px solid ${colors.border}; border-right: ${cell.borderRight}; ${cell.bold ? 'font-weight: 700;' : 'font-weight: 600;'}`;
         td.textContent = cell.value;
         if (cell.colspan) td.colSpan = cell.colspan;
         totalRow.appendChild(td);
@@ -728,17 +1252,14 @@ const copiarComoImagen = async () => {
           new ClipboardItem({ 'image/png': blob })
         ]);
         
-        // Mostrar confirmación visual
-        const toast = document.createElement('div');
-        toast.style.cssText = 'position: fixed; bottom: 16px; right: 16px; background: #059669; color: white; padding: 10px 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; z-index: 9999; font-family: system-ui;';
-        toast.innerHTML = `
-          <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-          <span>Imagen copiada al portapapeles</span>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2500);
+        Swal.fire({
+          icon: 'success',
+          title: 'Copiado',
+          text: 'Imagen copiada al portapapeles',
+          timer: 1000,
+          showConfirmButton: false,
+          timerProgressBar: true
+        });
         
       } catch (clipboardError) {
         console.error('Error al copiar al portapapeles:', clipboardError);
@@ -748,13 +1269,13 @@ const copiarComoImagen = async () => {
         link.download = 'SeguimientoRoladas.png';
         link.href = url;
         link.click();
-        alert('No se pudo copiar al portapapeles. La imagen se ha descargado.');
+        Swal.fire({ icon: 'info', title: 'Imagen descargada', text: 'No se pudo copiar al portapapeles. La imagen se ha descargado.', timer: 2500, showConfirmButton: false });
       }
     }, 'image/png');
     
   } catch (error) {
     console.error('Error al generar imagen:', error);
-    alert('Error al generar la imagen');
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al generar la imagen', timer: 2000, showConfirmButton: false });
   } finally {
     copiando.value = false;
   }
@@ -763,7 +1284,7 @@ const copiarComoImagen = async () => {
 // Exportar a Excel
 const exportarAExcel = async () => {
   if (datos.value.length === 0) {
-    alert('No hay datos para exportar');
+    Swal.fire({ icon: 'warning', title: 'Sin datos', text: 'No hay datos para exportar', timer: 1500, showConfirmButton: false });
     return;
   }
   
@@ -995,9 +1516,11 @@ const exportarAExcel = async () => {
     link.download = fileName;
     link.click();
     window.URL.revokeObjectURL(url);
+    
+    Swal.fire({ icon: 'success', title: 'Exportado', text: 'Excel generado correctamente', timer: 1000, showConfirmButton: false, timerProgressBar: true });
   } catch (error) {
     console.error('Error exportando a Excel:', error);
-    alert('Error al exportar a Excel');
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al exportar a Excel', timer: 2000, showConfirmButton: false });
   }
 };
 
@@ -1005,20 +1528,7 @@ const exportarAExcel = async () => {
 const imprimirTabla = () => {
   if (datos.value.length === 0) return;
   
-  // Colores en hex para la impresión
-  const colores = {
-    urdidora: '#6366F1',
-    urdidoraLight: '#EEF2FF',
-    indigo: '#1E40AF',
-    indigoLight: '#DBEAFE',
-    tejeduria: '#059669',
-    tejeduriaLight: '#D1FAE5',
-    calidad: '#DC2626',
-    calidadLight: '#FEE2E2',
-    totales: '#F8FAFC'
-  };
-  
-  // Construir HTML de la tabla
+  // Construir HTML de la tabla con estilo limpio
   let html = `
     <!DOCTYPE html>
     <html>
@@ -1031,53 +1541,70 @@ const imprimirTabla = () => {
           margin: 10mm;
         }
         body { 
-          font-family: Arial, sans-serif; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
           font-size: 9px;
           margin: 0;
-          padding: 10px;
+          padding: 15px;
+          background: white;
         }
         h2 { 
           text-align: center; 
-          margin: 0 0 10px 0;
-          font-size: 14px;
+          margin: 0 0 8px 0;
+          font-size: 16px;
+          font-weight: 600;
           color: #1e293b;
         }
         .fecha-info {
           text-align: center;
-          margin-bottom: 10px;
+          margin-bottom: 12px;
           color: #64748b;
           font-size: 10px;
         }
         table { 
           border-collapse: collapse; 
           width: 100%;
-          font-size: 8px;
-        }
-        th, td { 
-          border: 1px solid #cbd5e1; 
-          padding: 3px 4px; 
-          text-align: center;
-          white-space: nowrap;
+          font-size: 9px;
+          background: white;
+          border: 1px solid #94a3b8;
         }
         th { 
-          font-weight: bold;
-          color: white;
+          padding: 6px 5px;
+          text-align: center;
+          font-weight: 600;
+          border: 1px solid #cbd5e1;
         }
-        .section-header {
-          font-size: 9px;
-          font-weight: bold;
+        td { 
+          padding: 6px 5px; 
+          text-align: center;
+          border: 1px solid #e2e8f0;
         }
-        .totales-row td {
-          background-color: ${colores.totales} !important;
-          font-weight: bold;
-          border-top: 2px solid #94a3b8;
+        .section-header th {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 8px 5px;
           border-bottom: 2px solid #94a3b8;
         }
-        .even-row-urdidora { background-color: ${colores.urdidoraLight}; }
-        .even-row-indigo { background-color: ${colores.indigoLight}; }
-        .even-row-tejeduria { background-color: ${colores.tejeduriaLight}; }
-        .even-row-calidad { background-color: ${colores.calidadLight}; }
-        .clickable { cursor: pointer; }
+        .section-rolada { color: #475569; background: #f1f5f9; border-right: 2px solid #94a3b8 !important; }
+        .section-urdidora { color: #047857; background: #f0fdf4; border-right: 2px solid #94a3b8 !important; }
+        .section-indigo { color: #1d4ed8; background: #eff6ff; border-right: 2px solid #94a3b8 !important; }
+        .section-tejeduria { color: #6d28d9; background: #f5f3ff; border-right: 2px solid #94a3b8 !important; }
+        .section-calidad { color: #b45309; background: #fffbeb; }
+        .col-header { 
+          color: #475569; 
+          background: #f8fafc;
+          font-size: 9px;
+          font-weight: 500;
+          border-bottom: 2px solid #94a3b8 !important;
+        }
+        .border-section { border-right: 2px solid #94a3b8 !important; }
+        .totales-row td {
+          background-color: #f1f5f9 !important;
+          font-weight: 600;
+          border-top: 2px solid #94a3b8 !important;
+          padding: 8px 5px;
+        }
+        .font-medium { font-weight: 500; }
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -1091,57 +1618,56 @@ const imprimirTabla = () => {
       <table>
         <thead>
           <tr class="section-header">
-            <th rowspan="2" style="background-color: #475569;">ROLADA</th>
-            <th colspan="2" style="background-color: ${colores.urdidora};">URDIDORA</th>
-            <th colspan="8" style="background-color: ${colores.indigo};">ÍNDIGO</th>
-            <th colspan="4" style="background-color: ${colores.tejeduria};">TEJEDURÍA</th>
-            <th colspan="3" style="background-color: ${colores.calidad};">CALIDAD</th>
+            <th rowspan="2" class="section-rolada" style="color: #475569; background: #f8fafc;">ROLADA</th>
+            <th colspan="2" class="section-urdidora">URDIDORA</th>
+            <th colspan="8" class="section-indigo">ÍNDIGO</th>
+            <th colspan="4" class="section-tejeduria">TEJEDURÍA</th>
+            <th colspan="3" class="section-calidad">CALIDAD</th>
           </tr>
-          <tr>
-            <th style="background-color: ${colores.urdidora};">MAQ OE</th>
-            <th style="background-color: ${colores.urdidora};">LOTE</th>
-            <th style="background-color: ${colores.indigo};">FECHA</th>
-            <th style="background-color: ${colores.indigo};">BASE</th>
-            <th style="background-color: ${colores.indigo};">COLOR</th>
-            <th style="background-color: ${colores.indigo};">METROS</th>
-            <th style="background-color: ${colores.indigo};">R‰</th>
-            <th style="background-color: ${colores.indigo};">CAV</th>
-            <th style="background-color: ${colores.indigo};">Vel.Nom</th>
-            <th style="background-color: ${colores.indigo};">Vel.Prom</th>
-            <th style="background-color: ${colores.tejeduria};">CRUDOS</th>
-            <th style="background-color: ${colores.tejeduria};">EFI%</th>
-            <th style="background-color: ${colores.tejeduria};">RU‰</th>
-            <th style="background-color: ${colores.tejeduria};">RT‰</th>
-            <th style="background-color: ${colores.calidad};">METROS</th>
-            <th style="background-color: ${colores.calidad};">CAL%</th>
-            <th style="background-color: ${colores.calidad};">Pts/100m²</th>
+          <tr class="col-header">
+            <th>Maq OE</th>
+            <th class="border-section">Lote</th>
+            <th>Fecha</th>
+            <th>Base</th>
+            <th>Color</th>
+            <th>Metros</th>
+            <th>R‰</th>
+            <th>Cav</th>
+            <th>Vel.Nom</th>
+            <th class="border-section">Vel.Prom</th>
+            <th>Metros</th>
+            <th>Efi%</th>
+            <th>RU‰</th>
+            <th class="border-section">RT‰</th>
+            <th>Metros</th>
+            <th>Cal%</th>
+            <th>Pts/100m²</th>
           </tr>
         </thead>
         <tbody>`;
   
   // Filas de datos
   datos.value.forEach((item, idx) => {
-    const isEven = idx % 2 === 0;
     html += `
           <tr>
-            <td style="background-color: #f1f5f9; font-weight: 600;">${item.ROLADA}</td>
-            <td class="${isEven ? 'even-row-urdidora' : ''}">${item.MAQ_OE || '-'}</td>
-            <td class="${isEven ? 'even-row-urdidora' : ''}">${item.LOTE || '-'}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${item.FECHA || '-'}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${item.BASE || '-'}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${formatListaConY(item.COLOR)}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${formatNumber(item.MTS_IND, 0)}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${formatNumber(item.R103, 1)}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${item.CAV || '-'}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${item.VEL_NOM || '-'}</td>
-            <td class="${isEven ? 'even-row-indigo' : ''}">${formatNumber(item.VEL_PROM, 1)}</td>
-            <td class="${isEven ? 'even-row-tejeduria' : ''}">${formatNumber(item.MTS_CRUDOS, 0)}</td>
-            <td class="${isEven ? 'even-row-tejeduria' : ''}">${formatNumber(item.EFI_TEJ, 1)}</td>
-            <td class="${isEven ? 'even-row-tejeduria' : ''}">${formatNumber(item.RU105, 1)}</td>
-            <td class="${isEven ? 'even-row-tejeduria' : ''}">${formatNumber(item.RT105, 1)}</td>
-            <td class="${isEven ? 'even-row-calidad' : ''}">${formatNumber(item.MTS_CAL, 0)}</td>
-            <td class="${isEven ? 'even-row-calidad' : ''}">${formatNumber(item.CAL_PERCENT, 1)}</td>
-            <td class="${isEven ? 'even-row-calidad' : ''}">${formatNumber(item.PTS_100M2, 1)}</td>
+            <td class="border-section font-medium">${item.ROLADA}</td>
+            <td>${item.MAQ_OE || '-'}</td>
+            <td class="border-section">${item.LOTE || '-'}</td>
+            <td>${item.FECHA || '-'}</td>
+            <td>${item.BASE || '-'}</td>
+            <td>${formatListaConY(item.COLOR)}</td>
+            <td class="font-medium">${formatNumber(item.MTS_IND, 0)}</td>
+            <td>${formatNumber(item.R103, 1)}</td>
+            <td>${item.CAV || '-'}</td>
+            <td>${item.VEL_NOM || '-'}</td>
+            <td class="border-section">${formatNumber(item.VEL_PROM, 1)}</td>
+            <td class="font-medium">${formatNumber(item.MTS_CRUDOS, 0)}</td>
+            <td>${formatNumber(item.EFI_TEJ, 1)}</td>
+            <td>${formatNumber(item.RU105, 1)}</td>
+            <td class="border-section">${formatNumber(item.RT105, 1)}</td>
+            <td class="font-medium">${formatNumber(item.MTS_CAL, 0)}</td>
+            <td>${formatNumber(item.CAL_PERCENT, 1)}</td>
+            <td>${formatNumber(item.PTS_100M2, 1)}</td>
           </tr>`;
   });
   
@@ -1149,19 +1675,17 @@ const imprimirTabla = () => {
   if (totalesMes.value) {
     html += `
           <tr class="totales-row">
-            <td colspan="3">TOTAL (${totalesMes.value.TOTAL_ROLADAS} roladas)</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
+            <td class="border-section" colspan="3">TOTAL (${totalesMes.value.TOTAL_ROLADAS} roladas)</td>
+            <td colspan="3">-</td>
             <td>${formatNumber(totalesMes.value.MTS_IND, 0)}</td>
             <td>${formatNumber(totalesMes.value.R103, 1)}</td>
             <td>${totalesMes.value.CAV || '-'}</td>
             <td>-</td>
-            <td>${formatNumber(totalesMes.value.VEL_PROM, 1)}</td>
+            <td class="border-section">${formatNumber(totalesMes.value.VEL_PROM, 1)}</td>
             <td>${formatNumber(totalesMes.value.MTS_CRUDOS, 0)}</td>
             <td>${formatNumber(totalesMes.value.EFI_TEJ, 1)}</td>
             <td>${formatNumber(totalesMes.value.RU105, 1)}</td>
-            <td>${formatNumber(totalesMes.value.RT105, 1)}</td>
+            <td class="border-section">${formatNumber(totalesMes.value.RT105, 1)}</td>
             <td>${formatNumber(totalesMes.value.MTS_CAL, 0)}</td>
             <td>${formatNumber(totalesMes.value.CAL_PERCENT, 1)}</td>
             <td>${formatNumber(totalesMes.value.PTS_100M2, 1)}</td>
