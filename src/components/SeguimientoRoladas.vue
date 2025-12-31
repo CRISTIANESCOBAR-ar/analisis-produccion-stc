@@ -196,38 +196,58 @@
     </main>
     
     <!-- Modal Detalle Rolada -->
-    <div v-if="modalVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @click.self="cerrarModal">
-      <div class="bg-white rounded-xl shadow-2xl w-[95vw] max-w-7xl h-[85vh] flex flex-col overflow-hidden border border-slate-300">
+    <div v-if="modalVisible" class="fixed inset-0 z-50 flex items-center justify-center p-1 bg-black/50 backdrop-blur-sm" @click.self="cerrarModal">
+      <div class="bg-white rounded-xl shadow-2xl w-[calc(100vw-8px)] h-[calc(100vh-8px)] flex flex-col overflow-hidden border border-slate-300">
         <!-- Header del Modal -->
         <div class="flex items-center justify-between px-5 py-3 bg-white">
           <div class="flex items-center gap-4">
             <!-- Botones de navegación de sección << >> -->
             <div class="flex items-center">
               <button 
-                @click="cambiarSeccion('indigo')" 
+                @click="cambiarSeccion('urdimbre')" 
                 :class="[
                   'px-3 py-2 rounded-l-md border border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  seccionActiva === 'urdimbre' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-500 hover:bg-slate-50'
+                ]"
+                v-tippy="{ content: 'Ver URDIMBRE', placement: 'bottom' }"
+              >
+                &lt;&lt; URDIMBRE
+              </button>
+              <button 
+                @click="cambiarSeccion('indigo')" 
+                :class="[
+                  'px-3 py-2 border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium',
                   seccionActiva === 'indigo' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 hover:bg-slate-50'
                 ]"
                 v-tippy="{ content: 'Ver ÍNDIGO', placement: 'bottom' }"
               >
-                &lt;&lt; ÍNDIGO
+                ÍNDIGO
               </button>
               <button 
                 @click="cambiarSeccion('tecelagem')" 
                 :class="[
-                  'px-3 py-2 rounded-r-md border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  'px-3 py-2 border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium',
                   seccionActiva === 'tecelagem' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-500 hover:bg-slate-50'
                 ]"
                 v-tippy="{ content: 'Ver TEJEDURÍA', placement: 'bottom' }"
               >
-                TEJEDURÍA &gt;&gt;
+                TEJEDURÍA
+              </button>
+              <button 
+                @click="cambiarSeccion('calidad')" 
+                :class="[
+                  'px-3 py-2 rounded-r-md border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  seccionActiva === 'calidad' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-500 hover:bg-slate-50'
+                ]"
+                v-tippy="{ content: 'Ver CALIDAD', placement: 'bottom' }"
+              >
+                CALIDAD &gt;&gt;
               </button>
             </div>
             
             <div>
               <h3 class="text-base font-semibold text-slate-800">
-                Detalle {{ seccionActiva === 'indigo' ? 'ÍNDIGO' : 'TEJEDURÍA' }} - Rolada {{ roladaSeleccionada }}
+                Detalle {{ seccionActiva === 'urdimbre' ? 'URDIMBRE' : seccionActiva === 'indigo' ? 'ÍNDIGO' : seccionActiva === 'tecelagem' ? 'TEJEDURÍA' : 'CALIDAD' }} - Rolada {{ roladaSeleccionada }}
               </h3>
               <p class="text-xs text-slate-500">{{ indiceRoladaActual + 1 }} de {{ datos.length }} roladas</p>
             </div>
@@ -264,7 +284,7 @@
             <!-- Botón Copiar Imagen -->
             <button 
               @click="copiarModalComoImagen" 
-              :disabled="copiandoModal || (seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : datosTecelagem.length === 0)"
+              :disabled="copiandoModal || (seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : datosCalidad.length === 0)"
               class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               v-tippy="{ content: 'Copiar como imagen', placement: 'bottom' }"
             >
@@ -276,7 +296,7 @@
             <!-- Botón Exportar Excel -->
             <button 
               @click="exportarModalAExcel" 
-              :disabled="datosDetalleAgrupados.length === 0"
+              :disabled="(seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : datosCalidad.length === 0)"
               class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               v-tippy="{ content: 'Exportar a Excel', placement: 'bottom' }"
             >
@@ -295,12 +315,78 @@
         </div>
         
         <!-- Loading -->
-        <div v-if="(seccionActiva === 'indigo' && cargandoDetalle) || (seccionActiva === 'tecelagem' && cargandoTecelagem)" class="flex-1 flex items-center justify-center py-20">
+        <div v-if="(seccionActiva === 'urdimbre' && cargandoUrdimbre) || (seccionActiva === 'indigo' && cargandoDetalle) || (seccionActiva === 'tecelagem' && cargandoTecelagem) || (seccionActiva === 'calidad' && cargandoCalidad)" class="flex-1 flex items-center justify-center py-20">
           <div class="flex flex-col items-center gap-3">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-600"></div>
             <span class="text-slate-600">Cargando detalles...</span>
           </div>
         </div>
+        
+        <!-- SECCIÓN URDIMBRE -->
+        <template v-else-if="seccionActiva === 'urdimbre'">
+          <div v-if="datosUrdimbre.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableUrdimbreRef">
+            <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
+              <thead class="sticky top-0 z-10">
+                <tr class="text-slate-600 text-[11px] bg-amber-50">
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Inicio</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Hora<br>Inicio</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Final</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Hora<br>Final</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Artículo</th>
+                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Vel.</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Puntas</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Operador</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Lote</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Maq.</th>
+                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Base</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="(item, index) in datosUrdimbre" 
+                  :key="index" 
+                  class="border-b border-slate-200 hover:bg-amber-50/50 transition-colors"
+                >
+                  <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ item.DT_INICIO }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.HORA_INICIO }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ item.DT_FINAL }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.HORA_FINAL }}</td>
+                  <td class="px-3 py-2.5 text-slate-700">{{ item.ARTIGO }}</td>
+                  <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumberModal(item.VELOC) }}</td>
+                  <td class="px-3 py-2.5 text-center font-semibold text-amber-600">{{ item.NUM_FIOS }}</td>
+                  <td class="px-3 py-2.5 text-slate-600">{{ item.NM_OPERADOR }}</td>
+                  <td class="px-3 py-2.5 text-slate-600">{{ item.LOTE_FIACAO }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600">{{ item.MAQ_FIACAO }}</td>
+                  <td class="px-3 py-2.5 text-slate-700">{{ item.BASE_URDUME }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="sticky bottom-0 z-10 bg-amber-100">
+                <tr class="font-semibold text-slate-700">
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300">TOTAL</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="5"></td>
+                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesUrdimbre.metros, 0) }}</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="6"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <!-- Sin datos URDIMBRE -->
+          <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <p class="font-medium">No se encontraron detalles URDIMBRE</p>
+              <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
+            </div>
+          </div>
+        </template>
         
         <!-- SECCIÓN ÍNDIGO -->
         <template v-else-if="seccionActiva === 'indigo'">
@@ -379,68 +465,287 @@
         
         <!-- SECCIÓN TEJEDURÍA -->
         <template v-else-if="seccionActiva === 'tecelagem'">
-          <div v-if="datosTecelagem.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableTecelagemRef">
-            <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
+          <!-- VISTA RESUMEN (lista de partidas) -->
+          <template v-if="!vistaDetallePartida">
+            <div v-if="datosTecelagem.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableTecelagemRef">
+              <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
+                <thead class="sticky top-0 z-10">
+                  <tr class="text-slate-600 text-[11px] bg-purple-50">
+                    <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Inicial</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Final</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Telar</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Eficiencia<br>%</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>TRA 10⁵</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>URD 10⁵</th>
+                    <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Artículo</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Color</th>
+                    <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Nombre</th>
+                    <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Trama</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Pasadas</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">RPM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    v-for="(item, index) in datosTecelagem" 
+                    :key="index" 
+                    class="border-b border-slate-200 hover:bg-purple-50/50 transition-colors cursor-pointer"
+                    @click="abrirDetallePartida(item)"
+                  >
+                    <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                    <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ formatFechaTecelagem(item.FECHA_INICIAL) }}</td>
+                    <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ formatFechaTecelagem(item.FECHA_FINAL) }}</td>
+                    <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 2) }}</td>
+                    <td class="px-3 py-2.5 text-center font-semibold text-purple-600">{{ item.MAQUINA ? parseInt(item.MAQUINA.slice(-3)) : '' }}</td>
+                    <td class="px-3 py-2.5 text-right text-green-600 tabular-nums">{{ formatNumberModal(item.EFICIENCIA) }}</td>
+                    <td class="px-3 py-2.5 text-right text-orange-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_TRA_105) }}</td>
+                    <td class="px-3 py-2.5 text-right text-red-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_URD_105) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.ARTIGO }}</td>
+                    <td class="px-3 py-2.5 text-center text-slate-600">{{ item.COR }}</td>
+                    <td class="px-3 py-2.5 text-slate-600">{{ item.NM_MERCADO }}</td>
+                    <td class="px-3 py-2.5 text-slate-600">{{ item.TRAMA }}</td>
+                    <td class="px-3 py-2.5 text-right text-slate-600 tabular-nums">{{ formatNumberModal(item.PASADAS) }}</td>
+                    <td class="px-3 py-2.5 text-right text-slate-700 tabular-nums">{{ formatNumber(item.RPM, 0) }}</td>
+                  </tr>
+                </tbody>
+                <tfoot class="sticky bottom-0 z-10 bg-purple-100">
+                  <tr class="font-semibold text-slate-700">
+                    <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="3">TOTAL</td>
+                    <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesTecelagem.metros, 2) }}</td>
+                    <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                    <td class="px-3 py-3 text-right text-green-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.eficiencia) }}</td>
+                    <td class="px-3 py-3 text-right text-orange-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.roturasTra) }}</td>
+                    <td class="px-3 py-3 text-right text-red-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.roturasUrd) }}</td>
+                    <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="4"></td>
+                    <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.pasadas) }}</td>
+                    <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesTecelagem.rpm, 0) }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            
+            <!-- Sin datos TEJEDURÍA -->
+            <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
+              <div class="text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <p class="font-medium">No se encontraron detalles TEJEDURÍA</p>
+                <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
+              </div>
+            </div>
+          </template>
+
+          <!-- VISTA DETALLE DE PARTIDA -->
+          <template v-else>
+            <!-- Header con info de la partida -->
+            <div class="bg-purple-50 border-b border-purple-200 px-4 py-3 m-3 mb-0 rounded-t-lg">
+              <div class="flex items-center gap-4">
+                <button 
+                  @click="volverAResumen"
+                  class="flex items-center gap-1 text-purple-700 hover:text-purple-900 font-medium transition-colors"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                  Volver
+                </button>
+                <div class="h-6 w-px bg-purple-300"></div>
+                <div class="flex-1 grid grid-cols-6 gap-4 text-sm">
+                  <div>
+                    <span class="text-purple-600 font-medium">Artículo:</span>
+                    <span class="ml-1 font-bold text-slate-800">{{ partidaSeleccionada?.ARTIGO }}</span>
+                  </div>
+                  <div>
+                    <span class="text-purple-600 font-medium">Nombre:</span>
+                    <span class="ml-1 font-bold text-slate-800">{{ partidaSeleccionada?.NM_MERCADO }}</span>
+                  </div>
+                  <div>
+                    <span class="text-purple-600 font-medium">Trama:</span>
+                    <span class="ml-1 text-slate-700">{{ partidaSeleccionada?.TRAMA }}</span>
+                  </div>
+                  <div>
+                    <span class="text-purple-600 font-medium">Telar:</span>
+                    <span class="ml-1 font-bold text-purple-700">{{ partidaSeleccionada?.MAQUINA ? parseInt(partidaSeleccionada.MAQUINA.slice(-3)) : '' }}</span>
+                  </div>
+                  <div>
+                    <span class="text-purple-600 font-medium">Pasadas:</span>
+                    <span class="ml-1 text-slate-700">{{ formatNumberModal(partidaSeleccionada?.PASADAS) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-purple-600 font-medium">Base:</span>
+                    <span class="ml-1 text-slate-700">{{ datosDetallePartida[0]?.BASE_URDUME || '' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cargando detalle -->
+            <div v-if="cargandoDetallePartida" class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-3"></div>
+                <p class="text-slate-500">Cargando detalle...</p>
+              </div>
+            </div>
+
+            <!-- Tabla de detalle -->
+            <div v-else-if="datosDetallePartida.length > 0" class="overflow-auto bg-white mx-3 mb-3 rounded-b-lg border border-t-0 border-slate-300" style="flex: 0 1 auto; max-height: calc(100vh - 200px);">
+              <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
+                <thead class="sticky top-0 z-10">
+                  <tr class="text-slate-600 text-[11px] bg-purple-50">
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Tur</th>
+                    <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros<br>Crudos</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros<br>Termin.</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros<br>Acumul.</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Paradas<br>Trama</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Paradas<br>Urdimbre</th>
+                    <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Total<br>Paradas</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Eficiencia<br>%</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>TRAMA 10⁵</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>URDIDO 10⁵</th>
+                    <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">RPM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    v-for="(item, index) in datosDetallePartida" 
+                    :key="index" 
+                    class="border-b border-slate-200 hover:bg-purple-50/50 transition-colors"
+                  >
+                    <td class="px-3 py-2.5 text-center text-slate-600">{{ formatFechaDetalle(item.DT_BASE_PRODUCAO) }}</td>
+                    <td class="px-3 py-2.5 text-center font-semibold text-slate-800">{{ item.TURNO }}</td>
+                    <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                    <td class="px-3 py-2.5 text-right text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
+                    <td class="px-3 py-2.5 text-right text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
+                    <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(calcularMetrosAcumulados(index), 0) }}</td>
+                    <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.PARADA_TRAMA }}</td>
+                    <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.PARADA_URDUME }}</td>
+                    <td class="px-3 py-2.5 text-center font-medium text-slate-700 tabular-nums">{{ (item.PARADA_TRAMA || 0) + (item.PARADA_URDUME || 0) }}</td>
+                    <td class="px-3 py-2.5 text-right text-green-600 tabular-nums">{{ formatNumberModal(item.EFICIENCIA) }}</td>
+                    <td class="px-3 py-2.5 text-right text-orange-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_TRA_105) }}</td>
+                    <td class="px-3 py-2.5 text-right text-red-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_URD_105) }}</td>
+                    <td class="px-3 py-2.5 text-right text-slate-700 tabular-nums">{{ formatNumber(item.RPM, 0) }}</td>
+                  </tr>
+                </tbody>
+                <tfoot class="sticky bottom-0 z-10 bg-purple-100">
+                  <tr class="font-semibold text-slate-700">
+                    <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="3">TOTAL</td>
+                    <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesDetallePartida.metros, 0) }}</td>
+                    <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                    <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
+                    <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesDetallePartida.paradasTrama }}</td>
+                    <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesDetallePartida.paradasUrdumbre }}</td>
+                    <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesDetallePartida.totalParadas }}</td>
+                    <td class="px-3 py-3 text-right text-green-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesDetallePartida.eficiencia) }}</td>
+                    <td class="px-3 py-3 text-right text-orange-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesDetallePartida.roturasTra) }}</td>
+                    <td class="px-3 py-3 text-right text-red-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesDetallePartida.roturasUrd) }}</td>
+                    <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesDetallePartida.rpm, 0) }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Sin datos detalle -->
+            <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
+              <div class="text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <p class="font-medium">No se encontraron detalles para esta partida</p>
+              </div>
+            </div>
+          </template>
+        </template>
+
+        <!-- SECCIÓN CALIDAD -->
+        <template v-else-if="seccionActiva === 'calidad'">
+          <div v-if="datosCalidad.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableCalidadRef">
+            <table class="w-full text-[12px] text-slate-700 border-separate border-spacing-0">
               <thead class="sticky top-0 z-10">
-                <tr class="text-slate-600 text-[11px] bg-purple-50">
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Telar</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Eficiencia<br>%</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>TRA 10⁵</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Roturas<br>URD 10⁵</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Artículo</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Color</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Nombre</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Trama</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Pasadas</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">RPM</th>
+                <tr class="text-slate-600 text-[10px] bg-teal-50">
+                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Partida</th>
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">S</th>
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">R</th>
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">Telar</th>
+                  <th class="px-2 py-1 font-medium text-center border-b border-b-slate-200 bg-teal-100" colspan="7">Metros</th>
+                  <th class="px-2 py-1 font-medium text-center border-b border-b-slate-200 bg-teal-100" colspan="6">Porcentaje</th>
+                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Artículo</th>
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">Color</th>
+                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Nombre</th>
+                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Trama</th>
+                </tr>
+                <tr class="text-slate-600 text-[9px] bg-teal-50">
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">Total</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">1era</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>HIL</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>IND</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>TEJ</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>ACA</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">1era</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>HIL</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>IND</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>TEJ</th>
+                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>ACA</th>
                 </tr>
               </thead>
               <tbody>
                 <tr 
-                  v-for="(item, index) in datosTecelagem" 
+                  v-for="(item, index) in datosCalidadAgrupados" 
                   :key="index" 
-                  class="border-b border-slate-200 hover:bg-purple-50/50 transition-colors"
+                  class="border-b border-slate-200 hover:bg-teal-50/50 transition-colors"
                 >
-                  <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
-                  <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 2) }}</td>
-                  <td class="px-3 py-2.5 text-center font-semibold text-purple-600">{{ item.MAQUINA ? parseInt(item.MAQUINA.slice(-3)) : '' }}</td>
-                  <td class="px-3 py-2.5 text-right text-green-600 tabular-nums">{{ formatNumberModal(item.EFICIENCIA) }}</td>
-                  <td class="px-3 py-2.5 text-right text-orange-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_TRA_105) }}</td>
-                  <td class="px-3 py-2.5 text-right text-red-600 tabular-nums">{{ formatNumberModal(item.ROTURAS_URD_105) }}</td>
-                  <td class="px-3 py-2.5 text-slate-700">{{ item.ARTIGO }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600">{{ item.COR }}</td>
-                  <td class="px-3 py-2.5 text-slate-600">{{ item.NM_MERCADO }}</td>
-                  <td class="px-3 py-2.5 text-slate-600">{{ item.TRAMA }}</td>
-                  <td class="px-3 py-2.5 text-right text-slate-600 tabular-nums">{{ formatNumberModal(item.PASADAS) }}</td>
-                  <td class="px-3 py-2.5 text-right text-slate-700 tabular-nums">{{ formatNumber(item.RPM, 0) }}</td>
+                  <td class="px-2 py-2 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                  <td class="px-2 py-2 text-center font-medium" :class="item.ST_IND === '1' ? 'text-green-600' : 'text-amber-600'">{{ item.ST_IND === '1' ? 'P' : 'N' }}</td>
+                  <td class="px-2 py-2 text-center text-slate-600">{{ item.REPROCESSO ? item.REPROCESSO.charAt(0) : '' }}</td>
+                  <td class="px-2 py-2 text-center font-semibold text-teal-600">{{ item.TEAR }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-700">{{ formatNumber(item.METRAGEM_TOTAL, 0) }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-700">{{ formatNumber(item.METROS_1ERA, 0) }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-700">{{ item.METROS_2DA > 0 ? formatNumber(item.METROS_2DA, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_HIL > 0 ? formatNumber(item.METROS_2DA_HIL, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_IND > 0 ? formatNumber(item.METROS_2DA_IND, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_TE > 0 ? formatNumber(item.METROS_2DA_TE, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_TEF > 0 ? formatNumber(item.METROS_2DA_TEF, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-green-600">{{ formatNumberModal(calcularPorcentaje(item.METROS_1ERA, item.METRAGEM_TOTAL)) }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-amber-600">{{ item.METROS_2DA > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_HIL > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_HIL, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_IND > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_IND, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_TE > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_TE, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_TEF > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_TEF, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-slate-700">{{ item.ARTIGO }}</td>
+                  <td class="px-2 py-2 text-center text-slate-600">{{ item.COR }}</td>
+                  <td class="px-2 py-2 text-slate-600">{{ item.NM_MERCADO }}</td>
+                  <td class="px-2 py-2 text-slate-600">{{ item.TRAMA }}</td>
                 </tr>
               </tbody>
-              <tfoot class="sticky bottom-0 z-10 bg-purple-100">
+              <tfoot class="sticky bottom-0 z-10 bg-teal-100">
                 <tr class="font-semibold text-slate-700">
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300">TOTAL</td>
-                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesTecelagem.metros, 2) }}</td>
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300"></td>
-                  <td class="px-3 py-3 text-right text-green-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.eficiencia) }}</td>
-                  <td class="px-3 py-3 text-right text-orange-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.roturasTra) }}</td>
-                  <td class="px-3 py-3 text-right text-red-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.roturasUrd) }}</td>
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="4"></td>
-                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesTecelagem.pasadas) }}</td>
-                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesTecelagem.rpm, 0) }}</td>
+                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="4">TOTAL</td>
+                  <td class="px-2 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesCalidad.metrosTotal, 0) }}</td>
+                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="6"></td>
+                  <td class="px-2 py-3 text-right text-green-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesCalidad.porcPrimera) }}</td>
+                  <td class="px-2 py-3 text-right text-amber-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesCalidad.porcSegunda) }}</td>
+                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="8"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
           
-          <!-- Sin datos TEJEDURÍA -->
+          <!-- Sin datos CALIDAD -->
           <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
             <div class="text-center">
               <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
-              <p class="font-medium">No se encontraron detalles TEJEDURÍA</p>
+              <p class="font-medium">No se encontraron datos de CALIDAD</p>
               <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
             </div>
           </div>
@@ -474,14 +779,26 @@ const cargandoDetalle = ref(false)
 const roladaSeleccionada = ref(null)
 const indiceRoladaActual = ref(0)
 const datosDetalle = ref([])
-const seccionActiva = ref('indigo') // 'indigo' o 'tecelagem'
+const seccionActiva = ref('indigo') // 'urdimbre', 'indigo', 'tecelagem' o 'calidad'
 const datosTecelagem = ref([])
 const cargandoTecelagem = ref(false)
+const datosCalidad = ref([])
+const cargandoCalidad = ref(false)
+const datosUrdimbre = ref([])
+const cargandoUrdimbre = ref(false)
+
+// Estado para vista detalle partida
+const vistaDetallePartida = ref(false)
+const partidaSeleccionada = ref(null)
+const datosDetallePartida = ref([])
+const cargandoDetallePartida = ref(false)
 
 // Refs
 const mainContentRef = ref(null)
 const modalTableRef = ref(null)
 const modalTableTecelagemRef = ref(null)
+const modalTableCalidadRef = ref(null)
+const modalTableUrdimbreRef = ref(null)
 const tablaRef = ref(null)
 const tableElementRef = ref(null)
 
@@ -532,6 +849,50 @@ const calcularR103 = (roturas, metros) => {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
   }).format(valor);
+};
+
+// Formatear fecha para TEJEDURÍA: "dd/mm/yy hh:mm"
+const formatFechaTecelagem = (fechaHora) => {
+  if (!fechaHora) return '';
+  try {
+    // Formato esperado: "DD/MM/YYYY HH:MM:SS" o "YYYY-MM-DD HH:MM:SS"
+    const partes = fechaHora.trim().split(' ');
+    if (partes.length < 2) return fechaHora;
+    
+    const fecha = partes[0];
+    const hora = partes[1];
+    
+    let dia, mes, anio;
+    
+    // Detectar formato de fecha
+    if (fecha.includes('/')) {
+      // Formato DD/MM/YYYY
+      const fechaPartes = fecha.split('/');
+      dia = fechaPartes[0];
+      mes = fechaPartes[1];
+      anio = fechaPartes[2];
+    } else if (fecha.includes('-')) {
+      // Formato YYYY-MM-DD
+      const fechaPartes = fecha.split('-');
+      anio = fechaPartes[0];
+      mes = fechaPartes[1];
+      dia = fechaPartes[2];
+    } else {
+      return fechaHora;
+    }
+    
+    // Obtener últimos 2 dígitos del año
+    const anioCorto = anio.slice(-2);
+    
+    // Obtener hora y minutos (formato HH:MM)
+    const horaPartes = hora.split(':');
+    const hh = horaPartes[0];
+    const mm = horaPartes[1];
+    
+    return `${dia}/${mes}/${anioCorto} ${hh}:${mm}`;
+  } catch (error) {
+    return fechaHora;
+  }
 };
 
 // Agrupar datos del detalle por PARTIDA (igual que ConsultaRoladaIndigo)
@@ -598,6 +959,14 @@ const totalesDetalle = computed(() => {
   }, { metros: 0, roturas: 0, cv: 0 });
 });
 
+// Totales del detalle URDIMBRE
+const totalesUrdimbre = computed(() => {
+  return datosUrdimbre.value.reduce((acc, item) => {
+    acc.metros += parseFloat(item.METRAGEM) || 0;
+    return acc;
+  }, { metros: 0 });
+});
+
 // Totales del detalle TECELAGEM
 const totalesTecelagem = computed(() => {
   let totalMetros = 0;
@@ -628,6 +997,159 @@ const totalesTecelagem = computed(() => {
     pasadas: count > 0 ? sumPasadas / count : 0
   };
 });
+
+// Totales para la vista de detalle de partida
+const totalesDetallePartida = computed(() => {
+  let totalMetros = 0;
+  let totalMetrosAcum = 0;
+  let totalParadasTrama = 0;
+  let totalParadasUrdumbre = 0;
+  let sumEficienciaPonderada = 0;
+  let sumRotTraPonderada = 0;
+  let sumRotUrdPonderada = 0;
+  let sumRpmPonderada = 0;
+  let sumPasadas = 0;
+  let count = 0;
+  
+  datosDetallePartida.value.forEach(item => {
+    const metros = parseFloat(item.METRAGEM) || 0;
+    totalMetros += metros;
+    totalParadasTrama += parseInt(item.PARADA_TRAMA) || 0;
+    totalParadasUrdumbre += parseInt(item.PARADA_URDUME) || 0;
+    sumEficienciaPonderada += (parseFloat(item.EFICIENCIA) || 0) * metros;
+    sumRotTraPonderada += (parseFloat(item.ROTURAS_TRA_105) || 0) * metros;
+    sumRotUrdPonderada += (parseFloat(item.ROTURAS_URD_105) || 0) * metros;
+    sumRpmPonderada += (parseFloat(item.RPM) || 0) * metros;
+    sumPasadas += parseFloat(item.BATIDAS) || 0;
+    count++;
+  });
+  
+  return {
+    metros: totalMetros,
+    paradasTrama: totalParadasTrama,
+    paradasUrdumbre: totalParadasUrdumbre,
+    totalParadas: totalParadasTrama + totalParadasUrdumbre,
+    eficiencia: totalMetros > 0 ? sumEficienciaPonderada / totalMetros : 0,
+    roturasTra: totalMetros > 0 ? sumRotTraPonderada / totalMetros : 0,
+    roturasUrd: totalMetros > 0 ? sumRotUrdPonderada / totalMetros : 0,
+    rpm: totalMetros > 0 ? sumRpmPonderada / totalMetros : 0,
+    pasadas: count > 0 ? sumPasadas / count : 0
+  };
+});
+
+// Agrupar datos de calidad por partida
+const datosCalidadAgrupados = computed(() => {
+  const grupos = {};
+  datosCalidad.value.forEach(item => {
+    const key = item.PARTIDA;
+    if (!grupos[key]) {
+      grupos[key] = {
+        PARTIDA: item.PARTIDA,
+        ST_IND: item.ST_IND,
+        REPROCESSO: item.REPROCESSO,
+        TEAR: item.TEAR,
+        METRAGEM_TOTAL: 0,
+        METROS_1ERA: 0,
+        METROS_2DA: 0,
+        METROS_2DA_HIL: 0,
+        METROS_2DA_IND: 0,
+        METROS_2DA_TE: 0,
+        METROS_2DA_TEF: 0,
+        ARTIGO: item.ARTIGO,
+        COR: item.COR,
+        NM_MERCADO: item.NM_MERCADO,
+        TRAMA: item.TRAMA
+      };
+    }
+    grupos[key].METRAGEM_TOTAL += parseFloat(item.METRAGEM_TOTAL) || 0;
+    grupos[key].METROS_1ERA += parseFloat(item.METROS_1ERA) || 0;
+    grupos[key].METROS_2DA += parseFloat(item.METROS_2DA) || 0;
+    grupos[key].METROS_2DA_HIL += parseFloat(item.METROS_2DA_HIL) || 0;
+    grupos[key].METROS_2DA_IND += parseFloat(item.METROS_2DA_IND) || 0;
+    grupos[key].METROS_2DA_TE += parseFloat(item.METROS_2DA_TE) || 0;
+    grupos[key].METROS_2DA_TEF += parseFloat(item.METROS_2DA_TEF) || 0;
+  });
+  return Object.values(grupos).sort((a, b) => a.PARTIDA.localeCompare(b.PARTIDA));
+});
+
+// Totales para calidad
+const totalesCalidad = computed(() => {
+  let metrosTotal = 0;
+  let metros1era = 0;
+  let metros2da = 0;
+  
+  datosCalidadAgrupados.value.forEach(item => {
+    metrosTotal += item.METRAGEM_TOTAL || 0;
+    metros1era += item.METROS_1ERA || 0;
+    metros2da += item.METROS_2DA || 0;
+  });
+  
+  return {
+    metrosTotal,
+    porcPrimera: metrosTotal > 0 ? (metros1era / metrosTotal) * 100 : 0,
+    porcSegunda: metrosTotal > 0 ? (metros2da / metrosTotal) * 100 : 0
+  };
+});
+
+// Calcular porcentaje
+const calcularPorcentaje = (parte, total) => {
+  if (!total || total === 0) return 0;
+  return (parte / total) * 100;
+};
+
+// Abrir vista de detalle de partida
+const abrirDetallePartida = async (partida) => {
+  partidaSeleccionada.value = partida;
+  cargandoDetallePartida.value = true;
+  datosDetallePartida.value = [];
+  
+  try {
+    const cor = partida.COR || '';
+    const response = await fetch(`${API_BASE_URL}/api/consulta-partida-tecelagem?partida=${encodeURIComponent(partida.PARTIDA)}&cor=${encodeURIComponent(cor)}`);
+    if (!response.ok) throw new Error('Error al cargar detalle de partida');
+    datosDetallePartida.value = await response.json();
+    vistaDetallePartida.value = true;
+  } catch (error) {
+    console.error('Error cargando detalle de partida:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo cargar el detalle de la partida'
+    });
+  } finally {
+    cargandoDetallePartida.value = false;
+  }
+};
+
+// Volver a la vista de resumen
+const volverAResumen = () => {
+  vistaDetallePartida.value = false;
+  partidaSeleccionada.value = null;
+  datosDetallePartida.value = [];
+};
+
+// Formatear fecha para detalle partida (DD/MM/YYYY -> dd/mm/yy)
+const formatFechaDetalle = (fecha) => {
+  if (!fecha) return '';
+  // Formato esperado: DD/MM/YYYY
+  const partes = fecha.split('/');
+  if (partes.length === 3) {
+    const dia = partes[0];
+    const mes = partes[1];
+    const anio = partes[2].slice(-2);
+    return `${dia}/${mes}/${anio}`;
+  }
+  return fecha;
+};
+
+// Calcular metros acumulados hasta el índice dado
+const calcularMetrosAcumulados = (indice) => {
+  let acumulado = 0;
+  for (let i = 0; i <= indice; i++) {
+    acumulado += parseFloat(datosDetallePartida.value[i]?.METRAGEM) || 0;
+  }
+  return acumulado;
+};
 
 // Abrir modal con detalle de la rolada
 const abrirModalDetalle = async (rolada, index) => {
@@ -670,11 +1192,54 @@ const cargarDetalleTecelagem = async (rolada) => {
   }
 };
 
+// Cargar detalle de una rolada (CALIDAD)
+const cargarDetalleCalidad = async (rolada) => {
+  cargandoCalidad.value = true;
+  datosCalidad.value = [];
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/consulta-rolada-calidad?rolada=${rolada}`);
+    if (!response.ok) throw new Error('Error al cargar detalle calidad');
+    datosCalidad.value = await response.json();
+  } catch (error) {
+    console.error('Error cargando detalle CALIDAD:', error);
+  } finally {
+    cargandoCalidad.value = false;
+  }
+};
+
+// Cargar detalle de URDIMBRE
+const cargarDetalleUrdimbre = async (rolada) => {
+  cargandoUrdimbre.value = true;
+  datosUrdimbre.value = [];
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/consulta-rolada-urdimbre?rolada=${rolada}`);
+    if (!response.ok) throw new Error('Error al cargar detalle urdimbre');
+    datosUrdimbre.value = await response.json();
+  } catch (error) {
+    console.error('Error cargando detalle URDIMBRE:', error);
+  } finally {
+    cargandoUrdimbre.value = false;
+  }
+};
+
 // Cambiar sección del modal
 const cambiarSeccion = async (seccion) => {
   seccionActiva.value = seccion;
+  // Resetear vista detalle partida al cambiar sección
+  vistaDetallePartida.value = false;
+  partidaSeleccionada.value = null;
+  datosDetallePartida.value = [];
+  
+  if (seccion === 'urdimbre' && datosUrdimbre.value.length === 0) {
+    await cargarDetalleUrdimbre(roladaSeleccionada.value);
+  }
   if (seccion === 'tecelagem' && datosTecelagem.value.length === 0) {
     await cargarDetalleTecelagem(roladaSeleccionada.value);
+  }
+  if (seccion === 'calidad' && datosCalidad.value.length === 0) {
+    await cargarDetalleCalidad(roladaSeleccionada.value);
   }
 };
 
@@ -690,12 +1255,19 @@ const navegarRolada = async (direccion) => {
   if (nuevoIndice >= 0 && nuevoIndice < datos.value.length) {
     indiceRoladaActual.value = nuevoIndice;
     roladaSeleccionada.value = datos.value[nuevoIndice].ROLADA;
-    // Limpiar datos de tecelagem para recargar si cambia de rolada
+    // Limpiar datos para recargar si cambia de rolada
+    datosUrdimbre.value = [];
     datosTecelagem.value = [];
-    if (seccionActiva.value === 'indigo') {
+    datosCalidad.value = [];
+    vistaDetallePartida.value = false;
+    if (seccionActiva.value === 'urdimbre') {
+      await cargarDetalleUrdimbre(roladaSeleccionada.value);
+    } else if (seccionActiva.value === 'indigo') {
       await cargarDetalleRolada(roladaSeleccionada.value);
-    } else {
+    } else if (seccionActiva.value === 'tecelagem') {
       await cargarDetalleTecelagem(roladaSeleccionada.value);
+    } else {
+      await cargarDetalleCalidad(roladaSeleccionada.value);
     }
   }
 };
@@ -705,12 +1277,31 @@ const cerrarModal = () => {
   modalVisible.value = false;
   datosDetalle.value = [];
   datosTecelagem.value = [];
+  datosCalidad.value = [];
+  datosUrdimbre.value = [];
   seccionActiva.value = 'indigo';
+  // Resetear vista de detalle partida
+  vistaDetallePartida.value = false;
+  partidaSeleccionada.value = null;
+  datosDetallePartida.value = [];
 };
 
 // Copiar modal como imagen
 const copiarModalComoImagen = async () => {
-  if (!modalTableRef.value || datosDetalleAgrupados.value.length === 0) return;
+  // Validar datos según la sección activa
+  if (seccionActiva.value === 'urdimbre') {
+    if (!modalTableUrdimbreRef.value || datosUrdimbre.value.length === 0) return;
+  } else if (seccionActiva.value === 'indigo') {
+    if (!modalTableRef.value || datosDetalleAgrupados.value.length === 0) return;
+  } else if (seccionActiva.value === 'tecelagem') {
+    if (vistaDetallePartida.value) {
+      if (datosDetallePartida.value.length === 0) return;
+    } else {
+      if (!modalTableTecelagemRef.value || datosTecelagem.value.length === 0) return;
+    }
+  } else {
+    if (datosCalidad.value.length === 0) return;
+  }
   
   copiandoModal.value = true;
   try {
@@ -721,7 +1312,8 @@ const copiarModalComoImagen = async () => {
     
     // Encabezado con logo
     const headerContainer = document.createElement('div');
-    headerContainer.style.cssText = 'display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #1e40af;';
+    const borderColor = seccionActiva.value === 'urdimbre' ? '#d97706' : seccionActiva.value === 'indigo' ? '#1e40af' : '#9333ea';
+    headerContainer.style.cssText = `display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid ${borderColor};`;
     
     // Logo
     const logo = document.createElement('img');
@@ -731,9 +1323,20 @@ const copiarModalComoImagen = async () => {
     
     // Título
     const titulo = document.createElement('div');
+    let seccionNombre = seccionActiva.value === 'urdimbre' ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'ÍNDIGO' : 'TEJEDURÍA';
+    let cantidadDatos = seccionActiva.value === 'urdimbre' ? datosUrdimbre.value.length : seccionActiva.value === 'indigo' ? datosDetalleAgrupados.value.length : datosTecelagem.value.length;
+    let subtitulo = `${cantidadDatos} partidas`;
+    
+    // Si estamos en detalle de partida de Tejeduría
+    if (seccionActiva.value === 'tecelagem' && vistaDetallePartida.value) {
+      cantidadDatos = datosDetallePartida.value.length;
+      const partida = partidaSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
+      subtitulo = `Partida ${partida} - ${cantidadDatos} turnos | Art: ${partidaSeleccionada.value?.ARTIGO || ''} | Telar: ${partidaSeleccionada.value?.MAQUINA ? parseInt(partidaSeleccionada.value.MAQUINA.slice(-3)) : ''}`;
+    }
+    
     titulo.innerHTML = `
-      <div style="font-size: 16px; font-weight: 600; color: #1e293b;">Detalle ÍNDIGO - Rolada ${roladaSeleccionada.value}</div>
-      <div style="font-size: 12px; color: #64748b;">${datosDetalleAgrupados.value.length} partidas</div>
+      <div style="font-size: 16px; font-weight: 600; color: #1e293b;">Detalle ${seccionNombre} - Rolada ${roladaSeleccionada.value}</div>
+      <div style="font-size: 12px; color: #64748b;">${subtitulo}</div>
     `;
     headerContainer.appendChild(titulo);
     tempContainer.appendChild(headerContainer);
@@ -744,70 +1347,240 @@ const copiarModalComoImagen = async () => {
     
     // Thead
     const thead = document.createElement('thead');
-    thead.innerHTML = `
-      <tr style="background: #f8fafc; font-size: 11px; color: #475569;">
-        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Partida</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Inicio</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Inicio</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Final</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Final</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Turno</th>
-        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Base</th>
-        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Color</th>
-        <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Veloc.</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">S</th>
-        <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">R10³</th>
-        <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas</th>
-        <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">CV</th>
-        <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Operador</th>
-      </tr>
-    `;
+    if (seccionActiva.value === 'urdimbre') {
+      thead.innerHTML = `
+        <tr style="background: #fffbeb; font-size: 11px; color: #475569;">
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Partida</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Inicio</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Inicio</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Final</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Final</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Artículo</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Vel.</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Puntas</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Operador</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Lote</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Maq.</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Base</th>
+        </tr>
+      `;
+    } else if (seccionActiva.value === 'indigo') {
+      thead.innerHTML = `
+        <tr style="background: #f8fafc; font-size: 11px; color: #475569;">
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Partida</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Inicio</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Inicio</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Final</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Hora<br>Final</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Turno</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Base</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Color</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Veloc.</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">S</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">R10³</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">CV</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Operador</th>
+        </tr>
+      `;
+    } else if (seccionActiva.value === 'tecelagem' && vistaDetallePartida.value) {
+      // Encabezados para detalle de partida de Tejeduría
+      thead.innerHTML = `
+        <tr style="background: #faf5ff; font-size: 11px; color: #475569;">
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Tur</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Partida</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros<br>Crudos</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros<br>Termin.</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros<br>Acumul.</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Paradas<br>Trama</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Paradas<br>Urdimbre</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Total<br>Paradas</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Eficiencia<br>%</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas<br>TRAMA 10⁵</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas<br>URDIDO 10⁵</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">RPM</th>
+        </tr>
+      `;
+    } else {
+      thead.innerHTML = `
+        <tr style="background: #faf5ff; font-size: 11px; color: #475569;">
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Partida</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Inicial</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Fecha<br>Final</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Telar</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Eficiencia<br>%</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas<br>TRA 10⁵</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Roturas<br>URD 10⁵</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Artículo</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Color</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Nombre</th>
+          <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Trama</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Pasadas</th>
+          <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">RPM</th>
+        </tr>
+      `;
+    }
     table.appendChild(thead);
     
     // Tbody
     const tbody = document.createElement('tbody');
-    datosDetalleAgrupados.value.forEach((item) => {
-      const r103 = (item.RUPTURAS && item.METRAGEM) ? ((item.RUPTURAS * 1000) / item.METRAGEM).toFixed(1) : '';
-      const tr = document.createElement('tr');
-      tr.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
-      tr.innerHTML = `
-        <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : ''}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_INICIO || ''}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_INICIO || ''}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_FINAL || ''}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_FINAL || ''}</td>
-        <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #2563eb;">${item.TURNO || ''}</td>
-        <td style="padding: 10px 12px; color: #334155;">${item.ARTIGO ? item.ARTIGO.substring(0, 10) : ''}</td>
-        <td style="padding: 10px 12px; color: #475569;">${item.COR || ''}</td>
-        <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.VELOC)}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.S || ''}</td>
-        <td style="padding: 10px 12px; text-align: right; color: #9333ea;">${r103}</td>
-        <td style="padding: 10px 12px; text-align: right; color: #dc2626;">${item.RUPTURAS || ''}</td>
-        <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.CAVALOS)}</td>
-        <td style="padding: 10px 12px; color: #475569;">${item.NM_OPERADOR || ''}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+    if (seccionActiva.value === 'urdimbre') {
+      datosUrdimbre.value.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
+        tr.innerHTML = `
+          <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_INICIO || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_INICIO || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_FINAL || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_FINAL || ''}</td>
+          <td style="padding: 10px 12px; color: #334155;">${item.ARTIGO || ''}</td>
+          <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.VELOC)}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #d97706;">${item.NUM_FIOS || ''}</td>
+          <td style="padding: 10px 12px; color: #475569;">${item.NM_OPERADOR || ''}</td>
+          <td style="padding: 10px 12px; color: #475569;">${item.LOTE_FIACAO || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.MAQ_FIACAO || ''}</td>
+          <td style="padding: 10px 12px; color: #334155;">${item.BASE_URDUME || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else if (seccionActiva.value === 'indigo') {
+      datosDetalleAgrupados.value.forEach((item) => {
+        const r103 = (item.RUPTURAS && item.METRAGEM) ? ((item.RUPTURAS * 1000) / item.METRAGEM).toFixed(1) : '';
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
+        tr.innerHTML = `
+          <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_INICIO || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_INICIO || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${item.DT_FINAL || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.HORA_FINAL || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #2563eb;">${item.TURNO || ''}</td>
+          <td style="padding: 10px 12px; color: #334155;">${item.ARTIGO ? item.ARTIGO.substring(0, 10) : ''}</td>
+          <td style="padding: 10px 12px; color: #475569;">${item.COR || ''}</td>
+          <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.VELOC)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.S || ''}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #9333ea;">${r103}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #dc2626;">${item.RUPTURAS || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.CAVALOS)}</td>
+          <td style="padding: 10px 12px; color: #475569;">${item.NM_OPERADOR || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else if (seccionActiva.value === 'tecelagem' && vistaDetallePartida.value) {
+      // Detalle de partida de Tejeduría
+      let metrosAcum = 0;
+      datosDetallePartida.value.forEach((item) => {
+        metrosAcum += parseFloat(item.METRAGEM) || 0;
+        const totalParadas = (parseInt(item.PARADA_TRAMA) || 0) + (parseInt(item.PARADA_URDUME) || 0);
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
+        tr.innerHTML = `
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatFechaDetalle(item.DT_BASE_PRODUCAO)}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #1e293b;">${item.TURNO || ''}</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : ''}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
+          <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(metrosAcum, 0)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.PARADA_TRAMA || 0}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.PARADA_URDUME || 0}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 500; color: #334155;">${totalParadas}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #16a34a;">${formatNumberModal(item.EFICIENCIA)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #ea580c;">${formatNumberModal(item.ROTURAS_TRA_105)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #dc2626;">${formatNumberModal(item.ROTURAS_URD_105)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #334155;">${formatNumber(item.RPM, 0)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      datosTecelagem.value.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
+        tr.innerHTML = `
+          <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">${item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${formatFechaTecelagem(item.FECHA_INICIAL)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #64748b; font-size: 11px;">${formatFechaTecelagem(item.FECHA_FINAL)}</td>
+          <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(item.METRAGEM, 2)}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #9333ea;">${item.MAQUINA ? parseInt(item.MAQUINA.slice(-3)) : ''}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #16a34a;">${formatNumberModal(item.EFICIENCIA)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #ea580c;">${formatNumberModal(item.ROTURAS_TRA_105)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #dc2626;">${formatNumberModal(item.ROTURAS_URD_105)}</td>
+          <td style="padding: 10px 12px; color: #334155;">${item.ARTIGO || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.COR || ''}</td>
+          <td style="padding: 10px 12px; color: #475569;">${item.NM_MERCADO || ''}</td>
+          <td style="padding: 10px 12px; color: #475569;">${item.TRAMA || ''}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #475569;">${formatNumberModal(item.PASADAS)}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #334155;">${formatNumber(item.RPM, 0)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
     table.appendChild(tbody);
     
     // Tfoot
     const tfoot = document.createElement('tfoot');
-    const r103Total = totalesDetalle.value.metros > 0 ? ((totalesDetalle.value.roturas * 1000) / totalesDetalle.value.metros).toFixed(1) : '';
-    tfoot.innerHTML = `
-      <tr style="background: #f1f5f9; font-weight: 600; color: #334155;">
-        <td style="padding: 12px; border-top: 2px solid #cbd5e1;">TOTAL</td>
-        <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="7"></td>
-        <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesDetalle.value.metros, 0)}</td>
-        <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
-        <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
-        <td style="padding: 12px; text-align: right; color: #7c3aed; border-top: 2px solid #cbd5e1;">${r103Total}</td>
-        <td style="padding: 12px; text-align: right; color: #b91c1c; border-top: 2px solid #cbd5e1;">${totalesDetalle.value.roturas}</td>
-        <td style="padding: 12px; text-align: center; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesDetalle.value.cv)}</td>
-        <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
-      </tr>
-    `;
+    if (seccionActiva.value === 'urdimbre') {
+      tfoot.innerHTML = `
+        <tr style="background: #fef3c7; font-weight: 600; color: #334155;">
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;">TOTAL</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="5"></td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesUrdimbre.value.metros, 0)}</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="6"></td>
+        </tr>
+      `;
+    } else if (seccionActiva.value === 'indigo') {
+      const r103Total = totalesDetalle.value.metros > 0 ? ((totalesDetalle.value.roturas * 1000) / totalesDetalle.value.metros).toFixed(1) : '';
+      tfoot.innerHTML = `
+        <tr style="background: #f1f5f9; font-weight: 600; color: #334155;">
+            <td style="padding: 12px; border-top: 2px solid #cbd5e1;">TOTAL</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="7"></td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesDetalle.value.metros, 0)}</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+          <td style="padding: 12px; text-align: right; color: #7c3aed; border-top: 2px solid #cbd5e1;">${r103Total}</td>
+          <td style="padding: 12px; text-align: right; color: #b91c1c; border-top: 2px solid #cbd5e1;">${totalesDetalle.value.roturas}</td>
+          <td style="padding: 12px; text-align: center; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesDetalle.value.cv)}</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+        </tr>
+      `;
+    } else if (seccionActiva.value === 'tecelagem' && vistaDetallePartida.value) {
+      // Totales para detalle de partida de Tejeduría
+      tfoot.innerHTML = `
+        <tr style="background: #faf5ff; font-weight: 600; color: #334155;">
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="3">TOTAL</td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesDetallePartida.value.metros, 0)}</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+          <td style="padding: 12px; text-align: center; border-top: 2px solid #cbd5e1;">${totalesDetallePartida.value.paradasTrama}</td>
+          <td style="padding: 12px; text-align: center; border-top: 2px solid #cbd5e1;">${totalesDetallePartida.value.paradasUrdumbre}</td>
+          <td style="padding: 12px; text-align: center; border-top: 2px solid #cbd5e1;">${totalesDetallePartida.value.totalParadas}</td>
+          <td style="padding: 12px; text-align: right; color: #15803d; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesDetallePartida.value.eficiencia)}</td>
+          <td style="padding: 12px; text-align: right; color: #c2410c; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesDetallePartida.value.roturasTra)}</td>
+          <td style="padding: 12px; text-align: right; color: #b91c1c; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesDetallePartida.value.roturasUrd)}</td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesDetallePartida.value.rpm, 0)}</td>
+        </tr>
+      `;
+    } else {
+      tfoot.innerHTML = `
+        <tr style="background: #faf5ff; font-weight: 600; color: #334155;">
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="3">TOTAL</td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesTecelagem.value.metros, 2)}</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;"></td>
+          <td style="padding: 12px; text-align: right; color: #15803d; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesTecelagem.value.eficiencia)}</td>
+          <td style="padding: 12px; text-align: right; color: #c2410c; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesTecelagem.value.roturasTra)}</td>
+          <td style="padding: 12px; text-align: right; color: #b91c1c; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesTecelagem.value.roturasUrd)}</td>
+          <td style="padding: 12px; border-top: 2px solid #cbd5e1;" colspan="4"></td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumberModal(totalesTecelagem.value.pasadas)}</td>
+          <td style="padding: 12px; text-align: right; border-top: 2px solid #cbd5e1;">${formatNumber(totalesTecelagem.value.rpm, 0)}</td>
+        </tr>
+      `;
+    }
     table.appendChild(tfoot);
     
     tempContainer.appendChild(table);
@@ -863,14 +1636,42 @@ const copiarModalComoImagen = async () => {
 
 // Exportar modal a Excel
 const exportarModalAExcel = async () => {
-  if (datosDetalleAgrupados.value.length === 0) return;
+  // Determinar qué datos usar según la vista actual
+  let datosActivos;
+  let esDetallePartida = false;
+  let esUrdimbre = false;
+  
+  if (seccionActiva.value === 'urdimbre') {
+    datosActivos = datosUrdimbre.value;
+    esUrdimbre = true;
+  } else if (seccionActiva.value === 'indigo') {
+    datosActivos = datosDetalleAgrupados.value;
+  } else if (seccionActiva.value === 'tecelagem' && vistaDetallePartida.value) {
+    datosActivos = datosDetallePartida.value;
+    esDetallePartida = true;
+  } else {
+    datosActivos = datosTecelagem.value;
+  }
+  
+  if (datosActivos.length === 0) return;
   
   try {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(`Rolada ${roladaSeleccionada.value}`);
+    let seccionNombre = esUrdimbre ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'INDIGO' : 'TEJEDURIA';
+    if (esDetallePartida) {
+      const partida = partidaSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
+      seccionNombre = `TEJ_Partida_${partida}`;
+    }
+    const worksheet = workbook.addWorksheet(`Rolada_${roladaSeleccionada.value}_${seccionNombre}`);
     
     // Colores
-    const colors = {
+    const colors = esUrdimbre ? {
+      headerBg: 'FFFFFBEB',
+      headerText: '1e293b',
+      border: 'FFcbd5e1',
+      totalsBg: 'FFFEF3C7',
+      amber: 'FFd97706'
+    } : seccionActiva.value === 'indigo' ? {
       headerBg: 'FFF8FAFC',
       headerText: '1e293b',
       border: 'FFcbd5e1',
@@ -878,122 +1679,441 @@ const exportarModalAExcel = async () => {
       purple: 'FF9333ea',
       red: 'FFdc2626',
       blue: 'FF2563eb'
+    } : {
+      headerBg: 'FFFAF5FF',
+      headerText: '1e293b',
+      border: 'FFcbd5e1',
+      totalsBg: 'FFFAF5FF',
+      purple: 'FF9333ea',
+      red: 'FFdc2626',
+      green: 'FF16a34a',
+      orange: 'FFea580c'
     };
     
     // Título
-    worksheet.mergeCells('A1:O1');
-    worksheet.getCell('A1').value = `Detalle ÍNDIGO - Rolada ${roladaSeleccionada.value}`;
+    const lastCol = esUrdimbre ? 'M' : seccionActiva.value === 'indigo' ? 'O' : (esDetallePartida ? 'M' : 'N');
+    worksheet.mergeCells(`A1:${lastCol}1`);
+    const seccionTitulo = esUrdimbre ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'ÍNDIGO' : 'TEJEDURÍA';
+    worksheet.getCell('A1').value = `Detalle ${seccionTitulo} - Rolada ${roladaSeleccionada.value}`;
     worksheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF1e293b' } };
     worksheet.getCell('A1').alignment = { horizontal: 'left', vertical: 'middle' };
     worksheet.getRow(1).height = 24;
     
     // Subtítulo
-    worksheet.mergeCells('A2:O2');
-    worksheet.getCell('A2').value = `${datosDetalleAgrupados.value.length} partidas`;
+    worksheet.mergeCells(`A2:${lastCol}2`);
+    let subtituloExcel = `${datosActivos.length} partidas`;
+    if (esDetallePartida) {
+      const partida = partidaSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
+      subtituloExcel = `Partida ${partida} - ${datosActivos.length} turnos | Art: ${partidaSeleccionada.value?.ARTIGO || ''} | Telar: ${partidaSeleccionada.value?.MAQUINA ? parseInt(partidaSeleccionada.value.MAQUINA.slice(-3)) : ''}`;
+    }
+    worksheet.getCell('A2').value = subtituloExcel;
     worksheet.getCell('A2').font = { size: 10, color: { argb: 'FF64748b' } };
     worksheet.getRow(2).height = 18;
     
     // Encabezados
-    const headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Turno', 'Base', 'Color', 'Metros', 'Veloc.', 'S', 'R10³', 'Roturas', 'CV', 'Operador'];
+    let headers;
+    if (esUrdimbre) {
+      headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Artículo', 'Metros', 'Vel.', 'Puntas', 'Operador', 'Lote', 'Maq.', 'Base'];
+    } else if (seccionActiva.value === 'indigo') {
+      headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Turno', 'Base', 'Color', 'Metros', 'Veloc.', 'S', 'R10³', 'Roturas', 'CV', 'Operador'];
+    } else if (esDetallePartida) {
+      headers = ['Fecha', 'Tur', 'Partida', 'Metros Crudos', 'Metros Termin.', 'Metros Acumul.', 'Paradas Trama', 'Paradas Urdimbre', 'Total Paradas', 'Eficiencia %', 'Roturas TRAMA 10⁵', 'Roturas URDIDO 10⁵', 'RPM'];
+    } else {
+      headers = ['Partida', 'Fecha Inicial', 'Fecha Final', 'Metros', 'Telar', 'Eficiencia %', 'Roturas TRA 10⁵', 'Roturas URD 10⁵', 'Artículo', 'Color', 'Nombre', 'Trama', 'Pasadas', 'RPM'];
+    }
     const headerRow = worksheet.addRow(headers);
-    headerRow.height = 24;
+    headerRow.height = esUrdimbre ? 24 : seccionActiva.value === 'indigo' ? 24 : 30;
     headerRow.eachCell((cell, colNumber) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerBg } };
       cell.font = { bold: true, size: 10, color: { argb: 'FF475569' } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle',
+        wrapText: true  // Quebrar texto en los encabezados
+      };
       cell.border = {
         bottom: { style: 'medium', color: { argb: colors.border } }
       };
     });
     
     // Datos
-    datosDetalleAgrupados.value.forEach((item, idx) => {
-      const row = worksheet.addRow([
-        item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
-        item.DT_INICIO || '',
-        item.HORA_INICIO || '',
-        item.DT_FINAL || '',
-        item.HORA_FINAL || '',
-        item.TURNO || '',
-        item.ARTIGO ? item.ARTIGO.substring(0, 10) : '',
-        item.COR || '',
-        item.METRAGEM || 0,
-        item.VELOC || '',
-        item.S || '',
-        (item.RUPTURAS && item.METRAGEM) ? ((item.RUPTURAS * 1000) / item.METRAGEM).toFixed(1) : '',
-        item.RUPTURAS || 0,
-        item.CAVALOS || 0,
-        item.NM_OPERADOR || ''
-      ]);
-      
-      row.height = 22;
-      row.eachCell((cell, colNumber) => {
-        cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || colNumber === 7 || colNumber === 8 || colNumber === 15 ? 'left' : 'center' };
-        cell.font = { size: 10 };
-        cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+    if (esUrdimbre) {
+      datosUrdimbre.value.forEach((item, idx) => {
+        const row = worksheet.addRow([
+          item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+          item.DT_INICIO || '',
+          item.HORA_INICIO || '',
+          item.DT_FINAL || '',
+          item.HORA_FINAL || '',
+          item.ARTIGO || '',
+          item.METRAGEM || 0,
+          item.VELOC || '',
+          item.NUM_FIOS || '',
+          item.NM_OPERADOR || '',
+          item.LOTE_FIACAO || '',
+          item.MAQ_FIACAO || '',
+          item.BASE_URDUME || ''
+        ]);
         
-        // Colores especiales
-        if (colNumber === 6) cell.font = { size: 10, bold: true, color: { argb: colors.blue } }; // Turno
-        if (colNumber === 12) cell.font = { size: 10, color: { argb: colors.purple } }; // R10³
-        if (colNumber === 13) cell.font = { size: 10, color: { argb: colors.red } }; // Roturas
+        row.height = 22;
+        row.eachCell((cell, colNumber) => {
+          cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || colNumber === 6 || colNumber === 10 || colNumber === 11 || colNumber === 13 ? 'left' : 'center' };
+          cell.font = { size: 10 };
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+          
+          // Colores especiales
+          if (colNumber === 9) cell.font = { size: 10, bold: true, color: { argb: colors.amber } }; // Puntas
+        });
+        
+        // Formato numérico para Metros
+        row.getCell(7).numFmt = '#,##0';
+        row.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
       });
-      
-      // Formato numérico para Metros
-      row.getCell(9).numFmt = '#,##0';
-      row.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
-    });
+    } else if (seccionActiva.value === 'indigo') {
+      datosDetalleAgrupados.value.forEach((item, idx) => {
+        const row = worksheet.addRow([
+          item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+          item.DT_INICIO || '',
+          item.HORA_INICIO || '',
+          item.DT_FINAL || '',
+          item.HORA_FINAL || '',
+          item.TURNO || '',
+          item.ARTIGO ? item.ARTIGO.substring(0, 10) : '',
+          item.COR || '',
+          item.METRAGEM || 0,
+          item.VELOC || '',
+          item.S || '',
+          (item.RUPTURAS && item.METRAGEM) ? ((item.RUPTURAS * 1000) / item.METRAGEM).toFixed(1) : '',
+          item.RUPTURAS || 0,
+          item.CAVALOS || 0,
+          item.NM_OPERADOR || ''
+        ]);
+        
+        row.height = 22;
+        row.eachCell((cell, colNumber) => {
+          cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || colNumber === 7 || colNumber === 8 || colNumber === 15 ? 'left' : 'center' };
+          cell.font = { size: 10 };
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+          
+          // Colores especiales
+          if (colNumber === 6) cell.font = { size: 10, bold: true, color: { argb: colors.blue } }; // Turno
+          if (colNumber === 12) cell.font = { size: 10, color: { argb: colors.purple } }; // R10³
+          if (colNumber === 13) cell.font = { size: 10, color: { argb: colors.red } }; // Roturas
+        });
+        
+        // Formato numérico para Metros
+        row.getCell(9).numFmt = '#,##0';
+        row.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+      });
+    } else if (esDetallePartida) {
+      // Exportar detalle de partida de Tejeduría
+      let metrosAcum = 0;
+      datosDetallePartida.value.forEach((item, idx) => {
+        metrosAcum += parseFloat(item.METRAGEM) || 0;
+        const totalParadas = (parseInt(item.PARADA_TRAMA) || 0) + (parseInt(item.PARADA_URDUME) || 0);
+        
+        const row = worksheet.addRow([
+          formatFechaDetalle(item.DT_BASE_PRODUCAO),
+          item.TURNO || '',
+          item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+          item.METRAGEM || 0,
+          item.METRAGEM || 0,
+          metrosAcum,
+          item.PARADA_TRAMA || 0,
+          item.PARADA_URDUME || 0,
+          totalParadas,
+          item.EFICIENCIA || 0,
+          item.ROTURAS_TRA_105 || 0,
+          item.ROTURAS_URD_105 || 0,
+          item.RPM || 0
+        ]);
+        
+        row.height = 22;
+        row.eachCell((cell, colNumber) => {
+          cell.font = { size: 10 };
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          
+          // Colores especiales
+          if (colNumber === 10) cell.font = { size: 10, color: { argb: colors.green } }; // Eficiencia
+          if (colNumber === 11) cell.font = { size: 10, color: { argb: colors.orange } }; // Roturas TRA
+          if (colNumber === 12) cell.font = { size: 10, color: { argb: colors.red } }; // Roturas URD
+        });
+        
+        // Formato numérico
+        row.getCell(4).numFmt = '#,##0'; // Metros Crudos
+        row.getCell(5).numFmt = '#,##0'; // Metros Termin
+        row.getCell(6).numFmt = '#,##0'; // Metros Acumul
+        row.getCell(10).numFmt = '0.00'; // Eficiencia
+        row.getCell(11).numFmt = '0.00'; // Roturas TRA
+        row.getCell(12).numFmt = '0.00'; // Roturas URD
+        row.getCell(13).numFmt = '#,##0'; // RPM
+      });
+    } else {
+      datosTecelagem.value.forEach((item, idx) => {
+        const row = worksheet.addRow([
+          item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+          formatFechaTecelagem(item.FECHA_INICIAL),
+          formatFechaTecelagem(item.FECHA_FINAL),
+          item.METRAGEM || 0,
+          item.MAQUINA ? parseInt(item.MAQUINA.slice(-3)) : '',
+          item.EFICIENCIA || 0,
+          item.ROTURAS_TRA_105 || 0,
+          item.ROTURAS_URD_105 || 0,
+          item.ARTIGO || '',
+          item.COR || '',
+          item.NM_MERCADO || '',
+          item.TRAMA || '',
+          formatNumberModal(item.PASADAS),
+          item.RPM || 0
+        ]);
+        
+        row.height = 22;
+        row.eachCell((cell, colNumber) => {
+          cell.font = { size: 10 };
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+          cell.alignment = { vertical: 'middle' };
+          
+          // Alineación específica según especificaciones
+          // Izquierda: I(9-Artículo), K(11-Nombre), L(12-Trama)
+          if (colNumber === 9 || colNumber === 11 || colNumber === 12) {
+            cell.alignment = { ...cell.alignment, horizontal: 'left' };
+          } else {
+            // Centro: A,B,C,D,E,F,G,H,J,M,N (todas las demás)
+            cell.alignment = { ...cell.alignment, horizontal: 'center' };
+          }
+          
+          // Colores especiales
+          if (colNumber === 5) cell.font = { size: 10, bold: true, color: { argb: colors.purple } }; // Telar
+          if (colNumber === 6) cell.font = { size: 10, color: { argb: colors.green } }; // Eficiencia
+          if (colNumber === 7) cell.font = { size: 10, color: { argb: colors.orange } }; // Roturas TRA
+          if (colNumber === 8) cell.font = { size: 10, color: { argb: colors.red } }; // Roturas URD
+        });
+        
+        // Formato numérico
+        row.getCell(4).numFmt = '#,##0.00'; // Metros
+        row.getCell(6).numFmt = '0.00'; // Eficiencia
+        row.getCell(7).numFmt = '0.00'; // Roturas TRA
+        row.getCell(8).numFmt = '0.00'; // Roturas URD
+        // Pasadas ya viene formateado como texto desde formatNumberModal
+        row.getCell(14).numFmt = '#,##0'; // RPM
+      });
+    }
     
     // Fila de totales
-    const totalesRow = worksheet.addRow([
-      'TOTAL', '', '', '', '', '', '', '',
-      totalesDetalle.value.metros,
-      '', '',
-      totalesDetalle.value.metros > 0 ? ((totalesDetalle.value.roturas * 1000) / totalesDetalle.value.metros).toFixed(1) : '',
-      totalesDetalle.value.roturas,
-      totalesDetalle.value.cv,
-      ''
-    ]);
-    totalesRow.height = 26;
-    totalesRow.eachCell((cell, colNumber) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
-      cell.font = { bold: true, size: 10 };
-      cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      
-      if (colNumber === 12) cell.font = { bold: true, size: 10, color: { argb: colors.purple } };
-      if (colNumber === 13) cell.font = { bold: true, size: 10, color: { argb: colors.red } };
-    });
-    totalesRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    totalesRow.getCell(9).numFmt = '#,##0';
-    totalesRow.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+    let totalesRow;
+    if (esUrdimbre) {
+      totalesRow = worksheet.addRow([
+        'TOTAL', '', '', '', '', '',
+        totalesUrdimbre.value.metros,
+        '', '', '', '', '', ''
+      ]);
+      totalesRow.height = 26;
+      totalesRow.eachCell((cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+        cell.font = { bold: true, size: 10 };
+        cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+      totalesRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      totalesRow.getCell(7).numFmt = '#,##0';
+      totalesRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+    } else if (seccionActiva.value === 'indigo') {
+      totalesRow = worksheet.addRow([
+        'TOTAL', '', '', '', '', '', '', '',
+        totalesDetalle.value.metros,
+        '', '',
+        totalesDetalle.value.metros > 0 ? ((totalesDetalle.value.roturas * 1000) / totalesDetalle.value.metros).toFixed(1) : '',
+        totalesDetalle.value.roturas,
+        totalesDetalle.value.cv,
+        ''
+      ]);
+      totalesRow.height = 26;
+      totalesRow.eachCell((cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+        cell.font = { bold: true, size: 10 };
+        cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        
+        if (colNumber === 12) cell.font = { bold: true, size: 10, color: { argb: colors.purple } };
+        if (colNumber === 13) cell.font = { bold: true, size: 10, color: { argb: colors.red } };
+      });
+      totalesRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      totalesRow.getCell(9).numFmt = '#,##0';
+      totalesRow.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+    } else if (esDetallePartida) {
+      // Totales para detalle de partida de Tejeduría
+      totalesRow = worksheet.addRow([
+        'TOTAL',
+        '', '',
+        totalesDetallePartida.value.metros,
+        '',
+        '',
+        totalesDetallePartida.value.paradasTrama,
+        totalesDetallePartida.value.paradasUrdumbre,
+        totalesDetallePartida.value.totalParadas,
+        totalesDetallePartida.value.eficiencia,
+        totalesDetallePartida.value.roturasTra,
+        totalesDetallePartida.value.roturasUrd,
+        totalesDetallePartida.value.rpm
+      ]);
+      totalesRow.height = 26;
+      totalesRow.eachCell((cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+        cell.font = { bold: true, size: 10 };
+        cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        
+        if (colNumber === 10) cell.font = { bold: true, size: 10, color: { argb: colors.green } };
+        if (colNumber === 11) cell.font = { bold: true, size: 10, color: { argb: colors.orange } };
+        if (colNumber === 12) cell.font = { bold: true, size: 10, color: { argb: colors.red } };
+      });
+      totalesRow.getCell(4).numFmt = '#,##0';
+      totalesRow.getCell(10).numFmt = '0.00';
+      totalesRow.getCell(11).numFmt = '0.00';
+      totalesRow.getCell(12).numFmt = '0.00';
+      totalesRow.getCell(13).numFmt = '#,##0';
+    } else {
+      totalesRow = worksheet.addRow([
+        'TOTAL',
+        '', '',
+        totalesTecelagem.value.metros,
+        '',
+        totalesTecelagem.value.eficiencia,
+        totalesTecelagem.value.roturasTra,
+        totalesTecelagem.value.roturasUrd,
+        '', '', '', '',
+        formatNumberModal(totalesTecelagem.value.pasadas),
+        totalesTecelagem.value.rpm
+      ]);
+      totalesRow.height = 26;
+      totalesRow.eachCell((cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+        cell.font = { bold: true, size: 10 };
+        cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+        cell.alignment = { vertical: 'middle' };
+        
+        // Aplicar la misma alineación que las filas de datos
+        // Izquierda: I(9-Artículo), K(11-Nombre), L(12-Trama)
+        if (colNumber === 9 || colNumber === 11 || colNumber === 12) {
+          cell.alignment = { ...cell.alignment, horizontal: 'left' };
+        } else {
+          // Centro: todas las demás
+          cell.alignment = { ...cell.alignment, horizontal: 'center' };
+        }
+        
+        if (colNumber === 6) cell.font = { bold: true, size: 10, color: { argb: colors.green } };
+        if (colNumber === 7) cell.font = { bold: true, size: 10, color: { argb: colors.orange } };
+        if (colNumber === 8) cell.font = { bold: true, size: 10, color: { argb: colors.red } };
+      });
+      totalesRow.getCell(4).numFmt = '#,##0.00';
+      totalesRow.getCell(6).numFmt = '0.00';
+      totalesRow.getCell(7).numFmt = '0.00';
+      totalesRow.getCell(8).numFmt = '0.00';
+      totalesRow.getCell(14).numFmt = '#,##0';
+    }
     
     // Anchos de columna
-    worksheet.columns = [
-      { width: 10 }, // Partida
-      { width: 12 }, // Fecha Inicio
-      { width: 10 }, // Hora Inicio
-      { width: 12 }, // Fecha Final
-      { width: 10 }, // Hora Final
-      { width: 7 },  // Turno
-      { width: 12 }, // Base
-      { width: 8 },  // Color
-      { width: 10 }, // Metros
-      { width: 8 },  // Veloc
-      { width: 5 },  // S
-      { width: 8 },  // R10³
-      { width: 9 },  // Roturas
-      { width: 6 },  // CV
-      { width: 30 }  // Operador
-    ];
+    if (esUrdimbre) {
+      worksheet.columns = [
+        { width: 10 },  // Partida
+        { width: 12 },  // Fecha Inicio
+        { width: 10 },  // Hora Inicio
+        { width: 12 },  // Fecha Final
+        { width: 10 },  // Hora Final
+        { width: 12 },  // Artigo
+        { width: 10 },  // Metragem
+        { width: 8 },   // Veloc
+        { width: 9 },   // Num Fios
+        { width: 20 },  // Operador
+        { width: 12 },  // Lote Fiação
+        { width: 12 },  // Maq Fiação
+        { width: 12 }   // Base Urdume
+      ];
+    } else if (seccionActiva.value === 'indigo') {
+      worksheet.columns = [
+        { width: 10 }, // Partida
+        { width: 12 }, // Fecha Inicio
+        { width: 10 }, // Hora Inicio
+        { width: 12 }, // Fecha Final
+        { width: 10 }, // Hora Final
+        { width: 7 },  // Turno
+        { width: 12 }, // Base
+        { width: 8 },  // Color
+        { width: 10 }, // Metros
+        { width: 8 },  // Veloc
+        { width: 5 },  // S
+        { width: 8 },  // R10³
+        { width: 9 },  // Roturas
+        { width: 6 },  // CV
+        { width: 30 }  // Operador
+      ];
+    } else if (esDetallePartida) {
+      worksheet.columns = [
+        { width: 12 },    // A - Fecha
+        { width: 5 },     // B - Tur
+        { width: 8 },     // C - Partida
+        { width: 10 },    // D - Metros Crudos
+        { width: 10 },    // E - Metros Termin.
+        { width: 10 },    // F - Metros Acumul.
+        { width: 8 },     // G - Paradas Trama
+        { width: 9 },     // H - Paradas Urdimbre
+        { width: 9 },     // I - Total Paradas
+        { width: 9 },     // J - Eficiencia %
+        { width: 11 },    // K - Roturas TRAMA 10⁵
+        { width: 11 },    // L - Roturas URDIDO 10⁵
+        { width: 6 }      // M - RPM
+      ];
+    } else {
+      worksheet.columns = [
+        { width: 7.86 },  // A - Partida
+        { width: 13 },    // B - Fecha Inicial
+        { width: 13.14 }, // C - Fecha Final
+        { width: 8.57 },  // D - Metros
+        { width: 4.43 },  // E - Telar
+        { width: 7.29 },  // F - Eficiencia %
+        { width: 7.29 },  // G - Roturas TRA 10⁵
+        { width: 7.29 },  // H - Roturas URD 10⁵
+        { width: 10.29 }, // I - Artículo
+        { width: 5 },     // J - Color
+        { width: 18.57 }, // K - Nombre
+        { width: 28 },    // L - Trama
+        { width: 6.14 },  // M - Pasadas
+        { width: 4 }      // N - RPM
+      ];
+    }
+    
+    // Configuración de impresión
+    worksheet.pageSetup = {
+      orientation: 'landscape',  // Orientación apaisada
+      fitToPage: true,           // Ajustar a página
+      fitToWidth: 1,             // Ajustar ancho a 1 página
+      fitToHeight: 0,            // Alto automático (múltiples páginas si es necesario)
+      margins: {
+        left: 0.196850394,       // 5mm en pulgadas
+        right: 0.196850394,      // 5mm en pulgadas
+        top: 0.196850394,        // 5mm en pulgadas
+        bottom: 0.393700787,     // 10mm en pulgadas
+        header: 0.3,
+        footer: 0.3
+      }
+    };
+    
+    // Repetir encabezados en todas las páginas (fila 3 contiene los encabezados)
+    worksheet.pageSetup.printTitlesRow = '3:3';
     
     // Generar archivo
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const ahora = new Date();
+    const fecha = ahora.toISOString().slice(0, 10).replace(/-/g, '');
+    const horas = String(ahora.getHours()).padStart(2, '0');
+    const minutos = String(ahora.getMinutes()).padStart(2, '0');
+    const nombreSeccion = seccionActiva.value === 'indigo' ? 'INDIGO' : 'TEJEDURIA';
     link.href = url;
-    link.download = `Detalle_Rolada_${roladaSeleccionada.value}_${fecha}.xlsx`;
+    link.download = `Detalle_${nombreSeccion}_Rolada_${roladaSeleccionada.value}_${fecha}_${horas}_${minutos}.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
     
