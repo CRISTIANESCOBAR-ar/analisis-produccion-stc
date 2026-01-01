@@ -324,67 +324,69 @@
         
         <!-- SECCIÓN URDIMBRE -->
         <template v-else-if="seccionActiva === 'urdimbre'">
-          <div v-if="datosUrdimbre.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableUrdimbreRef">
+          <div v-if="datosUrdimbre.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg shadow-sm border border-slate-300" ref="modalTableUrdimbreRef">
             <table class="w-full text-[13px] text-slate-700 border-separate border-spacing-0">
               <thead class="sticky top-0 z-10">
-                <tr class="text-slate-600 text-[11px] bg-amber-50">
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Partida</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Inicio</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Hora<br>Inicio</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Fecha<br>Final</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Hora<br>Final</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Artículo</th>
-                  <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Vel.</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Puntas</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Hil.</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Urd.</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Ope.</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Total</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>10⁶</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Operador</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Lote</th>
-                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Maq.</th>
-                  <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Base</th>
+                <tr class="text-slate-600 text-[11px] bg-slate-50">
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300">Partida</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Fecha<br>Inicio</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Hora<br>Inicio</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Fecha<br>Final</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Hora<br>Final</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Artículo</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Metros</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Vel.</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Puntas</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Rot<br>Hil.</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Rot<br>Urd.</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Rot<br>Ope.</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Rot<br>Total</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Rot<br>10⁶</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Operador</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Lote</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Maq.</th>
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300">Base</th>
                 </tr>
               </thead>
               <tbody>
                 <tr 
                   v-for="(item, index) in datosUrdimbre" 
                   :key="index" 
-                  class="border-b border-slate-200 hover:bg-amber-50/50 transition-colors"
+                  class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors"
                 >
-                  <td class="px-3 py-2.5 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ item.DT_INICIO }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.HORA_INICIO }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-500 text-xs">{{ item.DT_FINAL }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ item.HORA_FINAL }}</td>
-                  <td class="px-3 py-2.5 text-slate-700">{{ item.ARTIGO }}</td>
-                  <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumberModal(item.VELOC) }}</td>
-                  <td class="px-3 py-2.5 text-center font-semibold text-amber-600">{{ item.NUM_FIOS }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatRotura(item.RUP_FIACAO) }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatRotura(item.RUP_URD) }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatRotura(item.RUP_OPER) }}</td>
-                  <td class="px-3 py-2.5 text-center font-medium text-red-600 tabular-nums">{{ formatRotura(item.RUPTURAS) }}</td>
-                  <td class="px-3 py-2.5 text-center text-purple-600 tabular-nums">{{ calcularRot106(item.RUPTURAS, item.METRAGEM, item.NUM_FIOS) }}</td>
-                  <td class="px-3 py-2.5 text-slate-600">{{ item.NM_OPERADOR }}</td>
-                  <td class="px-3 py-2.5 text-slate-600">{{ item.LOTE_FIACAO }}</td>
-                  <td class="px-3 py-2.5 text-center text-slate-600">{{ item.MAQ_FIACAO }}</td>
-                  <td class="px-3 py-2.5 text-slate-700">{{ item.BASE_URDUME }}</td>
+                  <td class="px-2 py-2.5 font-semibold text-slate-800 text-center bg-slate-50/50">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-500 text-xs border-r border-slate-200">{{ item.DT_INICIO }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ item.HORA_INICIO }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-500 text-xs border-r border-slate-200">{{ item.DT_FINAL }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ item.HORA_FINAL }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-700 border-r border-slate-200">{{ item.ARTIGO }}</td>
+                  <td class="px-2 py-2.5 text-center font-medium text-slate-700 tabular-nums border-r border-slate-200">{{ formatNumber(item.METRAGEM, 0) }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumberModal(item.VELOC) }}</td>
+                  <td class="px-2 py-2.5 text-center font-semibold text-amber-600 border-r border-slate-200">{{ item.NUM_FIOS }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatRotura(item.RUP_FIACAO) }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatRotura(item.RUP_URD) }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatRotura(item.RUP_OPER) }}</td>
+                  <td class="px-2 py-2.5 text-center font-medium text-red-600 tabular-nums border-r border-slate-200">{{ formatRotura(item.RUPTURAS) }}</td>
+                  <td class="px-2 py-2.5 text-center text-purple-600 tabular-nums border-r border-slate-200">{{ calcularRot106(item.RUPTURAS, item.METRAGEM, item.NUM_FIOS) }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 border-r border-slate-200">{{ item.NM_OPERADOR }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 border-r border-slate-200">{{ item.LOTE_FIACAO }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-600 border-r border-slate-200">{{ item.MAQ_FIACAO }}</td>
+                  <td class="px-2 py-2.5 text-center text-slate-700">{{ item.BASE_URDUME }}</td>
                 </tr>
               </tbody>
-              <tfoot class="sticky bottom-0 z-10 bg-amber-100">
+              <tfoot class="sticky bottom-0 z-10 bg-slate-100">
                 <tr class="font-semibold text-slate-700">
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300">TOTAL</td>
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="5"></td>
-                  <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesUrdimbre.metros, 0) }}</td>
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="2"></td>
-                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupFiacao }}</td>
-                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupUrd }}</td>
-                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupOper }}</td>
-                  <td class="px-3 py-3 text-center tabular-nums text-red-600 border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupturas }}</td>
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="5"></td>
+                  <td class="px-2 py-3 text-center border-t-2 border-t-slate-300">
+                    <span class="text-xs uppercase tracking-wide text-slate-500">TOTAL</span>
+                  </td>
+                  <td class="px-2 py-3 border-r border-slate-200 border-t-2 border-t-slate-300" colspan="5"></td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesUrdimbre.metros, 0) }}</td>
+                  <td class="px-2 py-3 border-r border-slate-200 border-t-2 border-t-slate-300" colspan="2"></td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupFiacao }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupUrd }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupOper }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums text-red-600 border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupturas }}</td>
+                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="5"></td>
                 </tr>
               </tfoot>
             </table>
@@ -680,74 +682,85 @@
 
         <!-- SECCIÓN CALIDAD -->
         <template v-else-if="seccionActiva === 'calidad'">
-          <div v-if="datosCalidad.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg border border-slate-300" ref="modalTableCalidadRef">
+          <div v-if="datosCalidad.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg shadow-sm border border-slate-300" ref="modalTableCalidadRef">
             <table class="w-full text-[12px] text-slate-700 border-separate border-spacing-0">
               <thead class="sticky top-0 z-10">
-                <tr class="text-slate-600 text-[10px] bg-teal-50">
-                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Partida</th>
-                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">S</th>
-                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">R</th>
-                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">Telar</th>
-                  <th class="px-2 py-1 font-medium text-center border-b border-b-slate-200 bg-teal-100" colspan="7">Metros</th>
-                  <th class="px-2 py-1 font-medium text-center border-b border-b-slate-200 bg-teal-100" colspan="6">Porcentaje</th>
-                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Artículo</th>
-                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">Color</th>
-                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Nombre</th>
-                  <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300" rowspan="2">Trama</th>
+                <tr class="text-slate-600 text-[10px] bg-slate-50">
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300" rowspan="2">Partida</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300" rowspan="2">S</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300" rowspan="2">R</th>
+                  <th class="px-2 py-2 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300" rowspan="2">Telar</th>
+                  <th class="px-2 py-1 font-medium text-center border-r-2 border-slate-300 border-b border-b-slate-200 bg-slate-100" colspan="7">Metros</th>
+                  <th class="px-2 py-1 font-medium text-center border-r-2 border-slate-300 border-b border-b-slate-200 bg-slate-100" colspan="6">Porcentaje</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300" rowspan="2">Artículo</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300" rowspan="2">Color</th>
+                  <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300" rowspan="2">Nombre</th>
+                  <th class="px-2 py-2 font-medium text-center border-b-2 border-b-slate-300" rowspan="2">Trama</th>
                 </tr>
-                <tr class="text-slate-600 text-[9px] bg-teal-50">
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">Total</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">1era</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>HIL</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>IND</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>TEJ</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>ACA</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">1era</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>HIL</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>IND</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>TEJ</th>
-                  <th class="px-1 py-1 font-medium text-right border-b-2 border-b-slate-300">2da<br>ACA</th>
+                <tr class="text-slate-600 text-[9px] bg-slate-50">
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Total</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">1era</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da<br>HIL</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da<br>IND</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da<br>TEJ</th>
+                  <th class="px-1 py-1 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">2da<br>ACA</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">1era</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da<br>HIL</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da<br>IND</th>
+                  <th class="px-1 py-1 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">2da<br>TEJ</th>
+                  <th class="px-1 py-1 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">2da<br>ACA</th>
                 </tr>
               </thead>
               <tbody>
                 <tr 
                   v-for="(item, index) in datosCalidadAgrupados" 
                   :key="index" 
-                  class="border-b border-slate-200 hover:bg-teal-50/50 transition-colors"
+                  class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors"
                 >
-                  <td class="px-2 py-2 font-semibold text-slate-800">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
-                  <td class="px-2 py-2 text-center font-medium" :class="item.ST_IND === '1' ? 'text-green-600' : 'text-amber-600'">{{ item.ST_IND === '1' ? 'P' : 'N' }}</td>
-                  <td class="px-2 py-2 text-center text-slate-600">{{ item.REPROCESSO ? item.REPROCESSO.charAt(0) : '' }}</td>
-                  <td class="px-2 py-2 text-center font-semibold text-teal-600">{{ item.TEAR }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-700">{{ formatNumber(item.METRAGEM_TOTAL, 0) }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-700">{{ formatNumber(item.METROS_1ERA, 0) }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-700">{{ item.METROS_2DA > 0 ? formatNumber(item.METROS_2DA, 0) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_HIL > 0 ? formatNumber(item.METROS_2DA_HIL, 0) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_IND > 0 ? formatNumber(item.METROS_2DA_IND, 0) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_TE > 0 ? formatNumber(item.METROS_2DA_TE, 0) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-600">{{ item.METROS_2DA_TEF > 0 ? formatNumber(item.METROS_2DA_TEF, 0) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-green-600">{{ formatNumberModal(calcularPorcentaje(item.METROS_1ERA, item.METRAGEM_TOTAL)) }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-amber-600">{{ item.METROS_2DA > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA, item.METRAGEM_TOTAL)) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_HIL > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_HIL, item.METRAGEM_TOTAL)) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_IND > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_IND, item.METRAGEM_TOTAL)) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_TE > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_TE, item.METRAGEM_TOTAL)) : '' }}</td>
-                  <td class="px-2 py-2 text-right tabular-nums text-slate-500">{{ item.METROS_2DA_TEF > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_TEF, item.METRAGEM_TOTAL)) : '' }}</td>
-                  <td class="px-2 py-2 text-slate-700">{{ item.ARTIGO }}</td>
-                  <td class="px-2 py-2 text-center text-slate-600">{{ item.COR }}</td>
-                  <td class="px-2 py-2 text-slate-600">{{ item.NM_MERCADO }}</td>
-                  <td class="px-2 py-2 text-slate-600">{{ item.TRAMA }}</td>
+                  <td class="px-2 py-2 font-semibold text-slate-800 text-center border-r border-slate-200 bg-slate-50/50">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
+                  <td class="px-2 py-2 text-center font-medium border-r border-slate-200" :class="item.ST_IND === '1' ? 'text-green-600' : 'text-amber-600'">{{ item.ST_IND === '1' ? 'P' : 'N' }}</td>
+                  <td class="px-2 py-2 text-center text-slate-600 border-r border-slate-200">{{ item.REPROCESSO ? item.REPROCESSO.charAt(0) : '' }}</td>
+                  <td class="px-2 py-2 text-center font-semibold text-teal-600 border-r-2 border-slate-300">{{ item.TEAR }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-700 border-r border-slate-200">{{ formatNumber(item.METRAGEM_TOTAL, 0) }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-700 border-r border-slate-200">{{ formatNumber(item.METROS_1ERA, 0) }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-700 border-r border-slate-200">{{ item.METROS_2DA > 0 ? formatNumber(item.METROS_2DA, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-600 border-r border-slate-200">{{ item.METROS_2DA_HIL > 0 ? formatNumber(item.METROS_2DA_HIL, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-600 border-r border-slate-200">{{ item.METROS_2DA_IND > 0 ? formatNumber(item.METROS_2DA_IND, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-600 border-r border-slate-200">{{ item.METROS_2DA_TE > 0 ? formatNumber(item.METROS_2DA_TE, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-600 border-r-2 border-slate-300">{{ item.METROS_2DA_TEF > 0 ? formatNumber(item.METROS_2DA_TEF, 0) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-green-600 border-r border-slate-200">{{ formatNumberModal(calcularPorcentaje(item.METROS_1ERA, item.METRAGEM_TOTAL)) }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-amber-600 border-r border-slate-200">{{ item.METROS_2DA > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-500 border-r border-slate-200">{{ item.METROS_2DA_HIL > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_HIL, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-500 border-r border-slate-200">{{ item.METROS_2DA_IND > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_IND, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-500 border-r border-slate-200">{{ item.METROS_2DA_TE > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_TE, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-center tabular-nums text-slate-500 border-r-2 border-slate-300">{{ item.METROS_2DA_TEF > 0 ? formatNumberModal(calcularPorcentaje(item.METROS_2DA_TEF, item.METRAGEM_TOTAL)) : '' }}</td>
+                  <td class="px-2 py-2 text-center text-slate-700 border-r border-slate-200">{{ item.ARTIGO }}</td>
+                  <td class="px-2 py-2 text-center text-slate-600 border-r border-slate-200">{{ item.COR }}</td>
+                  <td class="px-2 py-2 text-center text-slate-600 border-r border-slate-200">{{ item.NM_MERCADO }}</td>
+                  <td class="px-2 py-2 text-center text-slate-600">{{ item.TRAMA }}</td>
                 </tr>
               </tbody>
-              <tfoot class="sticky bottom-0 z-10 bg-teal-100">
+              <tfoot class="sticky bottom-0 z-10 bg-slate-100">
                 <tr class="font-semibold text-slate-700">
-                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="4">TOTAL</td>
-                  <td class="px-2 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesCalidad.metrosTotal, 0) }}</td>
-                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="6"></td>
-                  <td class="px-2 py-3 text-right text-green-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesCalidad.porcPrimera) }}</td>
-                  <td class="px-2 py-3 text-right text-amber-700 tabular-nums border-t-2 border-t-slate-300">{{ formatNumberModal(totalesCalidad.porcSegunda) }}</td>
-                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="8"></td>
+                  <td class="px-2 py-3 text-center border-r-2 border-slate-300 border-t-2 border-t-slate-300" colspan="4">
+                    <span class="text-xs uppercase tracking-wide text-slate-500">TOTAL</span>
+                  </td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesCalidad.metrosTotal, 0) }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesCalidad.metros1era, 0) }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.metros2da > 0 ? formatNumber(totalesCalidad.metros2da, 0) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.metros2daHil > 0 ? formatNumber(totalesCalidad.metros2daHil, 0) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.metros2daInd > 0 ? formatNumber(totalesCalidad.metros2daInd, 0) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.metros2daTe > 0 ? formatNumber(totalesCalidad.metros2daTe, 0) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums border-r-2 border-slate-300 border-t-2 border-t-slate-300">{{ totalesCalidad.metros2daTef > 0 ? formatNumber(totalesCalidad.metros2daTef, 0) : '' }}</td>
+                  <td class="px-2 py-3 text-center text-green-700 tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumberModal(totalesCalidad.porcPrimera) }}</td>
+                  <td class="px-2 py-3 text-center text-amber-700 tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumberModal(totalesCalidad.porcSegunda) }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums text-slate-500 border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.porc2daHil > 0 ? formatNumberModal(totalesCalidad.porc2daHil) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums text-slate-500 border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.porc2daInd > 0 ? formatNumberModal(totalesCalidad.porc2daInd) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums text-slate-500 border-r border-slate-200 border-t-2 border-t-slate-300">{{ totalesCalidad.porc2daTe > 0 ? formatNumberModal(totalesCalidad.porc2daTe) : '' }}</td>
+                  <td class="px-2 py-3 text-center tabular-nums text-slate-500 border-r-2 border-slate-300 border-t-2 border-t-slate-300">{{ totalesCalidad.porc2daTef > 0 ? formatNumberModal(totalesCalidad.porc2daTef) : '' }}</td>
+                  <td class="px-2 py-3 border-t-2 border-t-slate-300" colspan="4"></td>
                 </tr>
               </tfoot>
             </table>
@@ -1124,17 +1137,35 @@ const totalesCalidad = computed(() => {
   let metrosTotal = 0;
   let metros1era = 0;
   let metros2da = 0;
+  let metros2daHil = 0;
+  let metros2daInd = 0;
+  let metros2daTe = 0;
+  let metros2daTef = 0;
   
   datosCalidadAgrupados.value.forEach(item => {
     metrosTotal += item.METRAGEM_TOTAL || 0;
     metros1era += item.METROS_1ERA || 0;
     metros2da += item.METROS_2DA || 0;
+    metros2daHil += item.METROS_2DA_HIL || 0;
+    metros2daInd += item.METROS_2DA_IND || 0;
+    metros2daTe += item.METROS_2DA_TE || 0;
+    metros2daTef += item.METROS_2DA_TEF || 0;
   });
   
   return {
     metrosTotal,
+    metros1era,
+    metros2da,
+    metros2daHil,
+    metros2daInd,
+    metros2daTe,
+    metros2daTef,
     porcPrimera: metrosTotal > 0 ? (metros1era / metrosTotal) * 100 : 0,
-    porcSegunda: metrosTotal > 0 ? (metros2da / metrosTotal) * 100 : 0
+    porcSegunda: metrosTotal > 0 ? (metros2da / metrosTotal) * 100 : 0,
+    porc2daHil: metrosTotal > 0 ? (metros2daHil / metrosTotal) * 100 : 0,
+    porc2daInd: metrosTotal > 0 ? (metros2daInd / metrosTotal) * 100 : 0,
+    porc2daTe: metrosTotal > 0 ? (metros2daTe / metrosTotal) * 100 : 0,
+    porc2daTef: metrosTotal > 0 ? (metros2daTef / metrosTotal) * 100 : 0
   };
 });
 
