@@ -2870,9 +2870,13 @@ app.get('/api/consulta-rolada-urdimbre', async (req, res) => {
         CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) AS METRAGEM,
         CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) AS VELOC,
         CAST(NUM_FIOS AS INTEGER) AS NUM_FIOS,
+        CAST(REPLACE(REPLACE([RUP FIACAO], '.', ''), ',', '.') AS REAL) AS RUP_FIACAO,
+        CAST(REPLACE(REPLACE([RUP URD], '.', ''), ',', '.') AS REAL) AS RUP_URD,
+        CAST(REPLACE(REPLACE([RUP OPER], '.', ''), ',', '.') AS REAL) AS RUP_OPER,
+        CAST(REPLACE(REPLACE(RUPTURAS, '.', ''), ',', '.') AS REAL) AS RUPTURAS,
         [NM OPERADOR] AS NM_OPERADOR,
         [LOTE FIACAO] AS LOTE_FIACAO,
-        [MAQ FIACAO] AS MAQ_FIACAO,
+        [MAQ  FIACAO] AS MAQ_FIACAO,
         [BASE URDUME] AS BASE_URDUME
       FROM tb_PRODUCCION
       WHERE SELETOR = 'URDIDEIRA'

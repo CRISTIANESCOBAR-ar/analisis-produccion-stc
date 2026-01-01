@@ -337,6 +337,11 @@
                   <th class="px-3 py-2 font-medium text-right border-b-2 border-b-slate-300">Metros</th>
                   <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Vel.</th>
                   <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Puntas</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Hil.</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Urd.</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Ope.</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>Total</th>
+                  <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Rot<br>10⁶</th>
                   <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Operador</th>
                   <th class="px-3 py-2 font-medium text-left border-b-2 border-b-slate-300">Lote</th>
                   <th class="px-3 py-2 font-medium text-center border-b-2 border-b-slate-300">Maq.</th>
@@ -358,6 +363,11 @@
                   <td class="px-3 py-2.5 text-right font-medium text-slate-700 tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
                   <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumberModal(item.VELOC) }}</td>
                   <td class="px-3 py-2.5 text-center font-semibold text-amber-600">{{ item.NUM_FIOS }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatRotura(item.RUP_FIACAO) }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatRotura(item.RUP_URD) }}</td>
+                  <td class="px-3 py-2.5 text-center text-slate-600 tabular-nums">{{ formatRotura(item.RUP_OPER) }}</td>
+                  <td class="px-3 py-2.5 text-center font-medium text-red-600 tabular-nums">{{ formatRotura(item.RUPTURAS) }}</td>
+                  <td class="px-3 py-2.5 text-center text-purple-600 tabular-nums">{{ calcularRot106(item.RUPTURAS, item.METRAGEM, item.NUM_FIOS) }}</td>
                   <td class="px-3 py-2.5 text-slate-600">{{ item.NM_OPERADOR }}</td>
                   <td class="px-3 py-2.5 text-slate-600">{{ item.LOTE_FIACAO }}</td>
                   <td class="px-3 py-2.5 text-center text-slate-600">{{ item.MAQ_FIACAO }}</td>
@@ -369,7 +379,12 @@
                   <td class="px-3 py-3 border-t-2 border-t-slate-300">TOTAL</td>
                   <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="5"></td>
                   <td class="px-3 py-3 text-right tabular-nums border-t-2 border-t-slate-300">{{ formatNumber(totalesUrdimbre.metros, 0) }}</td>
-                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="6"></td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="2"></td>
+                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupFiacao }}</td>
+                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupUrd }}</td>
+                  <td class="px-3 py-3 text-center tabular-nums border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupOper }}</td>
+                  <td class="px-3 py-3 text-center tabular-nums text-red-600 border-t-2 border-t-slate-300">{{ totalesUrdimbre.rupturas }}</td>
+                  <td class="px-3 py-3 border-t-2 border-t-slate-300" colspan="5"></td>
                 </tr>
               </tfoot>
             </table>
@@ -851,6 +866,34 @@ const calcularR103 = (roturas, metros) => {
   }).format(valor);
 };
 
+// Formatear valores de rotura: mostrar 0 cuando es 0, '-' solo cuando es null/undefined/vacío
+const formatRotura = (valor) => {
+  if (valor === null || valor === undefined || valor === '') return '-';
+  const num = parseFloat(valor);
+  return isNaN(num) ? '-' : Math.round(num);
+};
+
+// Calcular Rot 10^6 para URDIDORA: (RUPTURAS * 1000000) / (METRAGEM * NUM_FIOS)
+const calcularRot106 = (rupturas, metros, numFios) => {
+  // Si rupturas es null, undefined o vacío, retornar '-'
+  if (rupturas === null || rupturas === undefined || rupturas === '') return '-';
+  const rup = parseFloat(rupturas) || 0;
+  const mts = parseFloat(metros) || 0;
+  const fios = parseFloat(numFios) || 0;
+  
+  // Si metros o numFios son 0, no se puede calcular
+  if (mts === 0 || fios === 0) return '-';
+  
+  // Si rupturas es 0, el resultado es 0
+  if (rup === 0) return '0,0';
+  
+  const valor = (rup * 1000000) / (mts * fios);
+  return new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  }).format(valor);
+};
+
 // Formatear fecha para TEJEDURÍA: "dd/mm/yy hh:mm"
 const formatFechaTecelagem = (fechaHora) => {
   if (!fechaHora) return '';
@@ -963,8 +1006,12 @@ const totalesDetalle = computed(() => {
 const totalesUrdimbre = computed(() => {
   return datosUrdimbre.value.reduce((acc, item) => {
     acc.metros += parseFloat(item.METRAGEM) || 0;
+    acc.rupFiacao += parseFloat(item.RUP_FIACAO) || 0;
+    acc.rupUrd += parseFloat(item.RUP_URD) || 0;
+    acc.rupOper += parseFloat(item.RUP_OPER) || 0;
+    acc.rupturas += parseFloat(item.RUPTURAS) || 0;
     return acc;
-  }, { metros: 0 });
+  }, { metros: 0, rupFiacao: 0, rupUrd: 0, rupOper: 0, rupturas: 0 });
 });
 
 // Totales del detalle TECELAGEM
@@ -1359,6 +1406,11 @@ const copiarModalComoImagen = async () => {
           <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Metros</th>
           <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Vel.</th>
           <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Puntas</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Rot<br>Hil.</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Rot<br>Urd.</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Rot<br>Ope.</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Rot<br>Total</th>
+          <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Rot<br>10⁶</th>
           <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Operador</th>
           <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Lote</th>
           <th style="padding: 8px 12px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 500;">Maq.</th>
@@ -1442,6 +1494,11 @@ const copiarModalComoImagen = async () => {
           <td style="padding: 10px 12px; text-align: right; font-weight: 500; color: #334155;">${formatNumber(item.METRAGEM, 0)}</td>
           <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatNumberModal(item.VELOC)}</td>
           <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #d97706;">${item.NUM_FIOS || ''}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatRotura(item.RUP_FIACAO)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatRotura(item.RUP_URD)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #475569;">${formatRotura(item.RUP_OPER)}</td>
+          <td style="padding: 10px 12px; text-align: center; font-weight: 500; color: #dc2626;">${formatRotura(item.RUPTURAS)}</td>
+          <td style="padding: 10px 12px; text-align: center; color: #9333ea;">${calcularRot106(item.RUPTURAS, item.METRAGEM, item.NUM_FIOS)}</td>
           <td style="padding: 10px 12px; color: #475569;">${item.NM_OPERADOR || ''}</td>
           <td style="padding: 10px 12px; color: #475569;">${item.LOTE_FIACAO || ''}</td>
           <td style="padding: 10px 12px; text-align: center; color: #475569;">${item.MAQ_FIACAO || ''}</td>
@@ -1713,7 +1770,7 @@ const exportarModalAExcel = async () => {
     // Encabezados
     let headers;
     if (esUrdimbre) {
-      headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Artículo', 'Metros', 'Vel.', 'Puntas', 'Operador', 'Lote', 'Maq.', 'Base'];
+      headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Artículo', 'Metros', 'Vel.', 'Puntas', 'Rot Hil.', 'Rot Urd.', 'Rot Ope.', 'Rot Total', 'Rot 10⁶', 'Operador', 'Lote', 'Maq.', 'Base'];
     } else if (seccionActiva.value === 'indigo') {
       headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Turno', 'Base', 'Color', 'Metros', 'Veloc.', 'S', 'R10³', 'Roturas', 'CV', 'Operador'];
     } else if (esDetallePartida) {
@@ -1739,6 +1796,12 @@ const exportarModalAExcel = async () => {
     // Datos
     if (esUrdimbre) {
       datosUrdimbre.value.forEach((item, idx) => {
+        // Calcular Rot 10^6 para Excel
+        let rot106Value = '-';
+        if (item.RUPTURAS && item.METRAGEM && item.NUM_FIOS && item.METRAGEM > 0 && item.NUM_FIOS > 0) {
+          rot106Value = (item.RUPTURAS * 1000000) / (item.METRAGEM * item.NUM_FIOS);
+        }
+        
         const row = worksheet.addRow([
           item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
           item.DT_INICIO || '',
@@ -1749,6 +1812,11 @@ const exportarModalAExcel = async () => {
           item.METRAGEM || 0,
           item.VELOC || '',
           item.NUM_FIOS || '',
+          formatRotura(item.RUP_FIACAO),
+          formatRotura(item.RUP_URD),
+          formatRotura(item.RUP_OPER),
+          formatRotura(item.RUPTURAS),
+          rot106Value,
           item.NM_OPERADOR || '',
           item.LOTE_FIACAO || '',
           item.MAQ_FIACAO || '',
@@ -1757,17 +1825,24 @@ const exportarModalAExcel = async () => {
         
         row.height = 22;
         row.eachCell((cell, colNumber) => {
-          cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || colNumber === 6 || colNumber === 10 || colNumber === 11 || colNumber === 13 ? 'left' : 'center' };
+          cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 || colNumber === 6 || colNumber === 15 || colNumber === 16 || colNumber === 18 ? 'left' : 'center' };
           cell.font = { size: 10 };
           cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
           
           // Colores especiales
           if (colNumber === 9) cell.font = { size: 10, bold: true, color: { argb: colors.amber } }; // Puntas
+          if (colNumber === 13) cell.font = { size: 10, bold: true, color: { argb: 'FFdc2626' } }; // Rot Total
+          if (colNumber === 14) cell.font = { size: 10, color: { argb: 'FF9333ea' } }; // Rot 10^6
         });
         
         // Formato numérico para Metros
         row.getCell(7).numFmt = '#,##0';
         row.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+        
+        // Formato numérico para Rot 10^6
+        if (typeof rot106Value === 'number') {
+          row.getCell(14).numFmt = '#,##0.0';
+        }
       });
     } else if (seccionActiva.value === 'indigo') {
       datosDetalleAgrupados.value.forEach((item, idx) => {
