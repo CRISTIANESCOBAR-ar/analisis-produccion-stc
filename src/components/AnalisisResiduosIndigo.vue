@@ -10,6 +10,19 @@
         
         <div class="flex items-center gap-2">
           <button 
+            @click="imprimirPagina"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition-colors shadow-sm"
+            v-tippy="{ content: 'Imprimir página en orientación apaisada', placement: 'bottom' }"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            <span class="text-sm">Imprimir</span>
+          </button>
+          
+          <button 
             @click="copiarComoImagen"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors shadow-sm"
             v-tippy="{ content: 'Copiar gráficos como imagen', placement: 'bottom' }"
@@ -65,6 +78,14 @@
               No hay datos disponibles
             </div>
           </div>
+
+          <!-- Gráfico de Estopa Azul por Mes - Periodo -->
+          <div class="flex-[1.3] h-full px-2 py-4 border border-slate-200 rounded-lg min-w-0 overflow-hidden">
+            <Bar v-if="chartDataEstopaAzul" :data="chartDataEstopaAzul" :options="chartOptionsEstopaAzul" />
+            <div v-else-if="!cargando" class="h-full flex items-center justify-center text-slate-400">
+              No hay datos disponibles
+            </div>
+          </div>
         </div>
 
         <!-- Fila 2: Gráficos del Día Específico -->
@@ -80,6 +101,14 @@
           <!-- Gráfico de Columna S - Día -->
           <div class="flex-[1] h-full p-4 border border-slate-200 rounded-lg min-w-0 overflow-hidden">
             <Bar v-if="chartDataDiaS" :data="chartDataDiaS" :options="chartOptionsDiaS" />
+            <div v-else-if="!cargando" class="h-full flex items-center justify-center text-slate-400">
+              No hay datos disponibles
+            </div>
+          </div>
+
+          <!-- Gráfico de Estopa Azul por Mes - Día -->
+          <div class="flex-[1.3] h-full px-2 py-4 border border-slate-200 rounded-lg min-w-0 overflow-hidden">
+            <Bar v-if="chartDataEstopaAzulDia" :data="chartDataEstopaAzulDia" :options="chartOptionsEstopaAzulDia" />
             <div v-else-if="!cargando" class="h-full flex items-center justify-center text-slate-400">
               No hay datos disponibles
             </div>
@@ -107,6 +136,8 @@ const datos = ref([])
 const datosS = ref([])
 const datosDia = ref([])
 const datosDiaS = ref([])
+const datosEstopaAzul = ref([])
+const datosEstopaAzulDiario = ref([])
 const chartsContainer = ref(null)
 
 // Inicializar con ayer
@@ -130,14 +161,16 @@ const cargarDatos = async () => {
     const fechaDia = `${day}/${month}/${year}`
     
     // Cargar datos del periodo y del día específico en paralelo
-    const [respMotivos, respS, respMotivosDia, respSDia] = await Promise.all([
+    const [respMotivos, respS, respMotivosDia, respSDia, respEstopaAzul, respEstopaAzulDiario] = await Promise.all([
       fetch(`${API_BASE}/residuos-indigo-analisis?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`),
       fetch(`${API_BASE}/produccion-indigo-resumen?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`),
       fetch(`${API_BASE}/residuos-indigo-analisis?fecha_inicio=${fechaDia}&fecha_fin=${fechaDia}`),
-      fetch(`${API_BASE}/produccion-indigo-resumen?fecha_inicio=${fechaDia}&fecha_fin=${fechaDia}`)
+      fetch(`${API_BASE}/produccion-indigo-resumen?fecha_inicio=${fechaDia}&fecha_fin=${fechaDia}`),
+      fetch(`${API_BASE}/residuos-indigo-estopa-por-mes`),
+      fetch(`${API_BASE}/residuos-indigo-estopa-por-dia?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`)
     ])
     
-    if (!respMotivos.ok || !respS.ok || !respMotivosDia.ok || !respSDia.ok) {
+    if (!respMotivos.ok || !respS.ok || !respMotivosDia.ok || !respSDia.ok || !respEstopaAzul.ok || !respEstopaAzulDiario.ok) {
       throw new Error('Error al cargar datos')
     }
     
@@ -148,12 +181,17 @@ const cargarDatos = async () => {
     datosDia.value = await respMotivosDia.json()
     const dataSDia = await respSDia.json()
     datosDiaS.value = dataSDia.s_valores || []
+    
+    datosEstopaAzul.value = await respEstopaAzul.json()
+    datosEstopaAzulDiario.value = await respEstopaAzulDiario.json()
   } catch (error) {
     console.error('Error:', error)
     datos.value = []
     datosS.value = []
     datosDia.value = []
     datosDiaS.value = []
+    datosEstopaAzul.value = []
+    datosEstopaAzulDiario.value = []
   } finally {
     cargando.value = false
   }
@@ -580,6 +618,221 @@ const chartOptionsDiaS = computed(() => {
     }
   }
 })
+
+// Gráficos de Estopa Azul por Mes
+const chartDataEstopaAzul = computed(() => {
+  if (datosEstopaAzul.value.length === 0) return null
+  
+  // Encontrar el valor máximo
+  const maxValue = Math.max(...datosEstopaAzul.value.map(d => d.KgResiduo))
+  
+  return {
+    labels: datosEstopaAzul.value.map(d => {
+      const [year, month] = d.Mes.split('-')
+      const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+      return `${meses[parseInt(month) - 1]}-${year.slice(2)}`
+    }),
+    datasets: [
+      {
+        label: 'Kg de Estopa Azul',
+        data: datosEstopaAzul.value.map(d => d.KgResiduo),
+        backgroundColor: datosEstopaAzul.value.map((d) => 
+          d.KgResiduo === maxValue ? '#dc2626' : '#3b82f6'
+        ),
+        borderRadius: 4,
+      }
+    ]
+  }
+})
+
+const chartOptionsEstopaAzul = computed(() => {
+  const total = datosEstopaAzul.value.reduce((sum, d) => sum + d.KgResiduo, 0)
+  const promedio = datosEstopaAzul.value.length > 0 ? (total / datosEstopaAzul.value.length).toFixed(0) : 0
+  
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      title: {
+        display: true,
+        text: `Estopa Azul por Mes (Últimos 12 Meses)`,
+        font: {
+          size: 14,
+          weight: 'bold'
+        },
+        padding: {
+          top: 5,
+          bottom: 20
+        },
+        color: '#000'
+      },
+      datalabels: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          afterLabel: (context) => {
+            const value = context.raw
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+            return `${percentage}% del total`
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          display: true,
+          color: '#e5e7eb'
+        },
+        ticks: {
+          callback: function(value) {
+            return Math.round(value).toLocaleString() + ' kg'
+          },
+          font: {
+            size: 9
+          },
+          color: '#666'
+        },
+        border: {
+          display: false
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          font: {
+            weight: 'bold',
+            size: 9
+          },
+          color: '#000',
+          maxRotation: 90,
+          minRotation: 90,
+          autoSkip: false,
+          padding: 5
+        }
+      }
+    }
+  }
+})
+
+const chartDataEstopaAzulDia = computed(() => {
+  // Para el día, mostrar los datos diarios del mes seleccionado
+  if (datosEstopaAzulDiario.value.length === 0) return null
+  
+  const maxValue = Math.max(...datosEstopaAzulDiario.value.map(d => d.KgResiduo))
+  
+  return {
+    labels: datosEstopaAzulDiario.value.map(d => {
+      // Formato: DD/MM/YYYY -> DD
+      const [dia] = d.Fecha.split('/')
+      return dia
+    }),
+    datasets: [
+      {
+        label: 'Kg de Estopa Azul',
+        data: datosEstopaAzulDiario.value.map(d => d.KgResiduo),
+        backgroundColor: datosEstopaAzulDiario.value.map((d) => 
+          d.KgResiduo === maxValue ? '#dc2626' : '#10b981'
+        ),
+        borderRadius: 4,
+      }
+    ]
+  }
+})
+
+const chartOptionsEstopaAzulDia = computed(() => {
+  const total = datosEstopaAzulDiario.value.reduce((sum, d) => sum + d.KgResiduo, 0)
+  const [year, month, day] = fechaSeleccionada.value.split('-')
+  
+  // Función para formatear fecha a dd-mmm-yy
+  const formatearFecha = (d, m, y) => {
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    return `${d}-${meses[parseInt(m) - 1]}-${y.slice(2)}`
+  }
+  
+  const fechaInicio = formatearFecha('01', month, year)
+  const fechaFin = formatearFecha(day, month, year)
+  
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      title: {
+        display: true,
+        text: `Estopa Azul por Día del Periodo ${fechaInicio} a ${fechaFin}`,
+        font: {
+          size: 14,
+          weight: 'bold'
+        },
+        padding: {
+          top: 5,
+          bottom: 20
+        },
+        color: '#000'
+      },
+      datalabels: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          afterLabel: (context) => {
+            const value = context.raw
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+            return `${percentage}% del total del mes`
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          display: true,
+          color: '#e5e7eb'
+        },
+        ticks: {
+          callback: function(value) {
+            return Math.round(value).toLocaleString() + ' kg'
+          },
+          font: {
+            size: 9
+          },
+          color: '#666'
+        },
+        border: {
+          display: false
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          font: {
+            weight: 'bold',
+            size: 9
+          },
+          color: '#000',
+          maxRotation: 90,
+          minRotation: 90,
+          autoSkip: false,
+          padding: 5
+        }
+      }
+    }
+  }
+})
+
 const copiarParaWhatsApp = async () => {
   try {
     const [year, month, day] = fechaSeleccionada.value.split('-')
@@ -829,12 +1082,207 @@ const copiarComoImagen = async () => {
   }
 }
 
+async function imprimirPagina() {
+  if (!chartsContainer.value) {
+    window.print()
+    return
+  }
+  
+  try {
+    // Crear contenedor temporal para la captura
+    const tempContainer = document.createElement('div')
+    tempContainer.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: rgb(255, 255, 255);
+      padding: 10px;
+      z-index: 9999;
+      pointer-events: none;
+      width: 1120px;
+    `
+    document.body.appendChild(tempContainer)
+    
+    // Crear header
+    const headerDiv = document.createElement('div')
+    headerDiv.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 10px;
+    `
+    
+    const logo = document.querySelector('main img[alt="Santana Textiles"]')
+    if (logo) {
+      const logoClone = logo.cloneNode(true)
+      logoClone.style.cssText = 'height: 30px; width: auto;'
+      headerDiv.appendChild(logoClone)
+    }
+    
+    const titulo = document.createElement('h3')
+    titulo.textContent = 'Análisis Residuos de Índigo'
+    titulo.style.cssText = 'font-size: 16px; font-weight: 600; color: rgb(15, 23, 42); margin: 0;'
+    headerDiv.appendChild(titulo)
+    
+    tempContainer.appendChild(headerDiv)
+    
+    // Crear contenedor de gráficos
+    const chartsDiv = document.createElement('div')
+    chartsDiv.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      height: calc(100% - 50px);
+    `
+    
+    // Obtener filas de gráficos
+    const containerDivs = chartsContainer.value.querySelectorAll('.flex-1.flex.gap-4')
+    
+    containerDivs.forEach((rowDiv) => {
+      const row = document.createElement('div')
+      row.style.cssText = 'display: flex; gap: 8px; width: 100%; flex: 1;'
+      
+      const canvasContainers = rowDiv.querySelectorAll('div[class*="flex-"]')
+      canvasContainers.forEach((container) => {
+        const canvas = container.querySelector('canvas')
+        if (canvas) {
+          const wrapper = document.createElement('div')
+          const isBig = container.classList.contains('flex-[3]')
+          wrapper.style.cssText = `
+            flex: ${isBig ? '3' : '1.3'};
+            padding: 4px;
+            border: 1px solid rgb(226, 232, 240);
+            border-radius: 4px;
+            background: rgb(255, 255, 255);
+            display: flex;
+            align-items: stretch;
+          `
+          
+          const canvasClone = document.createElement('canvas')
+          canvasClone.width = canvas.width
+          canvasClone.height = canvas.height
+          canvasClone.style.cssText = 'width: 100%; height: 100%; object-fit: fill;'
+          const ctx = canvasClone.getContext('2d')
+          ctx.drawImage(canvas, 0, 0)
+          
+          wrapper.appendChild(canvasClone)
+          row.appendChild(wrapper)
+        }
+      })
+      
+      chartsDiv.appendChild(row)
+    })
+    
+    tempContainer.appendChild(chartsDiv)
+    
+    // Esperar imágenes
+    const images = tempContainer.querySelectorAll('img')
+    await Promise.all(
+      Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve()
+        return new Promise(resolve => {
+          img.addEventListener('load', () => resolve(), { once: true })
+          img.addEventListener('error', () => resolve(), { once: true })
+        })
+      })
+    )
+    
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Capturar con domToPng
+    let dataUrl
+    try {
+      dataUrl = await domToPng(tempContainer, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        width: tempContainer.scrollWidth,
+        height: tempContainer.scrollHeight
+      })
+    } finally {
+      if (tempContainer.isConnected) {
+        document.body.removeChild(tempContainer)
+      }
+    }
+    
+    // Abrir ventana de impresión con la imagen
+    const printWindow = window.open('', '_blank', 'width=1200,height=800')
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Análisis Residuos Índigo - Impresión</title>
+        <style>
+          @page {
+            size: landscape;
+            margin: 5mm 5mm 10mm 5mm;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+          }
+          img {
+            max-width: 100%;
+            max-height: 100vh;
+            object-fit: contain;
+          }
+          @media print {
+            body {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <img src="${dataUrl}" onload="setTimeout(function() { window.print(); window.close(); }, 200);" />
+      </body>
+      </html>
+    `)
+    printWindow.document.close()
+    
+  } catch (error) {
+    console.error('Error al imprimir:', error)
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'Error al preparar impresión',
+      text: error.message || 'No se pudo generar la imagen para imprimir',
+      showConfirmButton: false,
+      timer: 3000
+    })
+  }
+}
 
 onMounted(() => {
   cargarDatos()
 })
 </script>
 
+<style>
+/* Estilos globales de impresión */
+@media print {
+  /* Ocultar TODOS los botones, sidebar y navegación */
+  button,
+  .fixed,
+  aside,
+  nav,
+  [role="button"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+</style>
+
 <style scoped>
-/* Estilos opcionales */
+@media print {
+  @page {
+    size: landscape;
+    margin: 5mm 5mm 10mm 5mm;
+  }
+}
 </style>

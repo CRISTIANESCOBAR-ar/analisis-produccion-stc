@@ -2490,6 +2490,94 @@ app.get('/api/residuos-indigo-resumen', async (req, res) => {
 });
 
 // =====================================================================
+// ENDPOINT - Residuos ESTOPA AZUL por Mes (últimos 12 meses)
+// =====================================================================
+// GET /api/residuos-indigo-estopa-por-mes
+app.get('/api/residuos-indigo-estopa-por-mes', async (req, res) => {
+  try {
+    const sql = `
+      WITH MesesRecientes AS (
+        SELECT DISTINCT 
+          strftime('%Y-%m', 
+            substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)
+          ) AS Mes
+        FROM tb_RESIDUOS_INDIGO
+        WHERE TRIM(DESCRICAO) = 'ESTOPA AZUL'
+        ORDER BY Mes DESC
+        LIMIT 12
+      ),
+      ResiduesPorMes AS (
+        SELECT 
+          strftime('%Y-%m', 
+            substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)
+          ) AS Mes,
+          SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) as KgResiduo
+        FROM tb_RESIDUOS_INDIGO
+        WHERE TRIM(DESCRICAO) = 'ESTOPA AZUL'
+          AND strftime('%Y-%m', 
+            substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)
+          ) IN (SELECT Mes FROM MesesRecientes)
+        GROUP BY Mes
+      )
+      SELECT 
+        rpm.Mes,
+        CAST(ROUND(rpm.KgResiduo, 0) AS INTEGER) as KgResiduo
+      FROM ResiduesPorMes rpm
+      ORDER BY Mes ASC
+    `;
+
+    const rows = await dbAll(sql);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en /api/residuos-indigo-estopa-por-mes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
+// ENDPOINT - Residuos ESTOPA AZUL por Día de un rango de fechas
+// =====================================================================
+// GET /api/residuos-indigo-estopa-por-dia?fecha_inicio=DD/MM/YYYY&fecha_fin=DD/MM/YYYY
+app.get('/api/residuos-indigo-estopa-por-dia', async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin } = req.query;
+    
+    if (!fecha_inicio || !fecha_fin) {
+      return res.status(400).json({ error: 'Parámetros "fecha_inicio" y "fecha_fin" requeridos (formato DD/MM/YYYY)' });
+    }
+
+    // Convertir DD/MM/YYYY a YYYY-MM-DD para comparación
+    const [diaIni, mesIni, anioIni] = fecha_inicio.split('/');
+    const [diaFin, mesFin, anioFin] = fecha_fin.split('/');
+    const fechaIniISO = `${anioIni}-${mesIni}-${diaIni}`;
+    const fechaFinISO = `${anioFin}-${mesFin}-${diaFin}`;
+
+    const sql = `
+      SELECT 
+        DT_MOV as Fecha,
+        CAST(ROUND(SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)), 0) AS INTEGER) as KgResiduo
+      FROM tb_RESIDUOS_INDIGO
+      WHERE TRIM(DESCRICAO) = 'ESTOPA AZUL'
+        AND (
+          substr(DT_MOV, 7, 4) || '-' || substr(DT_MOV, 4, 2) || '-' || substr(DT_MOV, 1, 2)
+          BETWEEN ? AND ?
+        )
+      GROUP BY DT_MOV
+      ORDER BY 
+        substr(DT_MOV, 7, 4) ASC,
+        substr(DT_MOV, 4, 2) ASC,
+        substr(DT_MOV, 1, 2) ASC
+    `;
+
+    const rows = await dbAll(sql, [fechaIniISO, fechaFinISO]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en /api/residuos-indigo-estopa-por-dia:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
 // ENDPOINT TEMPORAL - Resumen tb_PRODUCCION con SELETOR=INDIGO
 // =====================================================================
 app.get('/api/produccion-indigo-resumen', async (req, res) => {

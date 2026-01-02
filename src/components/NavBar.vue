@@ -64,27 +64,7 @@
 
     <!-- Navegación -->
     <nav class="px-2 py-2 space-y-2">
-      <SidebarItem 
-        icon="📈" 
-        label="Dashboard" 
-        :active="isActive('/')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/')"
-      />
-      <SidebarItem 
-        icon="🔍" 
-        label="Fichas" 
-        :active="isActive('/fichas')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/fichas')"
-      />
-      <SidebarItem 
-        icon="🎯" 
-        label="Calidad" 
-        :active="isActive('/calidad')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/calidad')"
-      />
+      <!-- Entradas eliminadas: Dashboard de Producción, Búsqueda de Fichas, Control de Calidad -->
       <SidebarItemWithSubmenu
         icon="📋"
         label="Revisión CQ"
@@ -155,13 +135,6 @@
         :active="isActive('/costos-mensuales')" 
         :collapsed="isCollapsed"
         @click="handleNavClick('/costos-mensuales')"
-      />
-      <SidebarItem 
-        icon="⚠️" 
-        label="Paradas" 
-        :active="isActive('/paradas')" 
-        :collapsed="isCollapsed"
-        @click="handleNavClick('/paradas')"
       />
       <SidebarItem 
         icon="📥" 

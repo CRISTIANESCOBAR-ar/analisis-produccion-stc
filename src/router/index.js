@@ -1,8 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Dashboard from '../components/Dashboard.vue'
-import FichaSearch from '../components/FichaSearch.vue'
-import CalidadTable from '../components/CalidadTable.vue'
-import ParadasTable from '../components/ParadasTable.vue'
 import ImportControl from '../components/ImportControl.vue'
 import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
@@ -17,21 +13,7 @@ import CostosMensuales from '../components/CostosMensuales.vue'
 const routes = [
   {
     path: '/',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { title: 'Dashboard - Análisis Producción STC' }
-  },
-  {
-    path: '/fichas',
-    name: 'FichaSearch',
-    component: FichaSearch,
-    meta: { title: 'Búsqueda de Fichas - Análisis Producción STC' }
-  },
-  {
-    path: '/calidad',
-    name: 'CalidadTable',
-    component: CalidadTable,
-    meta: { title: 'Control de Calidad - Análisis Producción STC' }
+    redirect: '/revision-cq'
   },
   {
     path: '/revision-cq',
@@ -50,12 +32,6 @@ const routes = [
     name: 'AnalisisMesaTest',
     component: AnalisisMesaTest,
     meta: { title: 'Análisis Mesa de Test - Análisis Producción STC' }
-  },
-  {
-    path: '/paradas',
-    name: 'ParadasTable',
-    component: ParadasTable,
-    meta: { title: 'Paradas de Máquina - Análisis Producción STC' }
   },
   {
     path: '/importaciones',
