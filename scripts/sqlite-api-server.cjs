@@ -3151,16 +3151,32 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
       ),
       URD AS (
         SELECT
-          CAST(ROLADA AS INTEGER) AS ROLADA,
-          GROUP_CONCAT(DISTINCT CAST(CAST(TRIM(substr("MAQ  FIACAO", -2)) AS INTEGER) AS TEXT)) AS MAQ_OE,
-          GROUP_CONCAT(DISTINCT CAST(CAST("LOTE FIACAO" AS INTEGER) AS TEXT)) AS LOTE
-        FROM tb_PRODUCCION
-        WHERE SELETOR = 'URDIDEIRA'
-          AND ROLADA IS NOT NULL
-          AND ROLADA != ''
-          AND "MAQ  FIACAO" IS NOT NULL
-          AND "LOTE FIACAO" IS NOT NULL
-        GROUP BY ROLADA
+          inner_urd.ROLADA,
+          GROUP_CONCAT(DISTINCT CAST(CAST(TRIM(substr(inner_urd."MAQ  FIACAO", -2)) AS INTEGER) AS TEXT)) AS MAQ_OE,
+          GROUP_CONCAT(DISTINCT CAST(CAST(inner_urd."LOTE FIACAO" AS INTEGER) AS TEXT)) AS LOTE,
+          SUM(inner_urd.METRAGEM) / NULLIF(COUNT(DISTINCT inner_urd.PARTIDA), 0) AS URDIDORA_METROS,
+          SUM(inner_urd.RUPTURAS) AS URDIDORA_ROTURAS,
+          SUM(inner_urd.NUM_FIOS_MAX) AS NUM_FIOS
+        FROM (
+          SELECT 
+            CAST(ROLADA AS INTEGER) AS ROLADA,
+            PARTIDA,
+            "MAQ  FIACAO",
+            "LOTE FIACAO",
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM,
+            SUM(CAST(RUPTURAS AS INTEGER)) AS RUPTURAS,
+            MAX(CAST(REPLACE(REPLACE(NUM_FIOS, '.', ''), ',', '.') AS REAL)) AS NUM_FIOS_MAX
+          FROM tb_PRODUCCION
+          WHERE SELETOR = 'URDIDEIRA'
+            AND ROLADA IS NOT NULL
+            AND PARTIDA IS NOT NULL
+            AND NUM_FIOS IS NOT NULL
+          GROUP BY ROLADA, PARTIDA
+        ) AS inner_urd
+        WHERE inner_urd.ROLADA IS NOT NULL
+          AND inner_urd."MAQ  FIACAO" IS NOT NULL
+          AND inner_urd."LOTE FIACAO" IS NOT NULL
+        GROUP BY inner_urd.ROLADA
       ),
       IND AS (
         SELECT
@@ -3209,6 +3225,9 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
           R_IND.ROLADA,
           URD.MAQ_OE,
           URD.LOTE,
+          URD.URDIDORA_METROS,
+          URD.URDIDORA_ROTURAS,
+          URD.NUM_FIOS,
           IND.FECHA,
           IND.BASE,
           IND.COLOR,
@@ -3243,6 +3262,9 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
           INDI.ROLADA,
           INDI.MAQ_OE,
           INDI.LOTE,
+          INDI.URDIDORA_METROS,
+          INDI.URDIDORA_ROTURAS,
+          INDI.NUM_FIOS,
           INDI.FECHA,
           INDI.BASE,
           INDI.COLOR,
@@ -3301,6 +3323,9 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
         IT.ROLADA,
         IT.MAQ_OE,
         IT.LOTE,
+        ROUND(IT.URDIDORA_METROS, 0) AS URDIDORA_METROS,
+        IT.URDIDORA_ROTURAS,
+        IT.NUM_FIOS,
         IT.FECHA AS FECHA,
         IT.BASE,
         IT.COLOR,
@@ -3332,6 +3357,25 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
         WITH 
         ROLADAS_SEL AS (
           SELECT CAST(value AS INTEGER) AS ROLADA FROM json_each('[' || ? || ']')
+        ),
+        URD_RAW AS (
+          SELECT
+            SUM(inner_urd.METRAGEM) / NULLIF(COUNT(DISTINCT inner_urd.PARTIDA), 0) AS TOTAL_URDIDORA_METROS,
+            SUM(inner_urd.RUPTURAS) AS TOTAL_URDIDORA_ROTURAS,
+            SUM(inner_urd.NUM_FIOS_MAX) AS TOTAL_NUM_FIOS
+          FROM (
+            SELECT 
+              PARTIDA,
+              SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM,
+              SUM(CAST(RUPTURAS AS INTEGER)) AS RUPTURAS,
+              MAX(CAST(REPLACE(REPLACE(NUM_FIOS, '.', ''), ',', '.') AS REAL)) AS NUM_FIOS_MAX
+            FROM tb_PRODUCCION
+            WHERE SELETOR = 'URDIDEIRA'
+              AND ROLADA IS NOT NULL
+              AND ROLADA != ''
+              AND CAST(ROLADA AS INTEGER) IN (SELECT ROLADA FROM ROLADAS_SEL)
+            GROUP BY ROLADA, PARTIDA
+          ) AS inner_urd
         ),
         IND_RAW AS (
           SELECT
@@ -3374,6 +3418,9 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
             AND CAST(ROLADA AS INTEGER) IN (SELECT ROLADA FROM ROLADAS_SEL)
         )
         SELECT
+          ROUND(URD.TOTAL_URDIDORA_METROS, 0) AS URDIDORA_METROS,
+          URD.TOTAL_URDIDORA_ROTURAS AS URDIDORA_ROTURAS,
+          URD.TOTAL_NUM_FIOS AS NUM_FIOS,
           ROUND(IND.TOTAL_MTS_IND, 0) AS MTS_IND,
           ROUND((IND.TOTAL_ROT_IND * 1000.0) / NULLIF(IND.TOTAL_MTS_IND, 0), 1) AS R103,
           IND.TOTAL_CAV AS CAV,
@@ -3385,7 +3432,7 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
           ROUND(CAL.TOTAL_MTS_CAL, 0) AS MTS_CAL,
           ROUND((CAL.TOTAL_MTS_1ERA * 100.0) / NULLIF(CAL.TOTAL_MTS_CAL, 0), 1) AS CAL_PERCENT,
           ROUND((CAL.TOTAL_PUNTOS * 100.0) / NULLIF(CAL.SUM_MTS_ANCHO / 100.0, 0), 1) AS PTS_100M2
-        FROM IND_RAW IND, TEJ_RAW TEJ, CAL_RAW CAL
+        FROM URD_RAW URD, IND_RAW IND, TEJ_RAW TEJ, CAL_RAW CAL
       `;
       
       const roladasStr = roladas.join(',');

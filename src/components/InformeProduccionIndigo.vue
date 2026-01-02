@@ -95,7 +95,7 @@
               <th scope="col" class="px-1.5 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center w-16">Metros</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">Rot. Tot.</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">Rot 10³</th>
-              <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">Cav.</th>
+              <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">CV</th>
               <th scope="col" class="px-0.5 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center w-12 text-[10px] leading-tight">Tiem<br>po</th>
               <th scope="col" class="px-1.5 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center w-12">Vel.</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">N</th>
@@ -131,7 +131,7 @@
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono font-semibold text-blue-700 tabular-nums">{{ formatNumber(item.ROT_103, 2) }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center text-slate-600 font-mono tabular-nums">{{ formatNumber(item.CAVALOS, 0) }}</td>
               <td class="px-0.5 py-1.5 border-r border-slate-200 text-center text-slate-600 font-mono tabular-nums text-xs">{{ formatTiempo(item.TIEMPO_MINUTOS) }}</td>
-              <td class="px-1.5 py-1.5 border-r border-slate-200 text-center text-slate-600 font-mono tabular-nums">{{ formatNumber(item.VELOC_PROMEDIO, 1) }}</td>
+              <td class="px-1.5 py-1.5 border-r border-slate-200 text-center text-slate-600 font-mono tabular-nums">{{ formatNumber(item.VELOC_PROMEDIO, 1).replace(',0', '') }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono tabular-nums" :class="getCalidadColor(item.N_PERCENT)">{{ item.N_COUNT }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono font-semibold tabular-nums" :class="getCalidadColor(item.N_PERCENT)">{{ formatNumber(item.N_PERCENT, 1) }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono tabular-nums" :class="getCalidadColor(item.P_PERCENT)">{{ item.P_COUNT }}</td>
@@ -345,7 +345,7 @@ const exportarAExcel = async () => {
     
     // Crear dos filas de encabezado
     worksheet.addRow(['Rolada', 'URDIDEIRA', '', '', '', '', '', '', 'ÍNDIGO', '', '', '', '', '', '', '', '', '', '', '', '', '', 'TEJEDURÍA', '', '', 'CALIDAD', '', '']);
-    worksheet.addRow(['', 'Fecha', 'Maq. OE', 'Lote', 'Metros', 'Rot. Tot.', 'Rot 10⁶', 'Tiempo', 'Fecha', 'Base', 'Col', 'Metros', 'Rot. Tot.', 'Rot 10³', 'Cav.', 'Tiempo', 'Vel.', 'N', '%', 'P', '%', 'Q', '%', 'Efic. %', 'Rot URD 10⁵', 'Rot TRA 10⁵', 'Metros', 'Cal. %', 'Pts. 100m²']);
+    worksheet.addRow(['', 'Fecha', 'Maq. OE', 'Lote', 'Metros', 'Rot. Tot.', 'Rot 10⁶', 'Tiempo', 'Fecha', 'Base', 'Col', 'Metros', 'Rot. Tot.', 'Rot 10³', 'CV', 'Tiempo', 'Vel.', 'N', '%', 'P', '%', 'Q', '%', 'Efic. %', 'Rot URD 10⁵', 'Rot TRA 10⁵', 'Metros', 'Cal. %', 'Pts. 100m²']);
     
     // Combinar celdas de la primera fila
     worksheet.mergeCells('A1:A2');
@@ -437,7 +437,7 @@ const exportarAExcel = async () => {
       { key: 'METRAGEM', width: 9 },
       { key: 'RUPTURAS', width: 8 },
       { key: 'ROT_103', width: 8 },
-      { key: 'CAVALOS', width: 6 },
+      { key: 'CAVALOS', width: 3 },
       { key: 'TIEMPO_MINUTOS', width: 7 },
       { key: 'VELOC_PROMEDIO', width: 7 },
       { key: 'N_COUNT', width: 5 },
@@ -531,7 +531,7 @@ const exportarAExcel = async () => {
       row.getCell('METRAGEM').numFmt = '#,##0';
       row.getCell('ROT_103').numFmt = '0.00';
       row.getCell('TIEMPO_MINUTOS').numFmt = '[hh]:mm';
-      row.getCell('VELOC_PROMEDIO').numFmt = '0.0';
+      row.getCell('VELOC_PROMEDIO').numFmt = '0.#';
       row.getCell('N_PERCENT').numFmt = '0.0';
       row.getCell('P_PERCENT').numFmt = '0.0';
       row.getCell('Q_PERCENT').numFmt = '0.0';
@@ -665,7 +665,7 @@ const copiarComoImagen = async () => {
       { text: 'Metros', width: '55px', borderRight: '1px solid ' + colors.borderLight },
       { text: 'Rot. Tot.', width: '50px', borderRight: '1px solid ' + colors.borderLight },
       { text: 'Rot 10³', width: '50px', borderRight: '1px solid ' + colors.borderLight },
-      { text: 'Cav.', width: '35px', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'CV', width: '17px', borderRight: '1px solid ' + colors.borderLight },
       { text: 'Tiempo', width: '50px', borderRight: '1px solid ' + colors.borderLight },
       { text: 'Vel.', width: '45px', borderRight: '1px solid ' + colors.borderLight },
       { text: 'N', width: '35px', borderRight: '1px solid ' + colors.borderLight },
@@ -714,7 +714,7 @@ const copiarComoImagen = async () => {
         { value: formatNumber(item.ROT_103, 2), color: '#2563eb', bold: true, borderRight: '1px solid ' + colors.borderLight },
         { value: formatNumber(item.CAVALOS, 0), borderRight: '1px solid ' + colors.borderLight },
         { value: formatTiempo(item.TIEMPO_MINUTOS), borderRight: '1px solid ' + colors.borderLight },
-        { value: formatNumber(item.VELOC_PROMEDIO, 1), borderRight: '1px solid ' + colors.borderLight },
+        { value: formatNumber(item.VELOC_PROMEDIO, 1).replace(',0', ''), borderRight: '1px solid ' + colors.borderLight },
         { value: item.N_COUNT, borderRight: '1px solid ' + colors.borderLight },
         { value: formatNumber(item.N_PERCENT, 1), borderRight: '1px solid ' + colors.borderLight },
         { value: item.P_COUNT, borderRight: '1px solid ' + colors.borderLight },

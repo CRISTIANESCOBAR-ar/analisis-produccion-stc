@@ -108,7 +108,7 @@
             <!-- Fila superior - Grupos -->
             <tr class="text-slate-500 text-[11px] uppercase tracking-wider">
               <th scope="col" rowspan="2" class="px-3 py-3 font-semibold text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300 text-slate-700 bg-slate-50">Rolada</th>
-              <th scope="col" colspan="2" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Urdidora</th>
+              <th scope="col" colspan="3" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Urdidora</th>
               <th scope="col" colspan="8" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Índigo</th>
               <th scope="col" colspan="4" class="px-3 py-2 font-semibold text-center border-r-2 border-slate-300 border-b border-b-slate-300 text-slate-700 bg-slate-50">Tejeduría</th>
               <th scope="col" colspan="3" class="px-3 py-2 font-semibold text-center border-b border-b-slate-300 text-slate-700 bg-slate-50">Calidad</th>
@@ -116,7 +116,8 @@
             <!-- Fila inferior - Columnas -->
             <tr class="text-slate-600 text-[11px] bg-slate-50">
               <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Maq. OE</th>
-              <th scope="col" class="px-2 py-2 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">Lote</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Lote</th>
+              <th scope="col" class="px-2 py-2 font-medium text-center border-r-2 border-slate-300 border-b-2 border-b-slate-300">Rot 10⁶</th>
               <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Fecha</th>
               <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Base</th>
               <th scope="col" class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Color</th>
@@ -139,7 +140,8 @@
                 class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors">
               <td class="px-3 py-2.5 font-semibold text-slate-800 text-center tabular-nums border-r-2 border-slate-300 bg-slate-50/50">{{ item.ROLADA }}</td>
               <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatListaConY(item.MAQ_OE) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatListaConY(item.LOTE) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatListaConY(item.LOTE) }}</td>
+              <td class="px-2 py-2.5 text-center text-emerald-600 font-semibold tabular-nums border-r-2 border-slate-300">{{ calcularRot106(item.URDIDORA_ROTURAS, item.URDIDORA_METROS, item.NUM_FIOS) }}</td>
               <!-- Celdas ÍNDIGO clickeables -->
               <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-500 text-xs border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.FECHA }}</td>
               <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-700 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.BASE }}</td>
@@ -161,10 +163,11 @@
           <!-- Fila de totales del mes -->
           <tfoot v-if="totalesMes && datos.length > 0" class="sticky bottom-0 z-10 bg-slate-100">
             <tr class="font-semibold text-slate-700">
-              <td class="px-3 py-3 text-center border-r-2 border-slate-300 border-t-2 border-t-slate-300" colspan="3">
+              <td class="px-3 py-3 text-center border-l border-l-slate-200 border-r border-slate-200 border-t-2 border-t-slate-300" colspan="3">
                 <span class="text-xs uppercase tracking-wide text-slate-500">Total</span>
                 <span class="ml-2 text-slate-700">{{ totalesMes.TOTAL_ROLADAS }} roladas</span>
               </td>
+              <td class="px-2 py-3 text-center text-emerald-600 font-semibold tabular-nums border-r-2 border-slate-300 border-t-2 border-t-slate-300">{{ calcularRot106(totalesMes.URDIDORA_ROTURAS, totalesMes.URDIDORA_METROS, totalesMes.NUM_FIOS) }}</td>
               <td class="px-2 py-3 text-center text-slate-400 border-r border-slate-200 border-t-2 border-t-slate-300" colspan="3">-</td>
               <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.MTS_IND, 0) }}</td>
               <td class="px-2 py-3 text-center tabular-nums border-r border-slate-200 border-t-2 border-t-slate-300">{{ formatNumber(totalesMes.R103, 1) }}</td>
@@ -2257,6 +2260,7 @@ const cargarDatos = async () => {
     totalesMes.value = resultado.totales;
     
     console.log('Datos cargados:', datos.value.length, 'roladas');
+    console.log('Primera rolada:', datos.value[0]);
     console.log('Totales:', totalesMes.value);
   } catch (error) {
     console.error('Error cargando datos:', error);
@@ -2349,7 +2353,7 @@ const copiarComoImagen = async () => {
     const headerRow1 = document.createElement('tr');
     headerRow1.innerHTML = `
       <th rowspan="2" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 10px 12px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 2px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">ROLADA</th>
-      <th colspan="2" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">URDIDORA</th>
+      <th colspan="3" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">URDIDORA</th>
       <th colspan="8" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">ÍNDIGO</th>
       <th colspan="4" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-right: 2px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">TEJEDURÍA</th>
       <th colspan="3" style="background: ${colors.headerBg}; color: ${colors.headerTextDark}; padding: 8px; text-align: center; vertical-align: middle; border-bottom: 1px solid ${colors.border}; font-size: 11px; font-weight: 600; text-transform: uppercase;">CALIDAD</th>
@@ -2360,7 +2364,8 @@ const copiarComoImagen = async () => {
     const headerRow2 = document.createElement('tr');
     const subHeaders = [
       { text: 'Maq. OE', borderRight: '1px solid ' + colors.borderLight },
-      { text: 'Lote', borderRight: '2px solid ' + colors.border },
+      { text: 'Lote', borderRight: '1px solid ' + colors.borderLight },
+      { text: 'Rot 10⁶', borderRight: '2px solid ' + colors.border },
       { text: 'Fecha', borderRight: '1px solid ' + colors.borderLight },
       { text: 'Base', borderRight: '1px solid ' + colors.borderLight },
       { text: 'Color', borderRight: '1px solid ' + colors.borderLight },
@@ -2395,7 +2400,8 @@ const copiarComoImagen = async () => {
       const cellData = [
         { value: item.ROLADA, bold: true, color: colors.text, borderRight: '2px solid ' + colors.border },
         { value: formatListaConY(item.MAQ_OE), color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
-        { value: formatListaConY(item.LOTE), color: colors.textLight, borderRight: '2px solid ' + colors.border },
+        { value: formatListaConY(item.LOTE), color: colors.textLight, borderRight: '1px solid ' + colors.borderLight },
+        { value: calcularRot106(item.URDIDORA_ROTURAS, item.URDIDORA_METROS, item.NUM_FIOS), color: colors.cyan, bold: true, borderRight: '2px solid ' + colors.border },
         { value: item.FECHA || '-', color: colors.textLight, borderRight: '1px solid ' + colors.borderLight, small: true },
         { value: item.BASE || '-', color: colors.cyan, borderRight: '1px solid ' + colors.borderLight },
         { value: item.COLOR || '-', color: colors.text, borderRight: '1px solid ' + colors.borderLight },
@@ -2430,8 +2436,8 @@ const copiarComoImagen = async () => {
       totalRow.style.cssText = 'background: #f8fafc; font-weight: 600;';
       
       const totalCellData = [
-        { value: 'TOTAL', bold: true, borderRight: '2px solid ' + colors.border },
-        { value: totalesMes.value.TOTAL_ROLADAS + ' roladas', colspan: 2, borderRight: '2px solid ' + colors.border },
+        { value: 'TOTAL ' + totalesMes.value.TOTAL_ROLADAS + ' roladas', colspan: 3, borderRight: '1px solid ' + colors.borderLight },
+        { value: calcularRot106(totalesMes.value.URDIDORA_ROTURAS, totalesMes.value.URDIDORA_METROS, totalesMes.value.NUM_FIOS), color: colors.cyan, bold: true, borderRight: '2px solid ' + colors.border },
         { value: '-', colspan: 3, borderRight: '1px solid ' + colors.borderLight },
         { value: formatNumber(totalesMes.value.MTS_IND, 0), borderRight: '1px solid ' + colors.borderLight },
         { value: formatNumber(totalesMes.value.R103, 1), borderRight: '1px solid ' + colors.borderLight },
@@ -2449,7 +2455,7 @@ const copiarComoImagen = async () => {
       
       totalCellData.forEach(cell => {
         const td = document.createElement('td');
-        td.style.cssText = `background: #f8fafc; color: ${colors.text}; padding: 0 8px; height: 40px; line-height: 40px; text-align: center; vertical-align: middle; border-top: 2px solid ${colors.border}; border-right: ${cell.borderRight}; ${cell.bold ? 'font-weight: 700;' : 'font-weight: 600;'}`;
+        td.style.cssText = `background: #f8fafc; color: ${cell.color || colors.text}; padding: 0 8px; height: 40px; line-height: 40px; text-align: center; vertical-align: middle; border-top: 2px solid ${colors.border}; border-right: ${cell.borderRight}; ${cell.bold ? 'font-weight: 700;' : 'font-weight: 600;'}`;
         td.textContent = cell.value;
         if (cell.colspan) td.colSpan = cell.colspan;
         totalRow.appendChild(td);
@@ -2516,126 +2522,137 @@ const exportarAExcel = async () => {
   
   try {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Sistema de Producción STC';
-    workbook.created = new Date();
+    const worksheet = workbook.addWorksheet('Seguimiento Roladas');
     
-    const worksheet = workbook.addWorksheet('Seguimiento Roladas', {
-      views: [{ state: 'frozen', ySplit: 2 }]
-    });
-    
-    // Definir columnas con anchos
-    worksheet.columns = [
-      { key: 'ROLADA', width: 10 },
-      { key: 'MAQ_OE', width: 12 },
-      { key: 'LOTE', width: 12 },
-      { key: 'FECHA', width: 12 },
-      { key: 'BASE', width: 14 },
-      { key: 'COLOR', width: 10 },
-      { key: 'MTS_IND', width: 12 },
-      { key: 'R103', width: 10 },
-      { key: 'CAV', width: 8 },
-      { key: 'VEL_NOM', width: 10 },
-      { key: 'VEL_PROM', width: 10 },
-      { key: 'MTS_CRUDOS', width: 12 },
-      { key: 'EFI_TEJ', width: 10 },
-      { key: 'RU105', width: 10 },
-      { key: 'RT105', width: 10 },
-      { key: 'MTS_CAL', width: 12 },
-      { key: 'CAL_PERCENT', width: 10 },
-      { key: 'PTS_100M2', width: 12 }
-    ];
-    
-    // Colores para las secciones
-    const colors = {
-      headerDark: 'FF1E293B',      // slate-800
-      urdidoraHeader: 'FF047857',  // emerald-700
-      indigoHeader: 'FF1D4ED8',    // blue-700
-      tejeduriaHeader: 'FF6D28D9', // violet-700
-      calidadHeader: 'FFB45309',   // amber-700
-      urdidoraLight: 'FFD1FAE5',   // emerald-100
-      indigoLight: 'FFDBEAFE',     // blue-100
-      tejeduriaLight: 'FFEDE9FE',  // violet-100
-      calidadLight: 'FFFEF3C7',    // amber-100
-      totalesRow: 'FFF1F5F9',      // slate-100
-      white: 'FFFFFFFF'
+    // Configurar orientación y márgenes
+    worksheet.pageSetup = {
+      paperSize: 9, // A4
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.1968,
+        right: 0.1968,
+        top: 0.3937,
+        bottom: 0.3937,
+        header: 0.1968,
+        footer: 0.1968
+      }
     };
     
-    // === FILA 1: Encabezados de grupo ===
+    // Crear dos filas de encabezado
+    worksheet.addRow(['Rolada', 'URDIDORA', '', '', 'ÍNDIGO', '', '', '', '', '', '', '', 'TEJEDURÍA', '', '', '', 'CALIDAD', '', '']);
+    worksheet.addRow(['', 'Maq. OE', 'Lote', 'Rot 10⁶', 'Fecha', 'Base', 'Color', 'Metros', 'R10³', 'Cav', 'Vel.Nom', 'Vel.Prom', 'Metros', 'Efic.%', 'RU10⁵', 'RT10⁵', 'Metros', 'Cal.%', 'Pts/100m²']);
+    
+    // Combinar celdas de la primera fila
     worksheet.mergeCells('A1:A2');
-    worksheet.getCell('A1').value = 'ROLADA';
-    worksheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerDark } };
-    worksheet.getCell('A1').font = { bold: true, color: { argb: colors.white }, size: 10 };
-    worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-    worksheet.getCell('A1').border = { right: { style: 'thin', color: { argb: 'FF475569' } } };
+    worksheet.mergeCells('B1:D1');
+    worksheet.mergeCells('E1:L1');
+    worksheet.mergeCells('M1:P1');
+    worksheet.mergeCells('Q1:S1');
     
-    worksheet.mergeCells('B1:C1');
-    worksheet.getCell('B1').value = 'URDIDORA';
-    worksheet.getCell('B1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.urdidoraHeader } };
-    worksheet.getCell('B1').font = { bold: true, color: { argb: colors.white }, size: 10 };
-    worksheet.getCell('B1').alignment = { horizontal: 'center', vertical: 'middle' };
-    worksheet.getCell('B1').border = { right: { style: 'thin', color: { argb: 'FF475569' } } };
+    // Estilo de encabezados - Primera fila (grupos)
+    const headerRow1 = worksheet.getRow(1);
+    headerRow1.height = 20;
+    headerRow1.font = { bold: true, size: 10 };
+    headerRow1.alignment = { vertical: 'middle', horizontal: 'center' };
     
-    worksheet.mergeCells('D1:K1');
-    worksheet.getCell('D1').value = 'ÍNDIGO';
-    worksheet.getCell('D1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.indigoHeader } };
-    worksheet.getCell('D1').font = { bold: true, color: { argb: colors.white }, size: 10 };
-    worksheet.getCell('D1').alignment = { horizontal: 'center', vertical: 'middle' };
-    worksheet.getCell('D1').border = { right: { style: 'thin', color: { argb: 'FF475569' } } };
+    // Aplicar colores a la primera fila
+    headerRow1.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    headerRow1.getCell(1).value = 'Rolada';
+    headerRow1.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+    headerRow1.getCell(2).value = 'URDIDORA';
+    headerRow1.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+    headerRow1.getCell(5).value = 'ÍNDIGO';
+    headerRow1.getCell(13).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3E8FF' } };
+    headerRow1.getCell(13).value = 'TEJEDURÍA';
+    headerRow1.getCell(17).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+    headerRow1.getCell(17).value = 'CALIDAD';
     
-    worksheet.mergeCells('L1:O1');
-    worksheet.getCell('L1').value = 'TEJEDURÍA';
-    worksheet.getCell('L1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.tejeduriaHeader } };
-    worksheet.getCell('L1').font = { bold: true, color: { argb: colors.white }, size: 10 };
-    worksheet.getCell('L1').alignment = { horizontal: 'center', vertical: 'middle' };
-    worksheet.getCell('L1').border = { right: { style: 'thin', color: { argb: 'FF475569' } } };
+    // Bordes para la primera fila
+    headerRow1.getCell(1).border = {
+      right: { style: 'medium', color: { argb: 'FF64748B' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+    headerRow1.getCell(2).border = {
+      right: { style: 'medium', color: { argb: 'FF64748B' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+    headerRow1.getCell(5).border = {
+      right: { style: 'medium', color: { argb: 'FF64748B' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+    headerRow1.getCell(13).border = {
+      right: { style: 'medium', color: { argb: 'FF64748B' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+    headerRow1.getCell(17).border = {
+      right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
     
-    worksheet.mergeCells('P1:R1');
-    worksheet.getCell('P1').value = 'CALIDAD';
-    worksheet.getCell('P1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.calidadHeader } };
-    worksheet.getCell('P1').font = { bold: true, color: { argb: colors.white }, size: 10 };
-    worksheet.getCell('P1').alignment = { horizontal: 'center', vertical: 'middle' };
+    // Estilo de encabezados - Segunda fila (columnas)
+    const headerRow2 = worksheet.getRow(2);
+    headerRow2.height = 30;
+    headerRow2.font = { bold: false, size: 9 };
+    headerRow2.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     
-    worksheet.getRow(1).height = 22;
-    
-    // === FILA 2: Sub-encabezados ===
-    const subHeaders = [
-      '', 'Maq. OE', 'Lote', 'Fecha', 'Base', 'Color', 'Metros', 'R10³', 'Cav', 'Vel.Nom', 'Vel.Prom',
-      'Metros', 'Efic.%', 'RU10⁵', 'RT10⁵', 'Metros', 'Cal.%', 'Pts/100m²'
-    ];
-    const subHeaderRow = worksheet.getRow(2);
-    subHeaders.forEach((header, idx) => {
-      const cell = subHeaderRow.getCell(idx + 1);
-      cell.value = header;
-      cell.font = { bold: true, color: { argb: colors.white }, size: 9 };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Aplicar estilo y bordes a cada celda de la segunda fila
+    for (let col = 1; col <= 19; col++) {
+      const cell = headerRow2.getCell(col);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
       
-      // Color según sección
-      if (idx >= 1 && idx <= 2) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.urdidoraHeader } };
-      } else if (idx >= 3 && idx <= 10) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.indigoHeader } };
-      } else if (idx >= 11 && idx <= 14) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.tejeduriaHeader } };
-      } else if (idx >= 15) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.calidadHeader } };
-      } else {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.headerDark } };
+      let rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
+      if (col === 1 || col === 4 || col === 12 || col === 16) {
+        rightBorder = { style: 'medium', color: { argb: 'FF64748B' } };
       }
-    });
-    subHeaderRow.height = 20;
+      if (col === 19) {
+        rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
+      }
+      
+      cell.border = {
+        right: rightBorder,
+        bottom: { style: 'medium', color: { argb: 'FF94A3B8' } }
+      };
+    }
     
-    // === FILAS DE DATOS ===
-    datos.value.forEach((item, idx) => {
+    // Ajustar anchos de columnas
+    worksheet.columns = [
+      { key: 'ROLADA', width: 7 },
+      { key: 'MAQ_OE', width: 10 },
+      { key: 'LOTE', width: 10 },
+      { key: 'ROT_106', width: 8 },
+      { key: 'FECHA', width: 10 },
+      { key: 'BASE', width: 12 },
+      { key: 'COLOR', width: 7 },
+      { key: 'MTS_IND', width: 9 },
+      { key: 'R103', width: 8 },
+      { key: 'CAV', width: 4 },
+      { key: 'VEL_NOM', width: 7 },
+      { key: 'VEL_PROM', width: 7 },
+      { key: 'MTS_CRUDOS', width: 9 },
+      { key: 'EFI_TEJ', width: 7 },
+      { key: 'RU105', width: 8 },
+      { key: 'RT105', width: 8 },
+      { key: 'MTS_CAL', width: 9 },
+      { key: 'CAL_PERCENT', width: 7 },
+      { key: 'PTS_100M2', width: 8 }
+    ];
+    
+    // Agregar datos
+    datos.value.forEach(item => {
       const row = worksheet.addRow({
         ROLADA: item.ROLADA,
-        MAQ_OE: item.MAQ_OE || '-',
-        LOTE: item.LOTE || '-',
-        FECHA: item.FECHA || '-',
-        BASE: item.BASE || '-',
-        COLOR: item.COLOR || '-',
+        MAQ_OE: formatListaConY(item.MAQ_OE),
+        LOTE: formatListaConY(item.LOTE),
+        ROT_106: calcularRot106(item.URDIDORA_ROTURAS, item.URDIDORA_METROS, item.NUM_FIOS),
+        FECHA: item.FECHA,
+        BASE: item.BASE,
+        COLOR: item.COLOR,
         MTS_IND: item.MTS_IND,
         R103: item.R103,
-        CAV: item.CAV || '-',
+        CAV: item.CAV,
         VEL_NOM: item.VEL_NOM,
         VEL_PROM: item.VEL_PROM,
         MTS_CRUDOS: item.MTS_CRUDOS,
@@ -2647,50 +2664,69 @@ const exportarAExcel = async () => {
         PTS_100M2: item.PTS_100M2
       });
       
-      row.height = 18;
-      row.alignment = { vertical: 'middle' };
+      row.height = 16;
+      row.alignment = { vertical: 'middle', horizontal: 'center' };
+      row.font = { size: 9 };
       
-      // Estilo alternado y colores de sección
-      const isEven = idx % 2 === 0;
+      // Bordes y colores de fondo para cada celda
+      const rowIndex = row.number;
+      const bgColor = rowIndex % 2 === 1 ? 'FFFFFFFF' : 'FFF8FAFC';
       
-      row.eachCell((cell, colNumber) => {
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      for (let col = 1; col <= 19; col++) {
+        const cell = row.getCell(col);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+        
+        let rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
+        if (col === 1 || col === 4 || col === 12 || col === 16) {
+          rightBorder = { style: 'medium', color: { argb: 'FF64748B' } };
+        }
+        if (col === 19) {
+          rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
+        }
+        
         cell.border = {
-          bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } }
+          right: rightBorder,
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } }
         };
-        
-        // Colores según sección
-        if (colNumber >= 2 && colNumber <= 3) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? colors.urdidoraLight : colors.white } };
-        } else if (colNumber >= 4 && colNumber <= 11) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? colors.indigoLight : colors.white } };
-        } else if (colNumber >= 12 && colNumber <= 15) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? colors.tejeduriaLight : colors.white } };
-        } else if (colNumber >= 16) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? colors.calidadLight : colors.white } };
-        }
-        
-        // Formato numérico para columnas específicas
-        if ([7, 12, 16].includes(colNumber)) {
-          cell.numFmt = '#,##0';
-        } else if ([8, 13, 14, 15, 17, 18].includes(colNumber)) {
-          cell.numFmt = '#,##0.0';
-        }
-      });
+      }
+      
+      // Primera columna en negrita
+      row.getCell(1).font = { bold: true, size: 9 };
+      
+      // Formato numérico
+      row.getCell('MTS_IND').numFmt = '#,##0';
+      row.getCell('R103').numFmt = '0.0';
+      row.getCell('VEL_NOM').numFmt = '0';
+      row.getCell('VEL_PROM').numFmt = '0';
+      row.getCell('MTS_CRUDOS').numFmt = '#,##0';
+      row.getCell('EFI_TEJ').numFmt = '0.0';
+      row.getCell('RU105').numFmt = '0.0';
+      row.getCell('RT105').numFmt = '0.0';
+      row.getCell('MTS_CAL').numFmt = '#,##0';
+      row.getCell('CAL_PERCENT').numFmt = '0.0';
+      row.getCell('PTS_100M2').numFmt = '0.0';
+      row.getCell('ROT_106').numFmt = '0.00';
+      
+      // Colores especiales para valores destacados
+      row.getCell('ROT_106').font = { size: 9, color: { argb: 'FF059669' }, bold: true };
+      row.getCell('R103').font = { size: 9, color: { argb: 'FF2563EB' }, bold: true };
+      row.getCell('EFI_TEJ').font = { size: 9, color: { argb: 'FF7C3AED' }, bold: true };
+      row.getCell('CAL_PERCENT').font = { size: 9, color: { argb: 'FFB45309' }, bold: true };
     });
     
-    // === FILA DE TOTALES DEL MES ===
+    // Fila de totales del mes
     if (totalesMes.value) {
       const totalRow = worksheet.addRow({
         ROLADA: `TOTAL MES (${totalesMes.value.TOTAL_ROLADAS} roladas)`,
         MAQ_OE: '',
         LOTE: '',
-        FECHA: '',
-        BASE: '',
-        COLOR: '',
+        ROT_106: calcularRot106(totalesMes.value.URDIDORA_ROTURAS, totalesMes.value.URDIDORA_METROS, totalesMes.value.NUM_FIOS),
+        FECHA: '-',
+        BASE: '-',
+        COLOR: '-',
         MTS_IND: totalesMes.value.MTS_IND,
         R103: totalesMes.value.R103,
-        CAV: totalesMes.value.CAV || '-',
+        CAV: totalesMes.value.CAV,
         VEL_NOM: '-',
         VEL_PROM: totalesMes.value.VEL_PROM,
         MTS_CRUDOS: totalesMes.value.MTS_CRUDOS,
@@ -2702,45 +2738,75 @@ const exportarAExcel = async () => {
         PTS_100M2: totalesMes.value.PTS_100M2
       });
       
-      totalRow.height = 22;
+      totalRow.height = 20;
+      totalRow.alignment = { vertical: 'middle', horizontal: 'center' };
       totalRow.font = { bold: true, size: 10 };
       
-      totalRow.eachCell((cell, colNumber) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalesRow } };
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      // Combinar las primeras 3 celdas para el texto del total
+      worksheet.mergeCells(totalRow.number, 1, totalRow.number, 3);
+      
+      // Aplicar estilos a todas las celdas de la fila de totales
+      for (let col = 1; col <= 19; col++) {
+        const cell = totalRow.getCell(col);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+        
+        let rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
+        if (col === 1 || col === 4 || col === 12 || col === 16) {
+          rightBorder = { style: 'medium', color: { argb: 'FF64748B' } };
+        }
+        
         cell.border = {
           top: { style: 'medium', color: { argb: 'FF94A3B8' } },
+          right: rightBorder,
           bottom: { style: 'medium', color: { argb: 'FF94A3B8' } }
         };
-        
-        if ([7, 12, 16].includes(colNumber)) {
-          cell.numFmt = '#,##0';
-        } else if ([8, 13, 14, 15, 17, 18].includes(colNumber)) {
-          cell.numFmt = '#,##0.0';
-        }
-      });
+      }
       
-      // Merge primera celda para el texto del total
-      worksheet.mergeCells(totalRow.number, 1, totalRow.number, 3);
+      // Formato numérico para totales
+      totalRow.getCell('MTS_IND').numFmt = '#,##0';
+      totalRow.getCell('R103').numFmt = '0.0';
+      totalRow.getCell('VEL_PROM').numFmt = '0';
+      totalRow.getCell('MTS_CRUDOS').numFmt = '#,##0';
+      totalRow.getCell('EFI_TEJ').numFmt = '0.0';
+      totalRow.getCell('RU105').numFmt = '0.0';
+      totalRow.getCell('RT105').numFmt = '0.0';
+      totalRow.getCell('MTS_CAL').numFmt = '#,##0';
+      totalRow.getCell('CAL_PERCENT').numFmt = '0.0';
+      totalRow.getCell('PTS_100M2').numFmt = '0.0';
+      totalRow.getCell('ROT_106').numFmt = '0.00';
+      
+      // Colores especiales para valores destacados en totales
+      totalRow.getCell('ROT_106').font = { size: 10, color: { argb: 'FF059669' }, bold: true };
+      totalRow.getCell('R103').font = { size: 10, color: { argb: 'FF2563EB' }, bold: true };
+      totalRow.getCell('EFI_TEJ').font = { size: 10, color: { argb: 'FF7C3AED' }, bold: true };
+      totalRow.getCell('CAL_PERCENT').font = { size: 10, color: { argb: 'FFB45309' }, bold: true };
     }
     
-    // Generar nombre con fecha y hora
+    // Aplicar autofiltro
+    const ultimaFila = worksheet.rowCount;
+    worksheet.autoFilter = {
+      from: { row: 2, column: 1 },
+      to: { row: ultimaFila, column: 19 }
+    };
+    
+    
+    // Generar nombre con timestamp
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const yyyy = now.getFullYear();
+    const yy = String(now.getFullYear()).slice(-2);
     const hh = String(now.getHours()).padStart(2, '0');
     const min = String(now.getMinutes()).padStart(2, '0');
-    const fileName = `SeguimientoRoladas_${dd}-${mm}-${yyyy}_${hh}_${min}.xlsx`;
+    const timestamp = `${dd}-${mm}-${yy}_${hh}${min}`;
     
     // Generar archivo
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SeguimientoRoladas_${fechaSeleccionada.value}_${timestamp}.xlsx`;
+    a.click();
     window.URL.revokeObjectURL(url);
     
     Swal.fire({ icon: 'success', title: 'Exportado', text: 'Excel generado correctamente', timer: 1000, showConfirmButton: false, timerProgressBar: true });
@@ -2810,12 +2876,15 @@ const imprimirTabla = () => {
           letter-spacing: 0.5px;
           padding: 8px 5px;
           border-bottom: 2px solid #94a3b8;
+          color: #334155;
+          background: #f8fafc;
+          font-weight: 600;
         }
-        .section-rolada { color: #475569; background: #f1f5f9; border-right: 2px solid #94a3b8 !important; }
-        .section-urdidora { color: #047857; background: #f0fdf4; border-right: 2px solid #94a3b8 !important; }
-        .section-indigo { color: #1d4ed8; background: #eff6ff; border-right: 2px solid #94a3b8 !important; }
-        .section-tejeduria { color: #6d28d9; background: #f5f3ff; border-right: 2px solid #94a3b8 !important; }
-        .section-calidad { color: #b45309; background: #fffbeb; }
+        .section-rolada { background: #f8fafc; border-right: 2px solid #94a3b8 !important; }
+        .section-urdidora { background: #f8fafc; border-right: 2px solid #94a3b8 !important; }
+        .section-indigo { background: #f8fafc; border-right: 2px solid #94a3b8 !important; }
+        .section-tejeduria { background: #f8fafc; border-right: 2px solid #94a3b8 !important; }
+        .section-calidad { background: #f8fafc; }
         .col-header { 
           color: #475569; 
           background: #f8fafc;
@@ -2845,14 +2914,15 @@ const imprimirTabla = () => {
         <thead>
           <tr class="section-header">
             <th rowspan="2" class="section-rolada" style="color: #475569; background: #f8fafc;">ROLADA</th>
-            <th colspan="2" class="section-urdidora">URDIDORA</th>
+            <th colspan="3" class="section-urdidora">URDIDORA</th>
             <th colspan="8" class="section-indigo">ÍNDIGO</th>
             <th colspan="4" class="section-tejeduria">TEJEDURÍA</th>
             <th colspan="3" class="section-calidad">CALIDAD</th>
           </tr>
           <tr class="col-header">
             <th>Maq OE</th>
-            <th class="border-section">Lote</th>
+            <th>Lote</th>
+            <th class="border-section">Rot 10⁶</th>
             <th>Fecha</th>
             <th>Base</th>
             <th>Color</th>
@@ -2878,7 +2948,8 @@ const imprimirTabla = () => {
           <tr>
             <td class="border-section font-medium">${item.ROLADA}</td>
             <td>${item.MAQ_OE || '-'}</td>
-            <td class="border-section">${item.LOTE || '-'}</td>
+            <td>${item.LOTE || '-'}</td>
+            <td class="border-section" style="color: #059669; font-weight: 600;">${calcularRot106(item.URDIDORA_ROTURAS, item.URDIDORA_METROS, item.NUM_FIOS)}</td>
             <td>${item.FECHA || '-'}</td>
             <td>${item.BASE || '-'}</td>
             <td>${formatListaConY(item.COLOR)}</td>
@@ -2901,7 +2972,8 @@ const imprimirTabla = () => {
   if (totalesMes.value) {
     html += `
           <tr class="totales-row">
-            <td class="border-section" colspan="3">TOTAL (${totalesMes.value.TOTAL_ROLADAS} roladas)</td>
+            <td colspan="3">TOTAL (${totalesMes.value.TOTAL_ROLADAS} roladas)</td>
+            <td class="border-section" style="color: #059669; font-weight: 700;">${calcularRot106(totalesMes.value.URDIDORA_ROTURAS, totalesMes.value.URDIDORA_METROS, totalesMes.value.NUM_FIOS)}</td>
             <td colspan="3">-</td>
             <td>${formatNumber(totalesMes.value.MTS_IND, 0)}</td>
             <td>${formatNumber(totalesMes.value.R103, 1)}</td>
