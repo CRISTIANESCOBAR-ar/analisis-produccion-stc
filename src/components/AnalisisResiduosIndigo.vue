@@ -929,145 +929,184 @@ const copiarParaWhatsApp = async () => {
 
 const copiarComoImagen = async () => {
   if (!chartsContainer.value) return
-  
+
+  /*
+    Genera la imagen usando un canvas off‑screen y copia al portapapeles.
+    Motivo: evitar crear elementos temporales visibles que producían un parpadeo.
+
+    Fallbacks implementados (en orden):
+      1) `navigator.clipboard.write` con `ClipboardItem` (imagen binaria).
+      2) Si falla, copiar el `dataURL` con `navigator.clipboard.writeText(dataUrl)`.
+      3) Si eso falla, abrir la imagen en una nueva pestaña para que el usuario la guarde.
+      4) (Opcional) volver al método visible con `domToPng` si se requiere — no aplicado automáticamente.
+  */
+
   try {
-    // Crear contenedor temporal SIN clases Tailwind
-    const tempContainer = document.createElement('div')
-    tempContainer.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      background: rgb(255, 255, 255);
-      padding: 30px;
-      z-index: 9999;
-      pointer-events: none;
-      width: ${chartsContainer.value.scrollWidth + 100}px;
-    `
-    document.body.appendChild(tempContainer)
-    
-    // Crear header manualmente sin Tailwind
-    const headerDiv = document.createElement('div')
-    headerDiv.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      margin-bottom: 20px;
-    `
-    
-    // Logo
-    const logo = document.querySelector('main img[alt="Santana Textiles"]')
-    if (logo) {
-      const logoClone = logo.cloneNode(true)
-      logoClone.style.cssText = 'height: 40px; width: auto;'
-      headerDiv.appendChild(logoClone)
-    }
-    
-    // Título
-    const titulo = document.createElement('h3')
-    titulo.textContent = 'Análisis Residuos de Índigo'
-    titulo.style.cssText = 'font-size: 18px; font-weight: 600; color: rgb(15, 23, 42); margin: 0;'
-    headerDiv.appendChild(titulo)
-    
-    tempContainer.appendChild(headerDiv)
-    
-    // Crear contenedor de gráficos manualmente
-    const chartsDiv = document.createElement('div')
-    chartsDiv.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      width: 100%;
-    `
-    
-    // Obtener todos los canvas originales
-    const originalCanvases = chartsContainer.value.querySelectorAll('canvas')
-    const containerDivs = chartsContainer.value.querySelectorAll('.flex-1.flex.gap-4')
-    
-    containerDivs.forEach((rowDiv, rowIndex) => {
-      const row = document.createElement('div')
-      row.style.cssText = 'display: flex; gap: 16px; width: 100%;'
-      
-      const canvasContainers = rowDiv.querySelectorAll('div[class*="flex-"]')
-      canvasContainers.forEach((container, colIndex) => {
-        const canvas = container.querySelector('canvas')
-        if (canvas) {
-          const wrapper = document.createElement('div')
-          const isBig = container.classList.contains('flex-[3]')
-          wrapper.style.cssText = `
-            flex: ${isBig ? '3' : '1'};
-            padding: 16px;
-            border: 1px solid rgb(226, 232, 240);
-            border-radius: 8px;
-            background: rgb(255, 255, 255);
-          `
-          
-          // Clonar canvas
-          const canvasClone = document.createElement('canvas')
-          canvasClone.width = canvas.width
-          canvasClone.height = canvas.height
-          canvasClone.style.cssText = 'width: 100%; height: 100%;'
-          const ctx = canvasClone.getContext('2d')
-          ctx.drawImage(canvas, 0, 0)
-          
-          wrapper.appendChild(canvasClone)
-          row.appendChild(wrapper)
-        }
-      })
-      
-      chartsDiv.appendChild(row)
+    const pixelScale = Math.max(1, window.devicePixelRatio || 1) * 2
+    const padding = 30
+    const headerContentHeight = 40
+    const headerTop = padding
+    const headerHeight = headerContentHeight
+    const contentOffsetY = headerTop + headerHeight + padding
+
+    const containerRect = chartsContainer.value.getBoundingClientRect()
+
+    const canvases = Array.from(chartsContainer.value.querySelectorAll('canvas'))
+    if (canvases.length === 0) throw new Error('No hay canvases para copiar')
+
+    // Calcular bounding box relativo al contenedor
+    let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity
+    const rects = canvases.map(c => c.getBoundingClientRect())
+    rects.forEach(r => {
+      const left = r.left - containerRect.left
+      const top = r.top - containerRect.top
+      minLeft = Math.min(minLeft, left)
+      minTop = Math.min(minTop, top)
+      maxRight = Math.max(maxRight, left + r.width)
+      maxBottom = Math.max(maxBottom, top + r.height)
     })
-    
-    tempContainer.appendChild(chartsDiv)
-    
-    // Esperar imágenes
-    const images = tempContainer.querySelectorAll('img')
-    await Promise.all(
-      Array.from(images).map(img => {
-        if (img.complete) return Promise.resolve()
-        return new Promise(resolve => {
-          img.addEventListener('load', () => resolve(), { once: true })
-          img.addEventListener('error', () => resolve(), { once: true })
-        })
-      })
-    )
-    
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    // Capturar con domToPng
-    let dataUrl
-    try {
-      dataUrl = await domToPng(tempContainer, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        width: tempContainer.scrollWidth,
-        height: tempContainer.scrollHeight
-      })
-    } finally {
-      if (tempContainer.isConnected) {
-        document.body.removeChild(tempContainer)
+
+    const contentWidth = Math.ceil(maxRight - minLeft)
+    const contentHeight = Math.ceil(maxBottom - minTop)
+
+    const canvasWidth = Math.round((contentWidth + padding * 2) * pixelScale)
+    const canvasHeight = Math.round((contentOffsetY + contentHeight + padding) * pixelScale)
+
+    const out = document.createElement('canvas')
+    out.width = canvasWidth
+    out.height = canvasHeight
+    const ctx = out.getContext('2d')
+
+    // Fondo blanco
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, out.width, out.height)
+
+    // Dibujar header (logo y título) en coordenadas CSS, ajustadas por pixelScale
+    const logo = document.querySelector('main img[alt="Santana Textiles"]')
+    let currentX = padding
+    const logoHeight = 40
+    if (logo) {
+      try {
+        if (logo.complete) {
+          const logoRect = logo.getBoundingClientRect()
+          const aspect = logoRect.width && logoRect.height ? (logoRect.width / logoRect.height) : 1
+          const logoWidth = logoHeight * aspect
+          ctx.drawImage(logo, currentX * pixelScale, headerTop * pixelScale, logoWidth * pixelScale, logoHeight * pixelScale)
+          currentX += logoWidth + 16
+        } else {
+          const img = new Image()
+          img.src = logo.src
+          await new Promise(resolve => { img.onload = resolve; img.onerror = resolve })
+          const aspect = img.width && img.height ? (img.width / img.height) : 1
+          const logoWidth = logoHeight * aspect
+          ctx.drawImage(img, currentX * pixelScale, headerTop * pixelScale, logoWidth * pixelScale, logoHeight * pixelScale)
+          currentX += logoWidth + 16
+        }
+      } catch (e) {
+        // ignore
       }
     }
-    
-    // Convertir a blob y copiar
-    const response = await fetch(dataUrl)
-    const blob = await response.blob()
-    
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        'image/png': blob
-      })
-    ])
-    
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'Imagen copiada al portapapeles',
-      text: 'Presiona Ctrl+V para pegar',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true
+
+    ctx.fillStyle = '#0f172a'
+    ctx.font = `${16 * pixelScale}px sans-serif`
+    ctx.fillText('Análisis Residuos de Índigo', currentX * pixelScale, (headerTop + 26) * pixelScale)
+
+    // Dibujar cada canvas con coordenadas correctas y resoluciones
+    canvases.forEach((orig, i) => {
+      const r = rects[i]
+      const leftRel = r.left - containerRect.left
+      const topRel = r.top - containerRect.top
+      const destX = (padding + (leftRel - minLeft)) * pixelScale
+      const destY = (contentOffsetY + (topRel - minTop)) * pixelScale
+      const destW = r.width * pixelScale
+      const destH = r.height * pixelScale
+
+      try {
+        const srcW = orig.width || r.width * (window.devicePixelRatio || 1)
+        const srcH = orig.height || r.height * (window.devicePixelRatio || 1)
+        ctx.drawImage(orig, 0, 0, srcW, srcH, destX, destY, destW, destH)
+      } catch (err) {
+        // fallback: usar dataURL de canvas
+        try {
+          const data = orig.toDataURL('image/png')
+          const img = new Image()
+          img.src = data
+          img.onload = () => {
+            ctx.drawImage(img, destX, destY, destW, destH)
+          }
+        } catch (e) {
+          console.warn('No se pudo dibujar canvas:', e)
+        }
+      }
     })
+
+    // Pequeña espera por si hay onload pendientes
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png', 1))
+    if (!blob) throw new Error('No se pudo generar la imagen')
+
+    // Intento principal: escribir imagen binaria al portapapeles
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Imagen copiada al portapapeles',
+        text: 'Presiona Ctrl+V para pegar',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      })
+      return
+    } catch (errWrite) {
+      console.warn('Escritura de imagen en portapapeles falló, intentando fallback:', errWrite)
+    }
+
+    // Fallback 1: copiar dataURL como texto
+    try {
+      const dataUrl = out.toDataURL('image/png')
+      await navigator.clipboard.writeText(dataUrl)
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'DataURL copiado al portapapeles',
+        text: 'Algunos destinos no pegarán esta entrada como imagen; guarda la imagen manualmente si es necesario.',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true
+      })
+      return
+    } catch (errText) {
+      console.warn('Fallback writeText falló:', errText)
+    }
+
+    // Fallback 2: abrir imagen en nueva pestaña para que el usuario la guarde/pegue manualmente
+    try {
+      const dataUrl2 = out.toDataURL('image/png')
+      const w = window.open('', '_blank')
+      if (w) {
+        w.document.write(`<html><head><title>Imagen</title></head><body style="margin:0"><img src="${dataUrl2}" style="max-width:100%;height:auto;display:block;margin:0 auto;"/></body></html>`)
+        w.document.close()
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'Imagen abierta en nueva pestaña',
+          text: 'Guárdala o cópiala manualmente.',
+          showConfirmButton: false,
+          timer: 3500,
+          timerProgressBar: true
+        })
+        return
+      }
+    } catch (errOpen) {
+      console.warn('Abrir nueva pestaña falló:', errOpen)
+    }
+
+    throw new Error('No se pudo copiar la imagen ni realizar fallbacks')
   } catch (error) {
     console.error('Error al copiar imagen:', error)
     Swal.fire({
@@ -1088,125 +1127,146 @@ async function imprimirPagina() {
     return
   }
   
+  /*
+    Genera la imagen usando un canvas off‑screen y abre ventana de impresión.
+    Motivo: evitar crear elementos temporales visibles que producían un parpadeo en pantalla.
+  */
+  
   try {
-    // Crear contenedor temporal para la captura
-    const tempContainer = document.createElement('div')
-    tempContainer.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      background: rgb(255, 255, 255);
-      padding: 10px;
-      z-index: 9999;
-      pointer-events: none;
-      width: 1120px;
-    `
-    document.body.appendChild(tempContainer)
+    const pixelScale = Math.max(1, window.devicePixelRatio || 1) * 2
+    const padding = 20
+    const gap = 16
+    const headerContentHeight = 35
+    const headerTop = padding
+    const headerHeight = headerContentHeight
+    const contentOffsetY = headerTop + headerHeight + padding
+
+    const containerRect = chartsContainer.value.getBoundingClientRect()
+
+    const canvases = Array.from(chartsContainer.value.querySelectorAll('canvas'))
+    if (canvases.length === 0) throw new Error('No hay canvases para imprimir')
+
+    const rects = canvases.map(c => c.getBoundingClientRect())
     
-    // Crear header
-    const headerDiv = document.createElement('div')
-    headerDiv.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      margin-bottom: 10px;
-    `
-    
-    const logo = document.querySelector('main img[alt="Santana Textiles"]')
-    if (logo) {
-      const logoClone = logo.cloneNode(true)
-      logoClone.style.cssText = 'height: 30px; width: auto;'
-      headerDiv.appendChild(logoClone)
-    }
-    
-    const titulo = document.createElement('h3')
-    titulo.textContent = 'Análisis Residuos de Índigo'
-    titulo.style.cssText = 'font-size: 16px; font-weight: 600; color: rgb(15, 23, 42); margin: 0;'
-    headerDiv.appendChild(titulo)
-    
-    tempContainer.appendChild(headerDiv)
-    
-    // Crear contenedor de gráficos
-    const chartsDiv = document.createElement('div')
-    chartsDiv.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      width: 100%;
-      height: calc(100% - 50px);
-    `
-    
-    // Obtener filas de gráficos
-    const containerDivs = chartsContainer.value.querySelectorAll('.flex-1.flex.gap-4')
-    
-    containerDivs.forEach((rowDiv) => {
-      const row = document.createElement('div')
-      row.style.cssText = 'display: flex; gap: 8px; width: 100%; flex: 1;'
-      
-      const canvasContainers = rowDiv.querySelectorAll('div[class*="flex-"]')
-      canvasContainers.forEach((container) => {
-        const canvas = container.querySelector('canvas')
-        if (canvas) {
-          const wrapper = document.createElement('div')
-          const isBig = container.classList.contains('flex-[3]')
-          wrapper.style.cssText = `
-            flex: ${isBig ? '3' : '1.3'};
-            padding: 4px;
-            border: 1px solid rgb(226, 232, 240);
-            border-radius: 4px;
-            background: rgb(255, 255, 255);
-            display: flex;
-            align-items: stretch;
-          `
-          
-          const canvasClone = document.createElement('canvas')
-          canvasClone.width = canvas.width
-          canvasClone.height = canvas.height
-          canvasClone.style.cssText = 'width: 100%; height: 100%; object-fit: fill;'
-          const ctx = canvasClone.getContext('2d')
-          ctx.drawImage(canvas, 0, 0)
-          
-          wrapper.appendChild(canvasClone)
-          row.appendChild(wrapper)
-        }
-      })
-      
-      chartsDiv.appendChild(row)
+    // Calcular bounding box con gap incluido
+    let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity
+    rects.forEach((r, idx) => {
+      const left = r.left - containerRect.left
+      const top = r.top - containerRect.top
+      minLeft = Math.min(minLeft, left)
+      minTop = Math.min(minTop, top)
+      maxRight = Math.max(maxRight, left + r.width)
+      maxBottom = Math.max(maxBottom, top + r.height)
     })
-    
-    tempContainer.appendChild(chartsDiv)
-    
-    // Esperar imágenes
-    const images = tempContainer.querySelectorAll('img')
-    await Promise.all(
-      Array.from(images).map(img => {
-        if (img.complete) return Promise.resolve()
-        return new Promise(resolve => {
-          img.addEventListener('load', () => resolve(), { once: true })
-          img.addEventListener('error', () => resolve(), { once: true })
-        })
-      })
-    )
-    
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    // Capturar con domToPng
-    let dataUrl
-    try {
-      dataUrl = await domToPng(tempContainer, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        width: tempContainer.scrollWidth,
-        height: tempContainer.scrollHeight
-      })
-    } finally {
-      if (tempContainer.isConnected) {
-        document.body.removeChild(tempContainer)
+
+    // Escala uniforme para que todo se vea más profesional y grande
+    const uniformScale = 1.2
+    const contentWidth = Math.ceil((maxRight - minLeft) * uniformScale)
+    const contentHeight = Math.ceil((maxBottom - minTop) * uniformScale)
+
+    const canvasWidth = Math.round((contentWidth + padding * 2) * pixelScale)
+    const canvasHeight = Math.round((contentOffsetY + contentHeight + padding) * pixelScale)
+
+    const out = document.createElement('canvas')
+    out.width = canvasWidth
+    out.height = canvasHeight
+    const ctx = out.getContext('2d')
+
+    // Fondo blanco
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, out.width, out.height)
+
+    // Dibujar header (logo y título)
+    const logo = document.querySelector('main img[alt="Santana Textiles"]')
+    let currentX = padding
+    const logoHeight = 35
+    if (logo) {
+      try {
+        if (logo.complete) {
+          const logoRect = logo.getBoundingClientRect()
+          const aspect = logoRect.width && logoRect.height ? (logoRect.width / logoRect.height) : 1
+          const logoWidth = logoHeight * aspect
+          ctx.drawImage(logo, currentX * pixelScale, headerTop * pixelScale, logoWidth * pixelScale, logoHeight * pixelScale)
+          currentX += logoWidth + 16
+        } else {
+          const img = new Image()
+          img.src = logo.src
+          await new Promise(resolve => { img.onload = resolve; img.onerror = resolve })
+          const aspect = img.width && img.height ? (img.width / img.height) : 1
+          const logoWidth = logoHeight * aspect
+          ctx.drawImage(img, currentX * pixelScale, headerTop * pixelScale, logoWidth * pixelScale, logoHeight * pixelScale)
+          currentX += logoWidth + 16
+        }
+      } catch (e) {
+        // ignore
       }
     }
+
+    ctx.fillStyle = '#0f172a'
+    ctx.font = `bold ${16 * pixelScale}px sans-serif`
+    ctx.fillText('Análisis Residuos de Índigo', currentX * pixelScale, (headerTop + 24) * pixelScale)
+
+    // Dibujar cada canvas manteniendo proporciones y con bordes
+    const borderColor = 'rgb(226, 232, 240)'
+    const borderWidth = 1 * pixelScale
+    const borderRadius = 4 * pixelScale
+    
+    canvases.forEach((orig, i) => {
+      const r = rects[i]
+      const leftRel = r.left - containerRect.left
+      const topRel = r.top - containerRect.top
+      
+      // Escalar uniformemente manteniendo proporciones
+      const destX = (padding + (leftRel - minLeft) * uniformScale) * pixelScale
+      const destY = (contentOffsetY + (topRel - minTop) * uniformScale) * pixelScale
+      const destW = r.width * uniformScale * pixelScale
+      const destH = r.height * uniformScale * pixelScale
+
+      try {
+        const srcW = orig.width || r.width * (window.devicePixelRatio || 1)
+        const srcH = orig.height || r.height * (window.devicePixelRatio || 1)
+        ctx.drawImage(orig, 0, 0, srcW, srcH, destX, destY, destW, destH)
+      } catch (err) {
+        try {
+          const data = orig.toDataURL('image/png')
+          const img = new Image()
+          img.src = data
+          img.onload = () => {
+            ctx.drawImage(img, destX, destY, destW, destH)
+          }
+        } catch (e) {
+          console.warn('No se pudo dibujar canvas:', e)
+        }
+      }
+      
+      // Dibujar borde del contenedor con esquinas redondeadas
+      ctx.strokeStyle = borderColor
+      ctx.lineWidth = borderWidth
+      ctx.beginPath()
+      ctx.moveTo(destX + borderRadius, destY)
+      ctx.lineTo(destX + destW - borderRadius, destY)
+      ctx.quadraticCurveTo(destX + destW, destY, destX + destW, destY + borderRadius)
+      ctx.lineTo(destX + destW, destY + destH - borderRadius)
+      ctx.quadraticCurveTo(destX + destW, destY + destH, destX + destW - borderRadius, destY + destH)
+      ctx.lineTo(destX + borderRadius, destY + destH)
+      ctx.quadraticCurveTo(destX, destY + destH, destX, destY + destH - borderRadius)
+      ctx.lineTo(destX, destY + borderRadius)
+      ctx.quadraticCurveTo(destX, destY, destX + borderRadius, destY)
+      ctx.closePath()
+      ctx.stroke()
+    })
+
+    // Pequeña espera por si hay onload pendientes
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const dataUrl = out.toDataURL('image/png', 1)
     
     // Abrir ventana de impresión con la imagen
     const printWindow = window.open('', '_blank', 'width=1200,height=800')
+    if (!printWindow) {
+      throw new Error('No se pudo abrir la ventana de impresión. Verifica que los pop-ups estén permitidos.')
+    }
+    
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
