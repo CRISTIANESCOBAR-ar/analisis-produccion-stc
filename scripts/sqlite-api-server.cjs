@@ -2893,6 +2893,44 @@ app.get('/api/consulta-rolada-calidad', async (req, res) => {
 });
 
 // =====================================================================
+// ENDPOINT - Consulta detalle CALIDAD por partida (sin agrupar)
+// =====================================================================
+app.get('/api/consulta-partida-calidad', async (req, res) => {
+  try {
+    const { partida } = req.query;
+    
+    if (!partida) {
+      return res.status(400).json({ error: 'Parámetro PARTIDA requerido' });
+    }
+
+    const sql = `
+      SELECT 
+        GRP_DEF,
+        COD_DE,
+        DEFEITO,
+        CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) AS METRAGEM,
+        QUALIDADE,
+        HORA,
+        EMENDAS,
+        "PEÇA" AS PECA,
+        ETIQUETA,
+        LARGURA,
+        PONTUACAO
+      FROM tb_CALIDAD
+      WHERE PARTIDA = ?
+      ORDER BY HORA ASC
+    `;
+
+    const rows = await dbAll(sql, [partida]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/consulta-partida-calidad:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
 // ENDPOINT - Consulta ROLADA ÍNDIGO
 // =====================================================================
 app.get('/api/consulta-rolada-indigo', async (req, res) => {

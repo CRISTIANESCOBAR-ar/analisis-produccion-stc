@@ -287,7 +287,7 @@
             <!-- Botón Copiar Imagen -->
             <button 
               @click="copiarModalComoImagen" 
-              :disabled="copiandoModal || (seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : datosCalidad.length === 0)"
+              :disabled="copiandoModal || (seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : (vistaDetallePartidaCalidad ? datosDetallePartidaCalidad.length === 0 : datosCalidad.length === 0))"
               class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               v-tippy="{ content: 'Copiar como imagen', placement: 'bottom' }"
             >
@@ -296,10 +296,24 @@
               </svg>
             </button>
             
+            <!-- Botón Imprimir -->
+            <button 
+              @click="imprimirModalDetalle" 
+              :disabled="(seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : (vistaDetallePartidaCalidad ? datosDetallePartidaCalidad.length === 0 : datosCalidad.length === 0))"
+              class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              v-tippy="{ content: 'Imprimir detalle', placement: 'bottom' }"
+            >
+              <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+            </button>
+            
             <!-- Botón Exportar Excel -->
             <button 
               @click="exportarModalAExcel" 
-              :disabled="(seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : datosCalidad.length === 0)"
+              :disabled="(seccionActiva === 'urdimbre' ? datosUrdimbre.length === 0 : seccionActiva === 'indigo' ? datosDetalleAgrupados.length === 0 : seccionActiva === 'tecelagem' ? (vistaDetallePartida ? datosDetallePartida.length === 0 : datosTecelagem.length === 0) : (vistaDetallePartidaCalidad ? datosDetallePartidaCalidad.length === 0 : datosCalidad.length === 0))"
               class="p-2 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               v-tippy="{ content: 'Exportar a Excel', placement: 'bottom' }"
             >
@@ -685,6 +699,8 @@
 
         <!-- SECCIÓN CALIDAD -->
         <template v-else-if="seccionActiva === 'calidad'">
+          <!-- VISTA RESUMEN (lista de partidas) -->
+          <template v-if="!vistaDetallePartidaCalidad">
           <div v-if="datosCalidad.length > 0" class="flex-1 overflow-auto bg-white m-3 rounded-lg shadow-sm border border-slate-300" ref="modalTableCalidadRef">
             <table class="w-full text-[12px] text-slate-700 border-separate border-spacing-0">
               <thead class="sticky top-0 z-10">
@@ -720,7 +736,8 @@
                 <tr 
                   v-for="(item, index) in datosCalidadAgrupados" 
                   :key="index" 
-                  class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors"
+                  @click="abrirDetallePartidaCalidad(item)"
+                  class="border-b border-slate-200 hover:bg-teal-50/50 transition-colors cursor-pointer"
                 >
                   <td class="px-2 py-2 font-semibold text-slate-800 text-center border-r border-slate-200 bg-slate-50/50">{{ item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '' }}</td>
                   <td class="px-2 py-2 text-center font-medium border-r border-slate-200" :class="item.ST_IND === '1' ? 'text-green-600' : 'text-amber-600'">{{ item.ST_IND === '1' ? 'P' : 'N' }}</td>
@@ -780,6 +797,107 @@
               <p class="text-sm text-slate-400">Rolada {{ roladaSeleccionada }}</p>
             </div>
           </div>
+          </template>
+
+          <!-- VISTA DETALLE DE PARTIDA -->
+          <template v-else>
+            <!-- Header con info de la partida -->
+            <div class="bg-teal-50 border-b border-teal-200 px-4 py-3 m-3 mb-0 rounded-t-lg">
+              <div class="flex items-center gap-4">
+                <button 
+                  @click="volverAResumenCalidad"
+                  class="flex items-center gap-1 text-teal-700 hover:text-teal-900 font-medium transition-colors"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                  Volver
+                </button>
+                <div class="h-6 w-px bg-teal-300"></div>
+                <div class="flex-1 grid grid-cols-5 gap-4 text-sm">
+                  <div>
+                    <span class="text-teal-600 font-medium">Partida:</span>
+                    <span class="ml-1 font-bold text-slate-800">{{ partidaCalidadSeleccionada?.PARTIDA }}</span>
+                  </div>
+                  <div>
+                    <span class="text-teal-600 font-medium">Artículo:</span>
+                    <span class="ml-1 font-bold text-slate-800">{{ partidaCalidadSeleccionada?.ARTIGO }}</span>
+                  </div>
+                  <div>
+                    <span class="text-teal-600 font-medium">Color:</span>
+                    <span class="ml-1 text-slate-700">{{ partidaCalidadSeleccionada?.COR }}</span>
+                  </div>
+                  <div>
+                    <span class="text-teal-600 font-medium">Telar:</span>
+                    <span class="ml-1 font-bold text-teal-700">{{ partidaCalidadSeleccionada?.TEAR }}</span>
+                  </div>
+                  <div>
+                    <span class="text-teal-600 font-medium">Total:</span>
+                    <span class="ml-1 text-slate-700">{{ formatNumber(partidaCalidadSeleccionada?.METRAGEM_TOTAL, 0) }} m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cargando detalle -->
+            <div v-if="cargandoDetallePartidaCalidad" class="flex-1 flex items-center justify-center">
+              <div class="text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-3"></div>
+                <p class="text-slate-500">Cargando detalle...</p>
+              </div>
+            </div>
+
+            <!-- Tabla de detalle -->
+            <div v-else-if="datosDetallePartidaCalidad.length > 0" class="overflow-auto bg-white mx-3 mb-3 rounded-b-lg border border-t-0 border-slate-300" style="flex: 0 1 auto; max-height: calc(100vh - 200px);">
+              <table class="w-full text-[12px] text-slate-700 border-separate border-spacing-0">
+                <thead class="sticky top-0 z-10">
+                  <tr class="text-[11px] text-slate-600 bg-teal-50">
+                    <th class="px-2 py-2 font-medium text-left border-r border-slate-200 border-b-2 border-b-slate-300">Grupo</th>
+                    <th class="px-2 py-2 font-medium text-left border-r border-slate-200 border-b-2 border-b-slate-300">Código</th>
+                    <th class="px-2 py-2 font-medium text-left border-r border-slate-200 border-b-2 border-b-slate-300">Defecto</th>
+                    <th class="px-2 py-2 font-medium text-right border-r border-slate-200 border-b-2 border-b-slate-300">Metraje</th>
+                    <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Calidad</th>
+                    <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Hora</th>
+                    <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Emendas</th>
+                    <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Pieza</th>
+                    <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Etiqueta</th>
+                    <th class="px-2 py-2 font-medium text-right border-r border-slate-200 border-b-2 border-b-slate-300">Ancho</th>
+                    <th class="px-2 py-2 font-medium text-right border-b-2 border-b-slate-300">Puntuación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    v-for="(item, index) in datosDetallePartidaCalidad" 
+                    :key="index" 
+                    class="border-b border-slate-200 hover:bg-teal-50/50 transition-colors"
+                  >
+                    <td class="px-2 py-2 text-left">{{ item.GRP_DEF }}</td>
+                    <td class="px-2 py-2 text-left">{{ item.COD_DE }}</td>
+                    <td class="px-2 py-2 text-left">{{ item.DEFEITO }}</td>
+                    <td class="px-2 py-2 text-right tabular-nums">{{ formatNumber(item.METRAGEM, 0) }}</td>
+                    <td class="px-2 py-2 text-center">{{ item.QUALIDADE }}</td>
+                    <td class="px-2 py-2 text-center">{{ item.HORA }}</td>
+                    <td class="px-2 py-2 text-center">{{ item.EMENDAS }}</td>
+                    <td class="px-2 py-2 text-center">{{ item.PECA || item['PEÇA'] || '' }}</td>
+                    <td class="px-2 py-2 text-center">{{ item.ETIQUETA }}</td>
+                    <td class="px-2 py-2 text-right tabular-nums">{{ item.LARGURA }}</td>
+                    <td class="px-2 py-2 text-right tabular-nums">{{ item.PONTUACAO }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Sin datos detalle -->
+            <div v-else class="flex-1 flex items-center justify-center py-20 text-slate-500">
+              <div class="text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <p class="font-medium">No se encontraron detalles para esta partida</p>
+              </div>
+            </div>
+          </template>
         </template>
       </div>
     </div>
@@ -818,11 +936,17 @@ const cargandoCalidad = ref(false)
 const datosUrdimbre = ref([])
 const cargandoUrdimbre = ref(false)
 
-// Estado para vista detalle partida
+// Estado para vista detalle partida TEJEDURÍA
 const vistaDetallePartida = ref(false)
 const partidaSeleccionada = ref(null)
 const datosDetallePartida = ref([])
 const cargandoDetallePartida = ref(false)
+
+// Estado para vista detalle partida CALIDAD
+const vistaDetallePartidaCalidad = ref(false)
+const partidaCalidadSeleccionada = ref(null)
+const datosDetallePartidaCalidad = ref([])
+const cargandoDetallePartidaCalidad = ref(false)
 
 // Refs
 const mainContentRef = ref(null)
@@ -1289,6 +1413,36 @@ const cargarDetalleCalidad = async (rolada) => {
   }
 };
 
+// Abrir vista de detalle de partida CALIDAD
+const abrirDetallePartidaCalidad = async (partida) => {
+  partidaCalidadSeleccionada.value = partida;
+  cargandoDetallePartidaCalidad.value = true;
+  datosDetallePartidaCalidad.value = [];
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/consulta-partida-calidad?partida=${encodeURIComponent(partida.PARTIDA)}`);
+    if (!response.ok) throw new Error('Error al cargar detalle de partida');
+    datosDetallePartidaCalidad.value = await response.json();
+    vistaDetallePartidaCalidad.value = true;
+  } catch (error) {
+    console.error('Error cargando detalle de partida CALIDAD:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo cargar el detalle de la partida'
+    });
+  } finally {
+    cargandoDetallePartidaCalidad.value = false;
+  }
+};
+
+// Volver a la vista de resumen CALIDAD
+const volverAResumenCalidad = () => {
+  vistaDetallePartidaCalidad.value = false;
+  partidaCalidadSeleccionada.value = null;
+  datosDetallePartidaCalidad.value = [];
+};
+
 // Cargar detalle de URDIMBRE
 const cargarDetalleUrdimbre = async (rolada) => {
   cargandoUrdimbre.value = true;
@@ -1308,10 +1462,14 @@ const cargarDetalleUrdimbre = async (rolada) => {
 // Cambiar sección del modal
 const cambiarSeccion = async (seccion) => {
   seccionActiva.value = seccion;
-  // Resetear vista detalle partida al cambiar sección
+  // Resetear vista detalle partida TEJEDURÍA al cambiar sección
   vistaDetallePartida.value = false;
   partidaSeleccionada.value = null;
   datosDetallePartida.value = [];
+  // Resetear vista detalle partida CALIDAD al cambiar sección
+  vistaDetallePartidaCalidad.value = false;
+  partidaCalidadSeleccionada.value = null;
+  datosDetallePartidaCalidad.value = [];
   
   if (seccion === 'urdimbre' && datosUrdimbre.value.length === 0) {
     await cargarDetalleUrdimbre(roladaSeleccionada.value);
@@ -1341,6 +1499,7 @@ const navegarRolada = async (direccion) => {
     datosTecelagem.value = [];
     datosCalidad.value = [];
     vistaDetallePartida.value = false;
+    vistaDetallePartidaCalidad.value = false;
     if (seccionActiva.value === 'urdimbre') {
       await cargarDetalleUrdimbre(roladaSeleccionada.value);
     } else if (seccionActiva.value === 'indigo') {
@@ -1361,10 +1520,14 @@ const cerrarModal = () => {
   datosCalidad.value = [];
   datosUrdimbre.value = [];
   seccionActiva.value = 'indigo';
-  // Resetear vista de detalle partida
+  // Resetear vista de detalle partida TEJEDURÍA
   vistaDetallePartida.value = false;
   partidaSeleccionada.value = null;
   datosDetallePartida.value = [];
+  // Resetear vista de detalle partida CALIDAD
+  vistaDetallePartidaCalidad.value = false;
+  partidaCalidadSeleccionada.value = null;
+  datosDetallePartidaCalidad.value = [];
 };
 
 // Copiar modal como imagen
@@ -3006,6 +3169,332 @@ const imprimirTabla = () => {
     ventana.focus();
     ventana.print();
   };
+};
+
+// Imprimir detalle del modal según la sección activa
+const imprimirModalDetalle = () => {
+  let titulo = '';
+  let datos = [];
+  let columnas = [];
+  let totales = null;
+  
+  // Determinar qué datos y estructura usar según la sección
+  if (seccionActiva.value === 'urdimbre') {
+    if (datosUrdimbre.value.length === 0) return;
+    titulo = 'URDIMBRE';
+    datos = datosUrdimbre.value;
+    columnas = [
+      { label: 'Partida', key: 'PARTIDA', align: 'center' },
+      { label: 'Fecha Inicio', key: 'DT_INICIO', align: 'center' },
+      { label: 'Hora Inicio', key: 'HORA_INICIO', align: 'center' },
+      { label: 'Fecha Final', key: 'DT_FINAL', align: 'center' },
+      { label: 'Hora Final', key: 'HORA_FINAL', align: 'center' },
+      { label: 'Artigo', key: 'ARTIGO', align: 'center' },
+      { label: 'Metros', key: 'METRAGEM', align: 'right', format: 'number0' },
+      { label: 'Veloc', key: 'VELOC', align: 'right', format: 'number0' },
+      { label: 'Fios', key: 'NUM_FIOS', align: 'center' },
+      { label: 'R-Fiação', key: 'RUP_FIACAO', align: 'right', format: 'number0' },
+      { label: 'R-Urd', key: 'RUP_URD', align: 'right', format: 'number0' },
+      { label: 'R-Oper', key: 'RUP_OPER', align: 'right', format: 'number0' },
+      { label: 'Roturas', key: 'RUPTURAS', align: 'right', format: 'number0' },
+      { label: 'Operador', key: 'NM_OPERADOR', align: 'left' },
+      { label: 'Lote Fiação', key: 'LOTE_FIACAO', align: 'center' },
+      { label: 'Maq Fiação', key: 'MAQ_FIACAO', align: 'center' },
+      { label: 'Base Urdume', key: 'BASE_URDUME', align: 'center' }
+    ];
+    totales = {
+      METRAGEM: totalesUrdimbre.value.metros,
+      RUP_FIACAO: totalesUrdimbre.value.rupFiacao,
+      RUP_URD: totalesUrdimbre.value.rupUrd,
+      RUP_OPER: totalesUrdimbre.value.rupOper,
+      RUPTURAS: totalesUrdimbre.value.rupturas
+    };
+  } else if (seccionActiva.value === 'indigo') {
+    if (datosDetalleAgrupados.value.length === 0) return;
+    titulo = 'ÍNDIGO';
+    datos = datosDetalleAgrupados.value;
+    columnas = [
+      { label: 'Partida', key: 'PARTIDA', align: 'center' },
+      { label: 'Fecha Inicio', key: 'DT_INICIO', align: 'center' },
+      { label: 'Hora Inicio', key: 'HORA_INICIO', align: 'center' },
+      { label: 'Fecha Final', key: 'DT_FINAL', align: 'center' },
+      { label: 'Hora Final', key: 'HORA_FINAL', align: 'center' },
+      { label: 'Turno', key: 'TURNO', align: 'center' },
+      { label: 'Base', key: 'ARTIGO', align: 'center' },
+      { label: 'Color', key: 'COR', align: 'center' },
+      { label: 'Metros', key: 'METRAGEM', align: 'right', format: 'number0' },
+      { label: 'Veloc.', key: 'VELOC', align: 'right', format: 'number0' },
+      { label: 'S', key: 'S', align: 'center' },
+      { label: 'Roturas', key: 'RUPTURAS', align: 'right', format: 'number0' },
+      { label: 'CV', key: 'CAVALOS', align: 'right', format: 'number0' },
+      { label: 'Operador', key: 'NM_OPERADOR', align: 'left' }
+    ];
+    totales = {
+      METRAGEM: totalesDetalle.value.metros,
+      RUPTURAS: totalesDetalle.value.roturas,
+      CAVALOS: totalesDetalle.value.cv
+    };
+  } else if (seccionActiva.value === 'tecelagem') {
+    // Vista de detalle de partida o vista agrupada
+    if (vistaDetallePartida.value) {
+      if (datosDetallePartida.value.length === 0) return;
+      titulo = `TEJEDURÍA - Partida ${partidaSeleccionada.value}`;
+      datos = datosDetallePartida.value;
+      columnas = [
+        { label: 'Partida', key: 'PARTIDA', align: 'center' },
+        { label: 'Máquina', key: 'MAQUINA', align: 'center' },
+        { label: 'Fecha Inicio', key: 'FECHA_INICIAL', align: 'center' },
+        { label: 'Fecha Final', key: 'FECHA_FINAL', align: 'center' },
+        { label: 'Turno', key: 'TURNO', align: 'center' },
+        { label: 'Metros', key: 'METRAGEM', align: 'right', format: 'number2' },
+        { label: 'Efi%', key: 'EFICIENCIA', align: 'right', format: 'number1' },
+        { label: 'R-Tra 10⁵', key: 'ROTURAS_TRA_105', align: 'right', format: 'number1' },
+        { label: 'R-Urd 10⁵', key: 'ROTURAS_URD_105', align: 'right', format: 'number1' },
+        { label: 'Operador', key: 'NM_OPERADOR', align: 'left' }
+      ];
+      totales = {
+        METRAGEM: totalesDetallePartida.value.metros,
+        EFICIENCIA: totalesDetallePartida.value.eficiencia,
+        ROTURAS_TRA_105: totalesDetallePartida.value.roturasTra,
+        ROTURAS_URD_105: totalesDetallePartida.value.roturasUrd
+      };
+    } else {
+      if (datosTecelagem.value.length === 0) return;
+      titulo = 'TEJEDURÍA';
+      datos = datosTecelagem.value;
+      columnas = [
+        { label: 'Partida', key: 'PARTIDA', align: 'center' },
+        { label: 'Fecha Inicio', key: 'FECHA_INICIAL', align: 'center' },
+        { label: 'Fecha Final', key: 'FECHA_FINAL', align: 'center' },
+        { label: 'Metros', key: 'METRAGEM', align: 'right', format: 'number2' },
+        { label: 'Telar', key: 'MAQUINA', align: 'center' },
+        { label: 'Efi%', key: 'EFICIENCIA', align: 'right', format: 'number1' },
+        { label: 'R-Tra 10⁵', key: 'ROTURAS_TRA_105', align: 'right', format: 'number1' },
+        { label: 'R-Urd 10⁵', key: 'ROTURAS_URD_105', align: 'right', format: 'number1' },
+        { label: 'Artigo', key: 'ARTIGO', align: 'left' },
+        { label: 'Cor', key: 'COR', align: 'center' },
+        { label: 'Nombre', key: 'NOME', align: 'left' },
+        { label: 'Trama', key: 'TRAMA', align: 'left' },
+        { label: 'Pasadas', key: 'PASADAS', align: 'right', format: 'number0' },
+        { label: 'RPM', key: 'RPM_AVER', align: 'right', format: 'number0' }
+      ];
+      totales = {
+        METRAGEM: totalesTecelagem.value.metros,
+        EFICIENCIA: totalesTecelagem.value.eficiencia,
+        ROTURAS_TRA_105: totalesTecelagem.value.roturasTra,
+        ROTURAS_URD_105: totalesTecelagem.value.roturasUrd,
+        PASADAS: totalesTecelagem.value.pasadas,
+        RPM_AVER: totalesTecelagem.value.rpm
+      };
+    }
+  } else if (seccionActiva.value === 'calidad') {
+    // Vista de detalle de partida o vista agrupada
+    if (vistaDetallePartidaCalidad.value) {
+      if (datosDetallePartidaCalidad.value.length === 0) return;
+      titulo = `CALIDAD - Partida ${partidaSeleccionadaCalidad.value}`;
+      datos = datosDetallePartidaCalidad.value;
+      columnas = [
+        { label: 'Grupo', key: 'GRP_DEF', align: 'left' },
+        { label: 'Código', key: 'COD_DE', align: 'left' },
+        { label: 'Defecto', key: 'DEFEITO', align: 'left' },
+        { label: 'Metraje', key: 'METRAGEM', align: 'right', format: 'number0' },
+        { label: 'Calidad', key: 'QUALIDADE', align: 'center' },
+        { label: 'Hora', key: 'HORA', align: 'center' },
+        { label: 'Emendas', key: 'EMENDAS', align: 'center' },
+        { label: 'Pieza', key: 'PECA', align: 'center' },
+        { label: 'Etiqueta', key: 'ETIQUETA', align: 'center' },
+        { label: 'Ancho', key: 'LARGURA', align: 'right', format: 'number1' },
+        { label: 'Puntuación', key: 'PONTUACAO', align: 'right', format: 'number1' }
+      ];
+      totales = {
+        METRAGEM: totalesDetallePartidaCalidad.value.metraje,
+        PONTUACAO: totalesDetallePartidaCalidad.value.puntuacion
+      };
+    } else {
+      if (datosCalidadAgrupados.value.length === 0) return;
+      titulo = 'CALIDAD';
+      datos = datosCalidadAgrupados.value;
+      columnas = [
+        { label: 'Partida', key: 'PARTIDA', align: 'center' },
+        { label: 'Proceso', key: 'ST_IND', align: 'center' },
+        { label: 'Reproc', key: 'REPROCESSO', align: 'center' },
+        { label: 'Telar', key: 'TEAR', align: 'center' },
+        { label: 'Metros Total', key: 'METRAGEM_TOTAL', align: 'right', format: 'number0' },
+        { label: 'Metros 1ª', key: 'METROS_1ERA', align: 'right', format: 'number0' },
+        { label: 'Metros 2ª', key: 'METROS_2DA', align: 'right', format: 'number0' },
+        { label: '% 1ª', key: 'PCT_1ERA', align: 'right', format: 'number1' },
+        { label: '% 2ª', key: 'PCT_2DA', align: 'right', format: 'number1' },
+        { label: 'Artigo', key: 'ARTIGO', align: 'center' },
+        { label: 'Cor', key: 'COR', align: 'center' }
+      ];
+      totales = {
+        METRAGEM_TOTAL: totalesCalidadAgrupados.value.metrosTotal,
+        METROS_1ERA: totalesCalidadAgrupados.value.metros1era,
+        METROS_2DA: totalesCalidadAgrupados.value.metros2da
+      };
+    }
+  }
+  
+  // Formatear valores según tipo
+  const formatValue = (value, format) => {
+    if (value === null || value === undefined || value === '') return '-';
+    if (format === 'number0') return Math.round(value).toLocaleString('es-ES');
+    if (format === 'number1') return Number(value).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    if (format === 'number2') return Number(value).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (format === 'date') {
+      try {
+        return new Date(value + 'T00:00:00').toLocaleDateString('es-ES');
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  };
+  
+  // Validar que hay datos antes de continuar
+  if (!datos || datos.length === 0) {
+    console.error('No hay datos para imprimir');
+    return;
+  }
+  
+  // Construir HTML
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Detalle ${titulo} - Rolada ${roladaSeleccionada.value}</title>
+      <style>
+        @page { 
+          size: landscape; 
+          margin: 5mm 5mm 10mm 5mm;
+          @bottom-left {
+            content: 'Fecha: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}';
+            font-size: 8px;
+            color: #64748b;
+          }
+        }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+          font-size: 9px;
+          margin: 0;
+          padding: 15px;
+          background: white;
+        }
+        h2 { 
+          text-align: center; 
+          margin: 0 0 12px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+        table { 
+          border-collapse: collapse; 
+          width: 100%;
+          font-size: 9px;
+          background: white;
+          border: 1px solid #94a3b8;
+        }
+        th { 
+          padding: 6px 5px;
+          text-align: center;
+          font-weight: 600;
+          border: 1px solid #cbd5e1;
+          background: #f8fafc;
+          color: #334155;
+        }
+        td { 
+          padding: 6px 5px; 
+          border: 1px solid #e2e8f0;
+        }
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .totales-row td {
+          background-color: #f1f5f9 !important;
+          font-weight: 600;
+          border-top: 2px solid #94a3b8 !important;
+          padding: 8px 5px;
+        }
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      </style>
+    </head>
+    <body>
+      <h2>DETALLE ${titulo} - ROLADA ${roladaSeleccionada.value}</h2>
+      <table>
+        <thead>
+          <tr>`;
+  
+  // Headers
+  columnas.forEach(col => {
+    html += `<th>${col.label}</th>`;
+  });
+  
+  html += `</tr>
+        </thead>
+        <tbody>`;
+  
+  // Filas de datos - agregar debug
+  console.log('Datos a imprimir:', datos.length, 'filas');
+  console.log('Muestra de datos:', datos[0]);
+  
+  datos.forEach((item, index) => {
+    html += `<tr>`;
+    columnas.forEach(col => {
+      const value = formatValue(item[col.key], col.format);
+      html += `<td class="text-${col.align}">${value}</td>`;
+    });
+    html += `</tr>`;
+  });
+  
+  // Totales
+  if (totales) {
+    html += `<tr class="totales-row">`;
+    columnas.forEach((col, idx) => {
+      if (idx === 0) {
+        html += `<td class="text-center"><strong>TOTAL</strong></td>`;
+      } else if (totales[col.key] !== undefined) {
+        const value = formatValue(totales[col.key], col.format);
+        html += `<td class="text-${col.align}"><strong>${value}</strong></td>`;
+      } else {
+        html += `<td></td>`;
+      }
+    });
+    html += `</tr>`;
+  }
+  
+  html += `
+        </tbody>
+      </table>
+    </body>
+    </html>`;
+  
+  console.log('HTML generado, longitud:', html.length);
+  
+  // Abrir ventana de impresión
+  const ventana = window.open('', '_blank', 'width=1200,height=800');
+  if (!ventana) {
+    alert('No se pudo abrir la ventana de impresión. Verifica que no esté bloqueada por el navegador.');
+    return;
+  }
+  
+  ventana.document.open();
+  ventana.document.write(html);
+  ventana.document.close();
+  
+  // Esperar a que cargue y luego imprimir
+  setTimeout(() => {
+    ventana.focus();
+    ventana.print();
+    
+    // Cerrar la ventana después de imprimir o cancelar
+    // En Chrome y Firefox, esto se ejecuta después del diálogo de impresión
+    setTimeout(() => {
+      ventana.close();
+    }, 100);
+  }, 250);
 };
 
 // Inicializar fecha por defecto (ayer)
