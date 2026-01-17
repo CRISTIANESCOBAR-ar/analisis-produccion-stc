@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import DashboardGeneral from '../components/dashboards/DashboardGeneral.vue'
 import ImportControl from '../components/ImportControl.vue'
 import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
@@ -13,7 +14,13 @@ import CostosMensuales from '../components/CostosMensuales.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/revision-cq'
+    redirect: '/dashboard'
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: DashboardGeneral,
+    meta: { title: 'Dashboard - Análisis Producción STC' }
   },
   {
     path: '/revision-cq',

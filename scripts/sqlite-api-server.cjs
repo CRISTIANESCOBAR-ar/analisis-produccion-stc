@@ -10,7 +10,7 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 
 const app = express();
 const PORT = 3002;
@@ -39,18 +39,119 @@ const getTableConfig = (folderPath) => {
   }));
 };
 
-// Middleware
+// Middleware - CORS restrictivo
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3002',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174'
+];
+
 app.use(cors({
-  origin: '*', // Permitir todas las IPs de red local
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (como Postman) o de orígenes permitidos
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      securityLog('warn', 'CORS Violation', { origin, timestamp: new Date().toISOString() });
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
 app.use(express.json());
+
+// Rate limiting básico
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minuto
+const MAX_REQUESTS = 100;
+
+app.use((req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!requestCounts.has(ip)) {
+    requestCounts.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+  
+  const data = requestCounts.get(ip);
+  
+  if (now > data.resetTime) {
+    data.count = 1;
+    data.resetTime = now + RATE_LIMIT_WINDOW;
+    return next();
+  }
+  
+  if (data.count >= MAX_REQUESTS) {
+    securityLog('warn', 'Rate Limit Exceeded', { ip, count: data.count });
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+  
+  data.count++;
+  next();
+});
+
+// Helper para validar query parameters
+const validateQueryParams = (req, allowedParams) => {
+  const validated = {};
+  for (const param of allowedParams) {
+    if (req.query[param] !== undefined) {
+      const value = String(req.query[param]).trim();
+      // Validar que no contenga caracteres peligrosos
+      if (!/[<>"';\\]/.test(value)) {
+        validated[param] = value;
+      }
+    }
+  }
+  return validated;
+};
+
+// Helper para validar rutas contra path traversal
+const validatePath = (inputPath, allowedBasePaths) => {
+  const normalized = path.normalize(inputPath);
+  const resolved = path.resolve(normalized);
+  
+  // Verificar que la ruta resuelva a una de las rutas base permitidas
+  const isValid = allowedBasePaths.some(basePath => {
+    const resolvedBase = path.resolve(basePath);
+    return resolved.startsWith(resolvedBase);
+  });
+  
+  if (!isValid) {
+    securityLog('warn', 'Path Traversal Attempt', { attemptedPath: inputPath, resolvedPath: resolved });
+    return null;
+  }
+  
+  return resolved;
+};
+
+// Helper para logging de seguridad
+const securityLog = (level, event, details = {}) => {
+  const timestamp = new Date().toISOString();
+  const logEntry = {
+    timestamp,
+    level,
+    event,
+    ...details
+  };
+  
+  // Log a consola con formato
+  const emoji = level === 'error' ? '🔴' : level === 'warn' ? '⚠️' : '🔒';
+  console.log(`${emoji} [SECURITY] ${timestamp} - ${event}:`, JSON.stringify(details));
+  
+  // TODO: Aquí se podría agregar logging a archivo o servicio externo
+  // fs.appendFileSync('security.log', JSON.stringify(logEntry) + '\n');
+};
 
 // ✅ Servir archivos estáticos del frontend (producción)
 const distPath = path.join(__dirname, '../dist');
-if (fs.existsSync(distPath)) {
-  console.log('✅ Sirviendo frontend desde:', distPath);
-  app.use(express.static(distPath));
+const validDistPath = validatePath(distPath, [__dirname]);
+if (validDistPath && fs.existsSync(validDistPath)) {
+  console.log('✅ Sirviendo frontend desde:', validDistPath);
+  app.use(express.static(validDistPath));
 } else {
   console.log('⚠️  Carpeta dist/ no encontrada. Ejecuta: npm run build');
 }
@@ -294,7 +395,8 @@ const getDateRangeParams = (startDate, endDate) => {
 // GET /api/import-status - Estado detallado de importaciones
 app.get('/api/import-status', async (req, res) => {
   try {
-    const csvFolder = req.query.csvFolder || 'C:\\STC';
+    const params = validateQueryParams(req, ['csvFolder']);
+    const csvFolder = params.csvFolder || 'C:\\STC';
     const configs = getTableConfig(csvFolder);
     const statusList = [];
 
@@ -305,18 +407,23 @@ app.get('/api/import-status', async (req, res) => {
 
       // 1. Verificar archivo en disco - usar AMBAS fechas (mtime Y birthtime/ctime)
       try {
-        if (fs.existsSync(config.xlsxPath)) {
-          const stats = fs.statSync(config.xlsxPath);
+        const validXlsxPath = validatePath(config.xlsxPath, ['C:\\STC', csvFolder]);
+        if (validXlsxPath && fs.existsSync(validXlsxPath)) {
+          const stats = fs.statSync(validXlsxPath);
           // Usar la fecha más reciente entre mtime (modificación) y ctime (cambio de atributos/descarga)
           const mtime = stats.mtime.getTime();
           const ctime = stats.ctime.getTime();
           const mostRecent = new Date(Math.max(mtime, ctime));
           fileModified = mostRecent.toISOString(); // Fecha más reciente
         } else {
-          fileStatus = 'MISSING_FILE';
+          fileStatus = validXlsxPath ? 'MISSING_FILE' : 'INVALID_PATH';
+          if (!validXlsxPath) {
+            securityLog('warn', 'Invalid Path in Import Status', { path: config.xlsxPath });
+          }
         }
       } catch (e) {
         fileStatus = 'ERROR_READING_FILE';
+        securityLog('error', 'File Read Error', { path: config.xlsxPath, error: e.message });
       }
 
       // 2. Consultar base de datos
@@ -373,11 +480,10 @@ app.get('/api/import-status', async (req, res) => {
 app.post('/api/import/trigger', (req, res) => {
   // Ejecuta el script de PowerShell que ya existe
   const scriptPath = path.join(__dirname, 'update-all-tables.ps1');
-  const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}"`;
 
   console.log('🚀 Ejecutando actualización manual...');
   
-  exec(command, (error, stdout, stderr) => {
+  execFile('powershell', ['-ExecutionPolicy', 'Bypass', '-File', scriptPath], (error, stdout, stderr) => {
     if (error) {
       console.error(`❌ Error ejecutando script: ${error.message}`);
       return res.status(500).json({ error: error.message, details: stderr });
@@ -400,7 +506,6 @@ app.post('/api/import/force-all', async (req, res) => {
 
   // Usar script secuencial optimizado (paralelo no mejora por limitaciones SQLite)
   const scriptPath = path.join(__dirname, 'import-all-fast.ps1');
-  const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -CsvFolder "${csvFolder}"`;
 
   console.log(`⚡ Forzando importación completa desde ${csvFolder}...`);
 
@@ -408,13 +513,16 @@ app.post('/api/import/force-all', async (req, res) => {
     const tStart = Date.now();
     // Ejecutar script y esperar resultado
     const { stdout, stderr } = await new Promise((resolve, reject) => {
-      exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 300000 }, (error, stdout, stderr) => { // Timeout aumentado a 5 min
-        if (error) {
-          reject({ error, stderr });
-        } else {
-          resolve({ stdout, stderr });
+      execFile('powershell', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-CsvFolder', csvFolder], 
+        { maxBuffer: 10 * 1024 * 1024, timeout: 300000 }, 
+        (error, stdout, stderr) => {
+          if (error) {
+            reject({ error, stderr });
+          } else {
+            resolve({ stdout, stderr });
+          }
         }
-      });
+      );
     });
     const tExecDone = Date.now();
 
@@ -475,23 +583,24 @@ app.post('/api/import/force-table', async (req, res) => {
 
   const scriptFile = scriptMap[table] || 'import-calidad-fast.ps1';
   const scriptPath = path.join(__dirname, scriptFile);
-  
-  // El script import-calidad-fast.ps1 espera XlsxPath pero maneja CSV si la extensión es .csv
-  const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
 
   console.log(`⚡ Forzando importación de ${table} desde ${config.xlsxPath}...`);
-  console.log(`Comando: ${command}`);
   
   try {
     // Convertir exec a Promise
     const { stdout, stderr } = await new Promise((resolve, reject) => {
-      exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
-        if (error) {
-          reject({ error, stderr });
-        } else {
-          resolve({ stdout, stderr });
+      execFile('powershell', 
+        ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, 
+         '-XlsxPath', config.xlsxPath, '-SqlitePath', DB_PATH, '-Sheet', config.sheet],
+        { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, 
+        (error, stdout, stderr) => {
+          if (error) {
+            reject({ error, stderr });
+          } else {
+            resolve({ stdout, stderr });
+          }
         }
-      });
+      );
     });
     
     console.log(`✅ ${table} importada correctamente`);
@@ -593,20 +702,23 @@ app.post('/api/import/update-outdated', async (req, res) => {
     const scriptFile = scriptMap[table] || 'import-calidad-fast.ps1';
     const scriptPath = path.join(__dirname, scriptFile);
 
-    const command = `powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -XlsxPath "${config.xlsxPath}" -SqlitePath "${DB_PATH}" -Sheet "${config.sheet}"`;
-
     console.log(`  ⚡ Importando ${table} desde ${config.xlsxPath} usando ${scriptFile}...`);
     
     const t0 = Date.now();
     try {
       const { stdout, stderr } = await new Promise((resolve, reject) => {
-        exec(command, { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
-          if (error) {
-            reject({ error, stderr });
-          } else {
-            resolve({ stdout, stderr });
+        execFile('powershell',
+          ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath,
+           '-XlsxPath', config.xlsxPath, '-SqlitePath', DB_PATH, '-Sheet', config.sheet],
+          { maxBuffer: 10 * 1024 * 1024, timeout: 60000 },
+          (error, stdout, stderr) => {
+            if (error) {
+              reject({ error, stderr });
+            } else {
+              resolve({ stdout, stderr });
+            }
           }
-        });
+        );
       });
       const elapsed = Date.now() - t0;
       
@@ -779,7 +891,8 @@ app.get('/api/costos/items', async (req, res) => {
 // GET /api/costos/mensual - Costos de múltiples meses (últimos N meses o rango)
 app.get('/api/costos/mensual', async (req, res) => {
   try {
-    const limite = parseInt(req.query.limite) || 24; // Por defecto últimos 24 meses
+    const params = validateQueryParams(req, ['limite']);
+    const limite = parseInt(params.limite) || 24; // Por defecto últimos 24 meses
     
     const rows = await dbAll(
       `WITH MesesUnicos AS (
@@ -873,25 +986,26 @@ app.put('/api/costos/mensual', async (req, res) => {
 // GET /api/produccion - Listar producción con paginación
 app.get('/api/produccion', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const params = validateQueryParams(req, ['page', 'limit', 'startDate', 'endDate']);
+    const page = parseInt(params.page) || 1;
+    const limit = parseInt(params.limit) || 50;
     const offset = (page - 1) * limit;
     
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
     
     let whereClause = '';
-    let params = [];
+    let queryParams = [];
     
     if (dateRange) {
       whereClause = 'WHERE DT_BASE_PRODUCAO BETWEEN ? AND ?';
-      params = [dateRange.start, dateRange.end];
+      queryParams = [dateRange.start, dateRange.end];
     }
     
     const data = await dbAll(
       `SELECT * FROM tb_PRODUCCION ${whereClause} 
        ORDER BY DT_BASE_PRODUCAO DESC 
        LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+      [...queryParams, limit, offset]
     );
     
     const totalResult = await dbGet(
@@ -916,14 +1030,15 @@ app.get('/api/produccion', async (req, res) => {
 // GET /api/produccion/summary - Resumen de producción por fecha
 app.get('/api/produccion/summary', async (req, res) => {
   try {
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
+    const params = validateQueryParams(req, ['startDate', 'endDate']);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
     
     let whereClause = '';
-    let params = [];
+    let queryParams = [];
     
     if (dateRange) {
       whereClause = 'WHERE DT_BASE_PRODUCAO BETWEEN ? AND ?';
-      params = [dateRange.start, dateRange.end];
+      queryParams = [dateRange.start, dateRange.end];
     }
     
     const summary = await dbAll(
@@ -935,7 +1050,7 @@ app.get('/api/produccion/summary', async (req, res) => {
        ${whereClause}
        GROUP BY DATE(DT_BASE_PRODUCAO)
        ORDER BY fecha DESC`,
-      params
+      queryParams
     );
     
     res.json(summary);
@@ -951,25 +1066,26 @@ app.get('/api/produccion/summary', async (req, res) => {
 // GET /api/calidad - Listar control de calidad
 app.get('/api/calidad', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const params = validateQueryParams(req, ['page', 'limit', 'startDate', 'endDate']);
+    const page = parseInt(params.page) || 1;
+    const limit = parseInt(params.limit) || 50;
     const offset = (page - 1) * limit;
     
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
     
     let whereClause = '';
-    let params = [];
+    let queryParams = [];
     
     if (dateRange) {
       whereClause = 'WHERE DAT_PROD BETWEEN ? AND ?';
-      params = [dateRange.start, dateRange.end];
+      queryParams = [dateRange.start, dateRange.end];
     }
     
     const data = await dbAll(
       `SELECT * FROM tb_CALIDAD ${whereClause} 
        ORDER BY DAT_PROD DESC 
        LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+      [...queryParams, limit, offset]
     );
     
     const totalResult = await dbGet(
@@ -994,8 +1110,9 @@ app.get('/api/calidad', async (req, res) => {
 // GET /api/calidad/revision-cq - Reporte agrupado por Revisor (Lógica VBA exacta)
 app.get('/api/calidad/revision-cq', async (req, res) => {
   try {
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
-    const tramas = req.query.tramas || 'Todas'; // Todas, ALG 100%, P + E, POL 100%
+    const params = validateQueryParams(req, ['startDate', 'endDate', 'tramas']);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
+    const tramas = params.tramas || 'Todas'; // Todas, ALG 100%, P + E, POL 100%
 
     if (!dateRange) {
       return res.status(400).json({ error: 'Se requieren startDate y endDate' });
@@ -1161,9 +1278,10 @@ app.get('/api/calidad/available-dates', async (req, res) => {
 // GET /api/calidad/revisor-detalle - Detalle de producción por revisor (con partidas)
 app.get('/api/calidad/revisor-detalle', async (req, res) => {
   try {
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
-    const revisor = req.query.revisor;
-    const tramas = req.query.tramas || 'Todas';
+    const params = validateQueryParams(req, ['startDate', 'endDate', 'revisor', 'tramas']);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
+    const revisor = params.revisor;
+    const tramas = params.tramas || 'Todas';
 
     if (!dateRange || !revisor) {
       return res.status(400).json({ error: 'Se requieren startDate, endDate y revisor' });
@@ -1359,9 +1477,10 @@ app.get('/api/calidad/revisor-detalle', async (req, res) => {
 // GET /api/calidad/partida-detalle - Detalle de defectos de una partida específica
 app.get('/api/calidad/partida-detalle', async (req, res) => {
   try {
-    const fecha = req.query.fecha;
-    const partida = req.query.partida;
-    const revisor = req.query.revisor;
+    const params = validateQueryParams(req, ['fecha', 'partida', 'revisor']);
+    const fecha = params.fecha;
+    const partida = params.partida;
+    const revisor = params.revisor;
 
     if (!fecha || !partida || !revisor) {
       return res.status(400).json({ error: 'Se requieren fecha, partida y revisor' });
@@ -1407,7 +1526,8 @@ app.get('/api/calidad/partida-detalle', async (req, res) => {
 // GET /api/test/produccion-partida - TEST: Ver datos raw de producción para una partida
 app.get('/api/test/produccion-partida', async (req, res) => {
   try {
-    const partida = req.query.partida || '1541315';
+    const params = validateQueryParams(req, ['partida']);
+    const partida = params.partida || '1541315';
     
     // Ver registros con PONTOS_LIDOS no nulo
     const sqlWithData = `
@@ -1460,25 +1580,26 @@ app.get('/api/test/produccion-partida', async (req, res) => {
 // GET /api/paradas - Listar paradas de máquina
 app.get('/api/paradas', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const params = validateQueryParams(req, ['page', 'limit', 'startDate', 'endDate']);
+    const page = parseInt(params.page) || 1;
+    const limit = parseInt(params.limit) || 50;
     const offset = (page - 1) * limit;
     
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
     
     let whereClause = '';
-    let params = [];
+    let queryParams = [];
     
     if (dateRange) {
       whereClause = 'WHERE DATA_BASE BETWEEN ? AND ?';
-      params = [dateRange.start, dateRange.end];
+      queryParams = [dateRange.start, dateRange.end];
     }
     
     const data = await dbAll(
       `SELECT * FROM tb_PARADAS ${whereClause} 
        ORDER BY DATA_BASE DESC 
        LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+      [...queryParams, limit, offset]
     );
     
     const totalResult = await dbGet(
@@ -1503,14 +1624,15 @@ app.get('/api/paradas', async (req, res) => {
 // GET /api/paradas/top-motivos - Top motivos de parada
 app.get('/api/paradas/top-motivos', async (req, res) => {
   try {
-    const dateRange = getDateRangeParams(req.query.startDate, req.query.endDate);
+    const params = validateQueryParams(req, ['startDate', 'endDate']);
+    const dateRange = getDateRangeParams(params.startDate, params.endDate);
     
     let whereClause = '';
-    let params = [];
+    let queryParams = [];
     
     if (dateRange) {
       whereClause = 'WHERE DATA_BASE BETWEEN ? AND ?';
-      params = [dateRange.start, dateRange.end];
+      queryParams = [dateRange.start, dateRange.end];
     }
     
     const topMotivos = await dbAll(
@@ -1523,7 +1645,7 @@ app.get('/api/paradas/top-motivos', async (req, res) => {
        GROUP BY MOTIVO
        ORDER BY total_horas DESC
        LIMIT 10`,
-      params
+      queryParams
     );
     
     res.json(topMotivos);
@@ -1539,21 +1661,22 @@ app.get('/api/paradas/top-motivos', async (req, res) => {
 // GET /api/fichas - Listar fichas de artículos
 app.get('/api/fichas', async (req, res) => {
   try {
-    const search = req.query.search;
+    const params = validateQueryParams(req, ['search']);
+    const search = params.search;
     
     let whereClause = '';
-    let params = [];
+    let queryParams = [];
     
     if (search) {
       whereClause = `WHERE [ARTIGO CODIGO] LIKE ? OR ARTIGO LIKE ? OR COR LIKE ?`;
-      params = [`%${search}%`, `%${search}%`, `%${search}%`];
+      queryParams = [`%${search}%`, `%${search}%`, `%${search}%`];
     }
     
     const data = await dbAll(
       `SELECT * FROM tb_FICHAS ${whereClause} 
        ORDER BY [ARTIGO CODIGO]
        LIMIT 100`,
-      params
+      queryParams
     );
     
     res.json({ data: data });
@@ -1587,8 +1710,9 @@ app.get('/api/fichas/:codigo', async (req, res) => {
 // GET /api/testes - Listar testes físicos
 app.get('/api/testes', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const params = validateQueryParams(req, ['page', 'limit']);
+    const page = parseInt(params.page) || 1;
+    const limit = parseInt(params.limit) || 50;
     const offset = (page - 1) * limit;
     
     const data = await dbAll(
@@ -1702,7 +1826,8 @@ app.get('/api/calidad/revisores', async (req, res) => {
 // GET /api/calidad/historico-revisor - Análisis histórico mensual por revisor
 app.get('/api/calidad/historico-revisor', async (req, res) => {
   try {
-    const { startDate, endDate, revisor, tramas } = req.query;
+    const params = validateQueryParams(req, ['startDate', 'endDate', 'revisor', 'tramas']);
+    const { startDate, endDate, revisor, tramas } = params;
 
     if (!startDate || !endDate || !revisor) {
       return res.status(400).json({ error: 'Se requieren startDate, endDate y revisor' });
@@ -1796,7 +1921,8 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
 // GET /api/calidad/historico-global - Análisis histórico mensual GLOBAL (todos los revisores)
 app.get('/api/calidad/historico-global', async (req, res) => {
   try {
-    const { startDate, endDate, tramas } = req.query;
+    const params = validateQueryParams(req, ['startDate', 'endDate', 'tramas']);
+    const { startDate, endDate, tramas } = params;
 
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'Se requieren startDate y endDate' });
@@ -1889,7 +2015,8 @@ app.get('/api/calidad/historico-global', async (req, res) => {
 // GET /api/analisis-mesa-test?articulo=XXX&fecha_inicial=YYYY-MM-DD&fecha_final=YYYY-MM-DD
 app.get('/api/analisis-mesa-test', async (req, res) => {
   try {
-    const { articulo, fecha_inicial, fecha_final } = req.query;
+    const params = validateQueryParams(req, ['articulo', 'fecha_inicial', 'fecha_final']);
+    const { articulo, fecha_inicial, fecha_final } = params;
 
     if (!articulo) {
       return res.status(400).json({ error: 'Parámetro "articulo" requerido' });
@@ -2094,7 +2221,8 @@ app.get('/api/analisis-mesa-test', async (req, res) => {
 // =====================================================================
 app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin } = req.query;
+    const params = validateQueryParams(req, ['fecha_inicio', 'fecha_fin']);
+    const { fecha_inicio, fecha_fin } = params;
     
     // Filtro de fechas opcional (si no se envían, trae todo)
     let dateFilter = '';
@@ -2105,7 +2233,7 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
     let anudadosWhere = "WHERE MOTIVO = 101";
     let prensadaWhere = "WHERE DESCRICAO = 'ESTOPA AZUL'";
     
-    const params = [];
+    const queryParams = [];
     
     if (fecha_inicio && fecha_fin) {
       // Convertir DD/MM/YYYY a YYYY-MM-DD para comparación
@@ -2139,15 +2267,15 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
       prensadaWhere += residuosDateCondition;
 
       // Params for CTEs
-      params.push(fecha_inicio, fecha_fin); // ProduccionDiaria
-      params.push(fecha_inicio, fecha_fin); // TejeduriaProduccion
-      params.push(fecha_inicio, fecha_fin); // ResiduosDiarios
-      params.push(fecha_inicio, fecha_fin); // ResiduosTejeduria
-      params.push(fecha_inicio, fecha_fin); // AnudadosDiarios
-      params.push(fecha_inicio, fecha_fin); // ResiduosPrensada
+      queryParams.push(fecha_inicio, fecha_fin); // ProduccionDiaria
+      queryParams.push(fecha_inicio, fecha_fin); // TejeduriaProduccion
+      queryParams.push(fecha_inicio, fecha_fin); // ResiduosDiarios
+      queryParams.push(fecha_inicio, fecha_fin); // ResiduosTejeduria
+      queryParams.push(fecha_inicio, fecha_fin); // AnudadosDiarios
+      queryParams.push(fecha_inicio, fecha_fin); // ResiduosPrensada
       
       // Params for outer query
-      params.push(fecha_inicio, fecha_fin);
+      queryParams.push(fecha_inicio, fecha_fin);
     }
 
     const sql = `
@@ -2269,7 +2397,7 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
         substr(D.Fecha, 1, 2) ASC;
     `;
 
-    const rows = await dbAll(sql, params);
+    const rows = await dbAll(sql, queryParams);
     res.json(rows);
   } catch (error) {
     console.error('Error en /api/residuos-indigo-tejeduria:', error);
@@ -2283,7 +2411,8 @@ app.get('/api/residuos-indigo-tejeduria', async (req, res) => {
 // GET /api/detalle-residuos?fecha=DD/MM/YYYY
 app.get('/api/detalle-residuos', async (req, res) => {
   try {
-    const { fecha } = req.query;
+    const params = validateQueryParams(req, ['fecha']);
+    const { fecha } = params;
     
     if (!fecha) {
       return res.status(400).json({ error: 'Parámetro "fecha" requerido (formato DD/MM/YYYY)' });
@@ -2325,7 +2454,8 @@ app.get('/api/detalle-residuos', async (req, res) => {
 // GET /api/detalle-residuos-sector?fecha=DD/MM/YYYY
 app.get('/api/detalle-residuos-sector', async (req, res) => {
   try {
-    const { fecha } = req.query;
+    const params = validateQueryParams(req, ['fecha']);
+    const { fecha } = params;
     
     if (!fecha) {
       return res.status(400).json({ error: 'Parámetro "fecha" requerido (formato DD/MM/YYYY)' });
@@ -2359,7 +2489,8 @@ app.get('/api/detalle-residuos-sector', async (req, res) => {
 // GET /api/residuos-indigo-analisis?fecha_inicio=DD/MM/YYYY&fecha_fin=DD/MM/YYYY
 app.get('/api/residuos-indigo-analisis', async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin } = req.query;
+    const params = validateQueryParams(req, ['fecha_inicio', 'fecha_fin']);
+    const { fecha_inicio, fecha_fin } = params;
     
     if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Parámetros "fecha_inicio" y "fecha_fin" requeridos (formato DD/MM/YYYY)' });
@@ -2540,7 +2671,8 @@ app.get('/api/residuos-indigo-estopa-por-mes', async (req, res) => {
 // GET /api/residuos-indigo-estopa-por-dia?fecha_inicio=DD/MM/YYYY&fecha_fin=DD/MM/YYYY
 app.get('/api/residuos-indigo-estopa-por-dia', async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin } = req.query;
+    const params = validateQueryParams(req, ['fecha_inicio', 'fecha_fin']);
+    const { fecha_inicio, fecha_fin } = params;
     
     if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Parámetros "fecha_inicio" y "fecha_fin" requeridos (formato DD/MM/YYYY)' });
@@ -2637,7 +2769,8 @@ app.get('/api/produccion-indigo-resumen', async (req, res) => {
 // GET /api/articulos-mesa-test?fecha_inicial=YYYY-MM-DD&fecha_final=YYYY-MM-DD
 app.get('/api/articulos-mesa-test', async (req, res) => {
   try {
-    const { fecha_inicial, fecha_final } = req.query;
+    const params = validateQueryParams(req, ['fecha_inicial', 'fecha_final']);
+    const { fecha_inicial, fecha_final } = params;
 
     if (!fecha_inicial) {
       return res.status(400).json({ error: 'Parámetro "fecha_inicial" requerido' });
@@ -2726,7 +2859,8 @@ app.get('/api/articulos-mesa-test', async (req, res) => {
 // =====================================================================
 app.get('/api/consulta-rolada-tecelagem', async (req, res) => {
   try {
-    const { rolada } = req.query;
+    const params = validateQueryParams(req, ['rolada']);
+    const { rolada } = params;
     
     if (!rolada) {
       return res.status(400).json({ error: 'Parámetro ROLADA requerido' });
@@ -2790,7 +2924,8 @@ app.get('/api/consulta-rolada-tecelagem', async (req, res) => {
 // =====================================================================
 app.get('/api/consulta-partida-tecelagem', async (req, res) => {
   try {
-    const { partida, cor } = req.query;
+    const params = validateQueryParams(req, ['partida', 'cor']);
+    const { partida, cor } = params;
     
     if (!partida) {
       return res.status(400).json({ error: 'Parámetro PARTIDA requerido' });
@@ -2854,7 +2989,8 @@ app.get('/api/consulta-partida-tecelagem', async (req, res) => {
 // =====================================================================
 app.get('/api/consulta-rolada-calidad', async (req, res) => {
   try {
-    const { rolada } = req.query;
+    const params = validateQueryParams(req, ['rolada']);
+    const { rolada } = params;
     
     if (!rolada) {
       return res.status(400).json({ error: 'Parámetro ROLADA requerido' });
@@ -2897,7 +3033,8 @@ app.get('/api/consulta-rolada-calidad', async (req, res) => {
 // =====================================================================
 app.get('/api/consulta-partida-calidad', async (req, res) => {
   try {
-    const { partida } = req.query;
+    const params = validateQueryParams(req, ['partida']);
+    const { partida } = params;
     
     if (!partida) {
       return res.status(400).json({ error: 'Parámetro PARTIDA requerido' });
@@ -2915,7 +3052,8 @@ app.get('/api/consulta-partida-calidad', async (req, res) => {
         "PEÇA" AS PECA,
         ETIQUETA,
         LARGURA,
-        PONTUACAO
+        PONTUACAO,
+        "REVISOR FINAL" AS REVISOR_FINAL
       FROM tb_CALIDAD
       WHERE PARTIDA = ?
       ORDER BY HORA ASC
@@ -2935,7 +3073,8 @@ app.get('/api/consulta-partida-calidad', async (req, res) => {
 // =====================================================================
 app.get('/api/consulta-rolada-indigo', async (req, res) => {
   try {
-    const { rolada } = req.query;
+    const params = validateQueryParams(req, ['rolada']);
+    const { rolada } = params;
     
     if (!rolada) {
       return res.status(400).json({ error: 'Parámetro ROLADA requerido' });
@@ -2979,7 +3118,8 @@ app.get('/api/consulta-rolada-indigo', async (req, res) => {
 // =====================================================================
 app.get('/api/consulta-rolada-urdimbre', async (req, res) => {
   try {
-    const { rolada } = req.query;
+    const params = validateQueryParams(req, ['rolada']);
+    const { rolada } = params;
     
     if (!rolada) {
       return res.status(400).json({ error: 'Parámetro ROLADA requerido' });
@@ -3024,7 +3164,8 @@ app.get('/api/consulta-rolada-urdimbre', async (req, res) => {
 // ====================================
 app.get('/api/informe-produccion-indigo', async (req, res) => {
   try {
-    const { fechaInicio, fechaFin } = req.query;
+    const params = validateQueryParams(req, ['fechaInicio', 'fechaFin']);
+    const { fechaInicio, fechaFin } = params;
 
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
@@ -3132,6 +3273,7 @@ app.get('/api/informe-produccion-indigo', async (req, res) => {
       TecelagemMetrics AS (
         SELECT
           ROLADA,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM_TOTAL,
           SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) AS PONTOS_LIDOS_TOTAL,
           SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) AS PONTOS_100_TOTAL,
           SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) AS PARADA_TRAMA_TOTAL,
@@ -3211,6 +3353,7 @@ app.get('/api/informe-produccion-indigo', async (req, res) => {
         ROUND((CAST(COALESCE(rc.P_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS P_PERCENT,
         COALESCE(rc.Q_COUNT, 0) AS Q_COUNT,
         ROUND((CAST(COALESCE(rc.Q_COUNT, 0) AS REAL) * 100.0) / NULLIF(rc.TOTAL_COUNT, 0), 1) AS Q_PERCENT,
+        ROUND(tm.METRAGEM_TOTAL, 0) AS TECELAGEM_METROS,
         ROUND((tm.PONTOS_LIDOS_TOTAL * 100.0) / NULLIF(tm.PONTOS_100_TOTAL, 0), 1) AS TECELAGEM_EFICIENCIA,
         ROUND((tm.PARADA_TRAMA_TOTAL * 100000.0) / NULLIF((tm.PONTOS_LIDOS_TOTAL * 1000.0), 0), 2) AS RT105,
         ROUND((tm.PARADA_URDUME_TOTAL * 100000.0) / NULLIF((tm.PONTOS_LIDOS_TOTAL * 1000.0), 0), 2) AS RU105,
@@ -3242,7 +3385,8 @@ app.get('/api/informe-produccion-indigo', async (req, res) => {
 // ====================================
 app.get('/api/seguimiento-roladas', async (req, res) => {
   try {
-    const { fechaInicio, fechaFin } = req.query;
+    const params = validateQueryParams(req, ['fechaInicio', 'fechaFin']);
+    const { fechaInicio, fechaFin } = params;
 
     if (!fechaInicio || !fechaFin) {
       return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
@@ -3649,4 +3793,154 @@ app.listen(PORT, HOST, () => {
   console.log('Presiona Ctrl+C para detener');
   console.log('========================================');
   console.log('');
+});
+
+// =====================================================================
+// ENDPOINTS - Sistema de Alertas
+// =====================================================================
+
+// GET /api/alerts - Obtener alertas activas (últimas 24 horas)
+app.get('/api/alerts', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const alertsLogPath = path.join(__dirname, '..', 'logs', 'alerts.log');
+    
+    // Verificar si existe el archivo de log
+    if (!fs.existsSync(alertsLogPath)) {
+      return res.json([]);
+    }
+    
+    const alertsContent = fs.readFileSync(alertsLogPath, 'utf-8');
+    const alertsLog = alertsContent
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        try {
+          return JSON.parse(line);
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(alert => alert !== null)
+      .filter(alert => {
+        // Solo últimas 24 horas
+        const alertTime = new Date(alert.timestamp);
+        const now = new Date();
+        return (now - alertTime) < 24 * 60 * 60 * 1000;
+      });
+    
+    res.json(alertsLog);
+  } catch (error) {
+    console.error('Error en /api/alerts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/alerts/summary - Resumen de alertas por tipo
+app.get('/api/alerts/summary', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const alertsLogPath = path.join(__dirname, '..', 'logs', 'alerts.log');
+    
+    if (!fs.existsSync(alertsLogPath)) {
+      return res.json({ total: 0, por_tipo: {} });
+    }
+    
+    const alertsContent = fs.readFileSync(alertsLogPath, 'utf-8');
+    const alertsLog = alertsContent
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        try {
+          return JSON.parse(line);
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(alert => alert !== null)
+      .filter(alert => {
+        const alertTime = new Date(alert.timestamp);
+        const now = new Date();
+        return (now - alertTime) < 24 * 60 * 60 * 1000;
+      });
+    
+    // Contar por tipo
+    const porTipo = {};
+    alertsLog.forEach(alert => {
+      porTipo[alert.type] = (porTipo[alert.type] || 0) + 1;
+    });
+    
+    res.json({
+      total: alertsLog.length,
+      por_tipo: porTipo,
+      ultima_actualizacion: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error en /api/alerts/summary:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/metrics/daily - Métricas diarias para dashboard
+app.get('/api/metrics/daily', async (req, res) => {
+  try {
+    const fecha = req.query.fecha || new Date().toISOString().split('T')[0];
+    
+    // Producción total
+    const produccion = await dbGet(`
+      SELECT SUM(CAST(REPLACE(METRAGEM, ',', '.') AS REAL)) as total_metros
+      FROM tb_PRODUCCION 
+      WHERE SELETOR = 'TECELAGEM' 
+        AND DATE(DT_BASE_PRODUCAO) = ?
+    `, [fecha]);
+    
+    // Calidad promedio
+    const calidad = await dbGet(`
+      SELECT 
+        COUNT(*) as total_piezas,
+        SUM(CASE WHEN QUALIDADE LIKE '%1ERA%' THEN 1 ELSE 0 END) as piezas_1era,
+        ROUND(100.0 * SUM(CASE WHEN QUALIDADE LIKE '%1ERA%' THEN 1 ELSE 0 END) / COUNT(*), 2) as porc_calidad
+      FROM tb_CALIDAD 
+      WHERE DATE(DAT_PROD) = ? AND EMP = 'STC'
+    `, [fecha]);
+    
+    // Horas de parada
+    const paradas = await dbGet(`
+      SELECT SUM(CAST(REPLACE(DURACAO, ',', '.') AS REAL)) as horas_parada
+      FROM tb_PARADAS 
+      WHERE DATE(DT_INICIAL) = ?
+    `, [fecha]);
+    
+    // Top 3 motivos de parada
+    const topMotivos = await dbAll(`
+      SELECT 
+        MOTIVO,
+        SUM(CAST(REPLACE(DURACAO, ',', '.') AS REAL)) as horas_total,
+        COUNT(*) as cantidad
+      FROM tb_PARADAS
+      WHERE DATE(DT_INICIAL) = ?
+      GROUP BY MOTIVO
+      ORDER BY horas_total DESC
+      LIMIT 3
+    `, [fecha]);
+    
+    res.json({
+      fecha,
+      produccion: {
+        metros_total: produccion?.total_metros || 0
+      },
+      calidad: {
+        total_piezas: calidad?.total_piezas || 0,
+        piezas_1era: calidad?.piezas_1era || 0,
+        porcentaje: calidad?.porc_calidad || 0
+      },
+      paradas: {
+        horas_total: paradas?.horas_parada || 0,
+        top_motivos: topMotivos
+      }
+    });
+  } catch (error) {
+    console.error('Error en /api/metrics/daily:', error);
+    res.status(500).json({ error: error.message });
+  }
 });

@@ -1,15 +1,47 @@
 const vuePlugin = require('eslint-plugin-vue');
+const securityPlugin = require('eslint-plugin-security');
 
 module.exports = [
-  // Ignored paths (flat config uses `ignores` property)
+  // Ignored paths
   {
     ignores: ['node_modules/**', 'dist/**', 'public/**', 'database/**', '*.log']
   },
-  // Use plugin's recommended Vue 3 config if available
-  (vuePlugin && vuePlugin.configs && vuePlugin.configs['vue3-recommended']) || {},
-  // Project-specific overrides
+  // Security for Node.js/API files
   {
-    files: ['**/*.{js,vue}'],
+    files: ['scripts/**/*.{js,cjs}', 'src/**/*.js'],
+    plugins: {
+      security: securityPlugin
+    },
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        require: 'readonly',
+        module: 'readonly'
+      }
+    },
+    rules: {
+      'security/detect-object-injection': 'warn',
+      'security/detect-non-literal-fs-filename': 'warn',
+      'security/detect-eval-with-expression': 'error',
+      'security/detect-unsafe-regex': 'error',
+      'security/detect-buffer-noassert': 'error',
+      'security/detect-child-process': 'warn',
+      'security/detect-new-buffer': 'error',
+      'security/detect-possible-timing-attacks': 'warn',
+      'security/detect-pseudoRandomBytes': 'error',
+      'no-console': 'off'
+    }
+  },
+  // Vue files
+  {
+    files: ['src/**/*.vue'],
+    plugins: {
+      vue: vuePlugin
+    },
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'module'

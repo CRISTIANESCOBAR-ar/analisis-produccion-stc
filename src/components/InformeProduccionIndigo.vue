@@ -78,7 +78,7 @@
               <th scope="col" rowspan="2" class="pl-1.5 pr-1.5 py-1 font-semibold border-b-2 border-b-slate-300 border-r-2 border-slate-300 text-center bg-slate-50 w-14">Rolada</th>
               <th scope="col" colspan="7" class="px-2 py-0.5 font-semibold border-b border-b-slate-200 border-r-2 border-slate-300 bg-slate-100 text-center">URDIDEIRA</th>
               <th scope="col" colspan="15" class="px-2 py-0.5 font-semibold border-b border-b-slate-200 border-r-2 border-slate-300 bg-slate-100 text-center">ÍNDIGO</th>
-              <th scope="col" colspan="3" class="px-2 py-0.5 font-semibold border-b border-b-slate-200 border-r-2 border-slate-300 bg-slate-100 text-center">TEJEDURÍA</th>
+              <th scope="col" colspan="4" class="px-2 py-0.5 font-semibold border-b border-b-slate-200 border-r-2 border-slate-300 bg-slate-100 text-center">TEJEDURÍA</th>
               <th scope="col" colspan="3" class="px-2 py-0.5 font-semibold border-b border-b-slate-200 bg-slate-100 text-center">CALIDAD</th>
             </tr>
             <tr>
@@ -104,6 +104,7 @@
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">%</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">Q</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r-2 border-slate-300 bg-slate-50 text-center">%</th>
+              <th scope="col" class="px-1.5 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center w-16">Metros</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">Efic. %</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r border-slate-200 bg-slate-50 text-center">Rot URD 10⁵</th>
               <th scope="col" class="px-2 py-1 font-medium border-b-2 border-b-slate-300 border-r-2 border-slate-300 bg-slate-50 text-center">Rot TRA 10⁵</th>
@@ -138,6 +139,7 @@
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono font-semibold tabular-nums" :class="getCalidadColor(item.P_PERCENT)">{{ formatNumber(item.P_PERCENT, 1) }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono tabular-nums" :class="getCalidadColor(item.Q_PERCENT)">{{ item.Q_COUNT }}</td>
               <td class="px-2 py-1.5 border-r-2 border-slate-300 text-center font-mono font-semibold tabular-nums" :class="getCalidadColor(item.Q_PERCENT)">{{ formatNumber(item.Q_PERCENT, 1) }}</td>
+              <td class="px-1.5 py-1.5 border-r border-slate-200 text-center text-slate-700 font-medium font-mono tabular-nums">{{ formatNumber(item.TECELAGEM_METROS, 0) }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center font-mono font-semibold text-purple-700 tabular-nums">{{ formatNumber(item.TECELAGEM_EFICIENCIA, 1) }}</td>
               <td class="px-2 py-1.5 border-r border-slate-200 text-center text-slate-600 font-mono tabular-nums">{{ formatNumber(item.RT105, 2) }}</td>
               <td class="px-2 py-1.5 border-r-2 border-slate-300 text-center text-slate-600 font-mono tabular-nums">{{ formatNumber(item.RU105, 2) }}</td>
@@ -146,7 +148,7 @@
               <td class="px-0.5 py-1.5 text-center text-slate-600 font-mono tabular-nums text-xs">{{ formatNumber(item.PTS_100M2, 1) }}</td>
             </tr>
             <tr v-if="datos.length === 0 && !cargando" class="bg-slate-50">
-              <td colspan="29" class="px-4 py-8 text-center text-slate-500">
+              <td colspan="30" class="px-4 py-8 text-center text-slate-500">
                 No hay datos disponibles para el período seleccionado
               </td>
             </tr>
@@ -344,15 +346,15 @@ const exportarAExcel = async () => {
     };
     
     // Crear dos filas de encabezado
-    worksheet.addRow(['Rolada', 'URDIDEIRA', '', '', '', '', '', '', 'ÍNDIGO', '', '', '', '', '', '', '', '', '', '', '', '', '', 'TEJEDURÍA', '', '', 'CALIDAD', '', '']);
-    worksheet.addRow(['', 'Fecha', 'Maq. OE', 'Lote', 'Metros', 'Rot. Tot.', 'Rot 10⁶', 'Tiempo', 'Fecha', 'Base', 'Col', 'Metros', 'Rot. Tot.', 'Rot 10³', 'CV', 'Tiempo', 'Vel.', 'N', '%', 'P', '%', 'Q', '%', 'Efic. %', 'Rot URD 10⁵', 'Rot TRA 10⁵', 'Metros', 'Cal. %', 'Pts. 100m²']);
+    worksheet.addRow(['Rolada', 'URDIDEIRA', '', '', '', '', '', '', 'ÍNDIGO', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'TEJEDURÍA', '', '', '', 'CALIDAD', '', '']);
+    worksheet.addRow(['', 'Fecha', 'Maq. OE', 'Lote', 'Metros', 'Rot. Tot.', 'Rot 10⁶', 'Tiempo', 'Fecha', 'Base', 'Col', 'Metros', 'Rot. Tot.', 'Rot 10³', 'CV', 'Tiempo', 'Vel.', 'N', '%', 'P', '%', 'Q', '%', 'Metros', 'Efic. %', 'Rot URD 10⁵', 'Rot TRA 10⁵', 'Metros', 'Cal. %', 'Pts. 100m²']);
     
     // Combinar celdas de la primera fila
     worksheet.mergeCells('A1:A2');
     worksheet.mergeCells('B1:H1');
     worksheet.mergeCells('I1:W1');
-    worksheet.mergeCells('X1:Z1');
-    worksheet.mergeCells('AA1:AC1');
+    worksheet.mergeCells('X1:AA1');
+    worksheet.mergeCells('AB1:AD1');
     
     // Estilo de encabezados - Primera fila (grupos)
     const headerRow1 = worksheet.getRow(1);
@@ -369,8 +371,8 @@ const exportarAExcel = async () => {
     headerRow1.getCell(9).value = 'ÍNDIGO';
     headerRow1.getCell(24).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3E8FF' } }; // TEJEDURÍA - púrpura claro
     headerRow1.getCell(24).value = 'TEJEDURÍA';
-    headerRow1.getCell(27).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // CALIDAD - amarillo claro
-    headerRow1.getCell(27).value = 'CALIDAD';
+    headerRow1.getCell(28).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // CALIDAD - amarillo claro
+    headerRow1.getCell(28).value = 'CALIDAD';
     
     // Bordes para la primera fila
     headerRow1.getCell(1).border = {
@@ -389,7 +391,7 @@ const exportarAExcel = async () => {
       right: { style: 'medium', color: { argb: 'FF64748B' } },
       bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
     };
-    headerRow1.getCell(27).border = {
+    headerRow1.getCell(28).border = {
       right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
       bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } }
     };
@@ -401,17 +403,17 @@ const exportarAExcel = async () => {
     headerRow2.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     
     // Aplicar estilo y bordes a cada celda de la segunda fila según su sección
-    for (let col = 1; col <= 29; col++) {
+    for (let col = 1; col <= 30; col++) {
       const cell = headerRow2.getCell(col);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }; // bg-slate-50
       
       // Determinar el tipo de borde derecho según la sección
       let rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
-      if (col === 1 || col === 8 || col === 23 || col === 26) {
+      if (col === 1 || col === 8 || col === 23 || col === 27) {
         rightBorder = { style: 'medium', color: { argb: 'FF64748B' } }; // Bordes gruesos entre secciones
       }
       // La última columna debe tener borde delgado
-      if (col === 29) {
+      if (col === 30) {
         rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
       }
       
@@ -446,6 +448,7 @@ const exportarAExcel = async () => {
       { key: 'P_PERCENT', width: 5 },
       { key: 'Q_COUNT', width: 5 },
       { key: 'Q_PERCENT', width: 5 },
+      { key: 'TECELAGEM_METROS', width: 9 },
       { key: 'TECELAGEM_EFICIENCIA', width: 8 },
       { key: 'RT105', width: 8 },
       { key: 'RU105', width: 8 },
@@ -480,6 +483,7 @@ const exportarAExcel = async () => {
         P_PERCENT: item.P_PERCENT,
         Q_COUNT: item.Q_COUNT,
         Q_PERCENT: item.Q_PERCENT,
+        TECELAGEM_METROS: item.TECELAGEM_METROS,
         TECELAGEM_EFICIENCIA: item.TECELAGEM_EFICIENCIA,
         RT105: item.RT105,
         RU105: item.RU105,
@@ -496,8 +500,8 @@ const exportarAExcel = async () => {
       const rowIndex = row.number;
       const bgColor = rowIndex % 2 === 1 ? 'FFFFFFFF' : 'FFF8FAFC';
       
-      // Aplicar estilos celda por celda solo a las 29 columnas con datos
-      for (let col = 1; col <= 29; col++) {
+      // Aplicar estilos celda por celda solo a las 30 columnas con datos
+      for (let col = 1; col <= 30; col++) {
         const cell = row.getCell(col);
         
         // Fondo alternado
@@ -505,11 +509,11 @@ const exportarAExcel = async () => {
         
         // Determinar el tipo de borde derecho según la sección
         let rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
-        if (col === 1 || col === 8 || col === 23 || col === 26) {
+        if (col === 1 || col === 8 || col === 23 || col === 27) {
           rightBorder = { style: 'medium', color: { argb: 'FF64748B' } }; // Bordes gruesos entre secciones
         }
         // La última columna debe tener borde delgado
-        if (col === 29) {
+        if (col === 30) {
           rightBorder = { style: 'thin', color: { argb: 'FFE2E8F0' } };
         }
         
@@ -535,6 +539,7 @@ const exportarAExcel = async () => {
       row.getCell('N_PERCENT').numFmt = '0.0';
       row.getCell('P_PERCENT').numFmt = '0.0';
       row.getCell('Q_PERCENT').numFmt = '0.0';
+      row.getCell('TECELAGEM_METROS').numFmt = '#,##0';
       row.getCell('TECELAGEM_EFICIENCIA').numFmt = '0.0';
       row.getCell('RT105').numFmt = '0.00';
       row.getCell('RU105').numFmt = '0.00';

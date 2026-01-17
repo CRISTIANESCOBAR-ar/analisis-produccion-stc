@@ -575,30 +575,24 @@ const exportarAExcel = async () => {
       { header: 'Diferencia', key: 'diferencia', width: 6.14 }
     ]
     
-    // Estilo del encabezado
+    // Estilo del encabezado (solo hasta la columna U = 21)
     worksheet.getRow(1).height = 55
-    worksheet.getRow(1).font = { bold: true, color: { argb: 'FF334155' } }
-    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
-    worksheet.getRow(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-    worksheet.getRow(1).border = {
-      top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-      bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } },
-      left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-      right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-    }
-    
-    // Aplicar línea vertical de separación en el encabezado (columnas B, J, S)
-    worksheet.getCell('B1').border = {
-      ...worksheet.getCell('B1').border,
-      left: { style: 'medium', color: { argb: 'FF94A3B8' } }
-    }
-    worksheet.getCell('J1').border = {
-      ...worksheet.getCell('J1').border,
-      left: { style: 'medium', color: { argb: 'FF94A3B8' } }
-    }
-    worksheet.getCell('S1').border = {
-      ...worksheet.getCell('S1').border,
-      left: { style: 'medium', color: { argb: 'FF94A3B8' } }
+    for (let colNumber = 1; colNumber <= 21; colNumber++) {
+      const cell = worksheet.getRow(1).getCell(colNumber)
+      cell.font = { bold: true, color: { argb: 'FF334155' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      }
+      
+      // Aplicar línea vertical de separación en el encabezado (columnas 2, 10, 19)
+      if (colNumber === 2 || colNumber === 10 || colNumber === 19) {
+        cell.border.left = { style: 'medium', color: { argb: 'FF94A3B8' } }
+      }
     }
     
     // Helper para calcular valores
@@ -696,11 +690,14 @@ const exportarAExcel = async () => {
       diferencia: totales.value.diferenciaEstopa
     })
     
-    // Estilo de fila de totales
+    // Estilo de fila de totales (solo hasta la columna U = 21)
     totalRow.height = 25
-    totalRow.font = { bold: true, color: { argb: 'FF1E293B' } }
-    totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }
-    totalRow.alignment = { horizontal: 'center', vertical: 'middle' }
+    for (let colNumber = 1; colNumber <= 21; colNumber++) {
+      const cell = totalRow.getCell(colNumber)
+      cell.font = { bold: true, color: { argb: 'FF1E293B' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    }
     
     // Definir formatos comunes
     const formatos = {

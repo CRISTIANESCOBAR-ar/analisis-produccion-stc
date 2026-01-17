@@ -6,6 +6,13 @@
 
         <div class="flex items-center gap-3">
           <button
+            class="px-3 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            :disabled="cargando"
+            @click="mostrarDialogoNuevoMes = true"
+          >
+            + Agregar mes
+          </button>
+          <button
             class="px-3 py-2 text-sm font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
             :disabled="cargando || !tieneCambios"
             @click="guardar"
@@ -87,6 +94,92 @@
       <div class="mt-3 text-xs text-slate-500">
         Mostrando últimos 24 meses. Dejá el valor vacío para eliminarlo.
       </div>
+
+      <!-- Modal Nuevo Mes -->
+      <div v-if="mostrarDialogoNuevoMes" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+          <h4 class="text-lg font-semibold text-slate-800 mb-4">Agregar nuevo mes</h4>
+          
+          <div v-if="errorDialogo" class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            {{ errorDialogo }}
+          </div>
+          
+          <div class="space-y-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Mes (YYYY-MM)</label>
+              <input
+                type="text"
+                placeholder="2025-12"
+                class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+                v-model="nuevoMesForm.mes"
+                @keyup.enter="agregarNuevoMes"
+              />
+              <p class="text-xs text-slate-500 mt-1">Formato: YYYY-MM (ej: 2025-12)</p>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Urdido Teñido (ARS/m)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+                v-model="nuevoMesForm.urdido"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Tela Terminada (ARS/m)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+                v-model="nuevoMesForm.tela"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Estopa Azul (ARS/kg)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+                v-model="nuevoMesForm.estopa"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">Observaciones (opcional)</label>
+              <input
+                type="text"
+                placeholder="Deixe em branco se não tiver"
+                class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+                v-model="nuevoMesForm.observaciones"
+              />
+            </div>
+          </div>
+          
+          <div class="flex gap-3 justify-end">
+            <button
+              class="px-4 py-2 text-sm font-medium rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+              @click="cerrarDialogoNuevoMes"
+            >
+              Cancelar
+            </button>
+            <button
+              class="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              @click="agregarNuevoMes"
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -102,6 +195,15 @@ const cargando = ref(false)
 const mensaje = ref('')
 const mensajeTipo = ref('ok')
 const tieneCambios = ref(false)
+const mostrarDialogoNuevoMes = ref(false)
+const errorDialogo = ref('')
+const nuevoMesForm = ref({
+  mes: '',
+  urdido: '',
+  tela: '',
+  estopa: '',
+  observaciones: ''
+})
 
 const itemIds = ref({
   urdido: null,
@@ -220,6 +322,105 @@ async function guardar() {
   } finally {
     cargando.value = false
   }
+}
+
+function validarFormatoMes(mes) {
+  const regex = /^\d{4}-\d{2}$/
+  return regex.test(mes)
+}
+
+function validarMesNoRepetido(mes) {
+  return !filasPorMes.value.some(fila => fila.yyyymm === mes)
+}
+
+function validarValoresNumericos(urdido, tela, estopa) {
+  const valores = [urdido, tela, estopa]
+  
+  // Al menos uno debe ser válido
+  const hayAlMenosUno = valores.some(v => v !== '' && v !== null && v !== undefined && !isNaN(v))
+  if (!hayAlMenosUno) {
+    return false
+  }
+  
+  // Los que tengan valor deben ser números válidos >= 0
+  for (const v of valores) {
+    if (v !== '' && v !== null && v !== undefined) {
+      const num = Number(v)
+      if (isNaN(num) || num < 0) {
+        return false
+      }
+    }
+  }
+  
+  return true
+}
+
+function cerrarDialogoNuevoMes() {
+  mostrarDialogoNuevoMes.value = false
+  errorDialogo.value = ''
+  nuevoMesForm.value = {
+    mes: '',
+    urdido: '',
+    tela: '',
+    estopa: '',
+    observaciones: ''
+  }
+}
+
+function agregarNuevoMes() {
+  errorDialogo.value = ''
+  
+  const mes = nuevoMesForm.value.mes.trim()
+  
+  // Validar formato
+  if (!mes) {
+    errorDialogo.value = 'El mes es requerido'
+    return
+  }
+  
+  if (!validarFormatoMes(mes)) {
+    errorDialogo.value = 'Formato inválido. Use YYYY-MM (ej: 2025-12)'
+    return
+  }
+  
+  // Validar que no esté repetido
+  if (!validarMesNoRepetido(mes)) {
+    errorDialogo.value = `El mes ${mes} ya existe`
+    return
+  }
+  
+  // Validar valores numéricos
+  if (!validarValoresNumericos(nuevoMesForm.value.urdido, nuevoMesForm.value.tela, nuevoMesForm.value.estopa)) {
+    errorDialogo.value = 'Al menos un valor es requerido y todos deben ser números válidos >= 0'
+    return
+  }
+  
+  // Crear nueva fila
+  const nuevaFila = {
+    yyyymm: mes,
+    urdido: {
+      valor: nuevoMesForm.value.urdido !== '' ? Number(nuevoMesForm.value.urdido) : '',
+      itemId: itemIds.value.urdido
+    },
+    tela: {
+      valor: nuevoMesForm.value.tela !== '' ? Number(nuevoMesForm.value.tela) : '',
+      itemId: itemIds.value.tela
+    },
+    estopa: {
+      valor: nuevoMesForm.value.estopa !== '' ? Number(nuevoMesForm.value.estopa) : '',
+      itemId: itemIds.value.estopa
+    },
+    observaciones: nuevoMesForm.value.observaciones.trim()
+  }
+  
+  // Agregar a la lista y ordenar
+  filasPorMes.value.push(nuevaFila)
+  filasPorMes.value.sort((a, b) => b.yyyymm.localeCompare(a.yyyymm))
+  
+  // Marcar como cambio y cerrar diálogo
+  tieneCambios.value = true
+  cerrarDialogoNuevoMes()
+  setMensaje(`Mes ${mes} agregado. Recuerda guardar cambios`, 'ok')
 }
 
 onMounted(async () => {

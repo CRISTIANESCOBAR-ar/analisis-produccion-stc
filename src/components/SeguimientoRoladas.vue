@@ -141,23 +141,23 @@
               <td class="px-3 py-2.5 font-semibold text-slate-800 text-center tabular-nums border-r-2 border-slate-300 bg-slate-50/50">{{ item.ROLADA }}</td>
               <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatListaConY(item.MAQ_OE) }}</td>
               <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatListaConY(item.LOTE) }}</td>
-              <td class="px-2 py-2.5 text-center text-emerald-600 font-semibold tabular-nums border-r-2 border-slate-300">{{ calcularRot106(item.URDIDORA_ROTURAS, item.URDIDORA_METROS, item.NUM_FIOS) }}</td>
+              <td class="px-2 py-2.5 text-center text-emerald-600 font-semibold tabular-nums border-r-2 border-slate-300" @click="abrirModalDetalle(item.ROLADA, index, 'urdimbre')">{{ calcularRot106(item.URDIDORA_ROTURAS, item.URDIDORA_METROS, item.NUM_FIOS) }}</td>
               <!-- Celdas ÍNDIGO clickeables -->
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-500 text-xs border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.FECHA }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-700 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.BASE }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.COLOR }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.MTS_IND, 0) }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.R103, 1) }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.CAV || '-' }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.VEL_NOM, 0) }}</td>
-              <td @click="abrirModalDetalle(item.ROLADA, index)" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.VEL_PROM, 0) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_CRUDOS, 0) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.EFI_TEJ, 1) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.RU105, 1) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatNumber(item.RT105, 1) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_CAL, 0) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.CAL_PERCENT, 1) }}</td>
-              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums">{{ formatNumber(item.PTS_100M2, 1) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-500 text-xs border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.FECHA }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-700 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.BASE }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-600 border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.COLOR }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.MTS_IND, 0) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.R103, 1) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ item.CAV || '-' }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.VEL_NOM, 0) }}</td>
+              <td @click="abrirModalDetalle(item.ROLADA, index, 'indigo')" class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300 cursor-pointer hover:bg-blue-50 transition-colors">{{ formatNumber(item.VEL_PROM, 0) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200 cursor-pointer hover:bg-purple-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'tecelagem')">{{ formatNumber(item.MTS_CRUDOS, 0) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-purple-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'tecelagem')">{{ formatNumber(item.EFI_TEJ, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-purple-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'tecelagem')">{{ formatNumber(item.RU105, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r-2 border-slate-300 cursor-pointer hover:bg-purple-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'tecelagem')">{{ formatNumber(item.RT105, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200 cursor-pointer hover:bg-teal-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'calidad')">{{ formatNumber(item.MTS_CAL, 0) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums border-r border-slate-200 cursor-pointer hover:bg-teal-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'calidad')">{{ formatNumber(item.CAL_PERCENT, 1) }}</td>
+              <td class="px-2 py-2.5 text-center text-slate-600 tabular-nums cursor-pointer hover:bg-teal-50 transition-colors" @click="abrirModalDetalle(item.ROLADA, index, 'calidad')">{{ formatNumber(item.PTS_100M2, 1) }}</td>
             </tr>
           </tbody>
           <!-- Fila de totales del mes -->
@@ -209,12 +209,15 @@
               <button 
                 @click="cambiarSeccion('urdimbre')" 
                 :class="[
-                  'px-3 py-2 rounded-l-md border border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  'px-3 py-2 rounded-l-md border border-slate-200 shadow-sm transition-colors text-sm font-medium flex items-center gap-1.5',
                   seccionActiva === 'urdimbre' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-500 hover:bg-slate-50'
                 ]"
                 v-tippy="{ content: 'Ver URDIMBRE', placement: 'bottom' }"
               >
-                &lt;&lt; URDIMBRE
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                </svg>
+                URDIMBRE
               </button>
               <button 
                 @click="cambiarSeccion('indigo')" 
@@ -239,12 +242,15 @@
               <button 
                 @click="cambiarSeccion('calidad')" 
                 :class="[
-                  'px-3 py-2 rounded-r-md border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium',
+                  'px-3 py-2 rounded-r-md border border-l-0 border-slate-200 shadow-sm transition-colors text-sm font-medium flex items-center gap-1.5',
                   seccionActiva === 'calidad' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-500 hover:bg-slate-50'
                 ]"
                 v-tippy="{ content: 'Ver CALIDAD', placement: 'bottom' }"
               >
-                CALIDAD &gt;&gt;
+                CALIDAD
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                </svg>
               </button>
             </div>
             
@@ -862,7 +868,8 @@
                     <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Pieza</th>
                     <th class="px-2 py-2 font-medium text-center border-r border-slate-200 border-b-2 border-b-slate-300">Etiqueta</th>
                     <th class="px-2 py-2 font-medium text-right border-r border-slate-200 border-b-2 border-b-slate-300">Ancho</th>
-                    <th class="px-2 py-2 font-medium text-right border-b-2 border-b-slate-300">Puntuación</th>
+                    <th class="px-2 py-2 font-medium text-right border-r border-slate-200 border-b-2 border-b-slate-300">Puntuación</th>
+                    <th class="px-2 py-2 font-medium text-left border-b-2 border-b-slate-300">Revisor Final</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -881,7 +888,8 @@
                     <td class="px-2 py-2 text-center">{{ item.PECA || item['PEÇA'] || '' }}</td>
                     <td class="px-2 py-2 text-center">{{ item.ETIQUETA }}</td>
                     <td class="px-2 py-2 text-right tabular-nums">{{ item.LARGURA }}</td>
-                    <td class="px-2 py-2 text-right tabular-nums">{{ item.PONTUACAO }}</td>
+                    <td class="px-2 py-2 text-right tabular-nums border-r border-slate-200">{{ item.PONTUACAO }}</td>
+                    <td class="px-2 py-2 text-left">{{ item.REVISOR_FINAL || '-' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1296,6 +1304,55 @@ const totalesCalidad = computed(() => {
   };
 });
 
+// Totales para calidad agrupados (vista de exportación)
+const totalesCalidadAgrupados = computed(() => {
+  let metrosTotal = 0;
+  let metros1era = 0;
+  let metros2da = 0;
+  let pontuacao = 0;
+  let countPontuacao = 0;
+  
+  datosCalidadAgrupados.value.forEach(item => {
+    metrosTotal += item.METRAGEM_TOTAL || 0;
+    metros1era += item.METROS_1ERA || 0;
+    metros2da += item.METROS_2DA || 0;
+    if (item.PONTUACAO) {
+      pontuacao += parseFloat(item.PONTUACAO) || 0;
+      countPontuacao++;
+    }
+  });
+  
+  return {
+    metrosTotal,
+    metros1era,
+    metros2da,
+    perc1era: metrosTotal > 0 ? (metros1era / metrosTotal) * 100 : 0,
+    perc2da: metrosTotal > 0 ? (metros2da / metrosTotal) * 100 : 0,
+    pontuacao: countPontuacao > 0 ? pontuacao / countPontuacao : 0
+  };
+});
+
+// Totales para detalle de partida de calidad
+const totalesDetallePartidaCalidad = computed(() => {
+  let metraje = 0;
+  let pontuacao = 0;
+  let countPontuacao = 0;
+  
+  datosDetallePartidaCalidad.value.forEach(item => {
+    metraje += parseFloat(item.METRAGEM) || 0;
+    if (item.PONTUACAO) {
+      pontuacao += parseFloat(item.PONTUACAO) || 0;
+      countPontuacao++;
+    }
+  });
+  
+  return {
+    metraje,
+    pontuacao: countPontuacao > 0 ? pontuacao / countPontuacao : 0,
+    puntuacion: countPontuacao > 0 ? pontuacao / countPontuacao : 0
+  };
+});
+
 // Calcular porcentaje
 const calcularPorcentaje = (parte, total) => {
   if (!total || total === 0) return 0;
@@ -1357,12 +1414,30 @@ const calcularMetrosAcumulados = (indice) => {
 };
 
 // Abrir modal con detalle de la rolada
-const abrirModalDetalle = async (rolada, index) => {
+const abrirModalDetalle = async (rolada, index, seccion = 'indigo') => {
   roladaSeleccionada.value = rolada;
   indiceRoladaActual.value = index;
   modalVisible.value = true;
-  seccionActiva.value = 'indigo';
-  await cargarDetalleRolada(rolada);
+  seccionActiva.value = seccion;
+  
+  // Cargar datos según la sección seleccionada
+  if (seccion === 'urdimbre') {
+    if (datosUrdimbre.value.length === 0) {
+      await cargarDetalleUrdimbre(rolada);
+    }
+  } else if (seccion === 'indigo') {
+    if (datosDetalle.value.length === 0) {
+      await cargarDetalleRolada(rolada);
+    }
+  } else if (seccion === 'tecelagem') {
+    if (datosTecelagem.value.length === 0) {
+      await cargarDetalleTecelagem(rolada);
+    }
+  } else if (seccion === 'calidad') {
+    if (datosCalidad.value.length === 0) {
+      await cargarDetalleCalidad(rolada);
+    }
+  }
 };
 
 // Cargar detalle de una rolada (ÍNDIGO)
@@ -1893,7 +1968,9 @@ const exportarModalAExcel = async () => {
   // Determinar qué datos usar según la vista actual
   let datosActivos;
   let esDetallePartida = false;
+  let esDetallePartidaCalidad = false;
   let esUrdimbre = false;
+  let esCalidad = false;
   
   if (seccionActiva.value === 'urdimbre') {
     datosActivos = datosUrdimbre.value;
@@ -1903,18 +1980,28 @@ const exportarModalAExcel = async () => {
   } else if (seccionActiva.value === 'tecelagem' && vistaDetallePartida.value) {
     datosActivos = datosDetallePartida.value;
     esDetallePartida = true;
-  } else {
+  } else if (seccionActiva.value === 'tecelagem') {
     datosActivos = datosTecelagem.value;
+  } else if (seccionActiva.value === 'calidad' && vistaDetallePartidaCalidad.value) {
+    datosActivos = datosDetallePartidaCalidad.value;
+    esDetallePartidaCalidad = true;
+    esCalidad = true;
+  } else if (seccionActiva.value === 'calidad') {
+    datosActivos = datosCalidadAgrupados.value;
+    esCalidad = true;
   }
   
   if (datosActivos.length === 0) return;
   
   try {
     const workbook = new ExcelJS.Workbook();
-    let seccionNombre = esUrdimbre ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'INDIGO' : 'TEJEDURIA';
+    let seccionNombre = esUrdimbre ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'INDIGO' : esCalidad ? 'CALIDAD' : 'TEJEDURIA';
     if (esDetallePartida) {
       const partida = partidaSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
       seccionNombre = `TEJ_Partida_${partida}`;
+    } else if (esDetallePartidaCalidad) {
+      const partida = partidaCalidadSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
+      seccionNombre = `CAL_Partida_${partida}`;
     }
     const worksheet = workbook.addWorksheet(`Rolada_${roladaSeleccionada.value}_${seccionNombre}`);
     
@@ -1933,6 +2020,13 @@ const exportarModalAExcel = async () => {
       purple: 'FF9333ea',
       red: 'FFdc2626',
       blue: 'FF2563eb'
+    } : esCalidad ? {
+      headerBg: 'FFF0FDFA',
+      headerText: '1e293b',
+      border: 'FFcbd5e1',
+      totalsBg: 'FFCCFBF1',
+      teal: 'FF14b8a6',
+      green: 'FF16a34a'
     } : {
       headerBg: 'FFFAF5FF',
       headerText: '1e293b',
@@ -1945,9 +2039,9 @@ const exportarModalAExcel = async () => {
     };
     
     // Título
-    const lastCol = esUrdimbre ? 'M' : seccionActiva.value === 'indigo' ? 'O' : (esDetallePartida ? 'M' : 'N');
+    const lastCol = esUrdimbre ? 'M' : seccionActiva.value === 'indigo' ? 'O' : (esDetallePartida ? 'M' : esDetallePartidaCalidad ? 'L' : esCalidad ? 'K' : 'N');
     worksheet.mergeCells(`A1:${lastCol}1`);
-    const seccionTitulo = esUrdimbre ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'ÍNDIGO' : 'TEJEDURÍA';
+    const seccionTitulo = esUrdimbre ? 'URDIMBRE' : seccionActiva.value === 'indigo' ? 'ÍNDIGO' : esCalidad ? 'CALIDAD' : 'TEJEDURÍA';
     worksheet.getCell('A1').value = `Detalle ${seccionTitulo} - Rolada ${roladaSeleccionada.value}`;
     worksheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF1e293b' } };
     worksheet.getCell('A1').alignment = { horizontal: 'left', vertical: 'middle' };
@@ -1959,6 +2053,9 @@ const exportarModalAExcel = async () => {
     if (esDetallePartida) {
       const partida = partidaSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
       subtituloExcel = `Partida ${partida} - ${datosActivos.length} turnos | Art: ${partidaSeleccionada.value?.ARTIGO || ''} | Telar: ${partidaSeleccionada.value?.MAQUINA ? parseInt(partidaSeleccionada.value.MAQUINA.slice(-3)) : ''}`;
+    } else if (esDetallePartidaCalidad) {
+      const partida = partidaCalidadSeleccionada.value?.PARTIDA?.replace(/^0/, '') || '';
+      subtituloExcel = `Partida ${partida} - ${datosActivos.length} defectos | Total: ${totalesDetallePartidaCalidad.value.metraje} m`;
     }
     worksheet.getCell('A2').value = subtituloExcel;
     worksheet.getCell('A2').font = { size: 10, color: { argb: 'FF64748b' } };
@@ -1970,6 +2067,10 @@ const exportarModalAExcel = async () => {
       headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Artículo', 'Metros', 'Vel.', 'Puntas', 'Rot Hil.', 'Rot Urd.', 'Rot Ope.', 'Rot Total', 'Rot 10⁶', 'Operador', 'Lote', 'Maq.', 'Base'];
     } else if (seccionActiva.value === 'indigo') {
       headers = ['Partida', 'Fecha Inicio', 'Hora Inicio', 'Fecha Final', 'Hora Final', 'Turno', 'Base', 'Color', 'Metros', 'Veloc.', 'S', 'R10³', 'Roturas', 'CV', 'Operador'];
+    } else if (esDetallePartidaCalidad) {
+      headers = ['Grupo', 'Código', 'Defecto', 'Metraje', 'Calidad', 'Hora', 'Emendas', 'Pieza', 'Etiqueta', 'Ancho', 'Puntuación', 'Revisor Final'];
+    } else if (esCalidad) {
+      headers = ['Partida', 'Proceso', 'Reproc', 'Telar', 'Metros Total', 'Metros 1ª', 'Metros 2ª', '% 1ª', '% 2ª', 'Puntuación', 'Revisor'];
     } else if (esDetallePartida) {
       headers = ['Fecha', 'Tur', 'Partida', 'Metros Crudos', 'Metros Termin.', 'Metros Acumul.', 'Paradas Trama', 'Paradas Urdimbre', 'Total Paradas', 'Eficiencia %', 'Roturas TRAMA 10⁵', 'Roturas URDIDO 10⁵', 'RPM'];
     } else {
@@ -2121,6 +2222,89 @@ const exportarModalAExcel = async () => {
         row.getCell(12).numFmt = '0.00'; // Roturas URD
         row.getCell(13).numFmt = '#,##0'; // RPM
       });
+    } else if (esCalidad && !esDetallePartidaCalidad) {
+      // Exportar vista agrupada de CALIDAD
+      datosCalidadAgrupados.value.forEach((item, idx) => {
+        const row = worksheet.addRow([
+          item.PARTIDA ? item.PARTIDA.replace(/^0/, '') : '',
+          item.ST_IND === 'R' ? 'Reproceso' : 'Normal',
+          item.REPROCE || '',
+          item.TEAR ? parseInt(item.TEAR.slice(-3)) : '',
+          item.METRAGEM_TOTAL || 0,
+          item.METROS_1ERA || 0,
+          item.METROS_2DA || 0,
+          item.PERC_1ERA || 0,
+          item.PERC_2DA || 0,
+          item.PONTUACAO || 0,
+          item.REVISOR || ''
+        ]);
+        
+        row.height = 22;
+        row.eachCell((cell, colNumber) => {
+          cell.font = { size: 10 };
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          
+          // Colores especiales
+          if (colNumber === 8) cell.font = { size: 10, color: { argb: colors.teal } }; // % 1ª
+          if (colNumber === 9) cell.font = { size: 10, color: { argb: colors.green } }; // % 2ª
+          if (colNumber === 10) cell.font = { size: 10, bold: true, color: { argb: colors.teal } }; // Puntuación
+        });
+        
+        // Formato numérico
+        row.getCell(5).numFmt = '#,##0'; // Metros Total
+        row.getCell(6).numFmt = '#,##0'; // Metros 1ª
+        row.getCell(7).numFmt = '#,##0'; // Metros 2ª
+        row.getCell(8).numFmt = '0.0'; // % 1ª
+        row.getCell(9).numFmt = '0.0'; // % 2ª
+        row.getCell(10).numFmt = '0.0'; // Puntuación
+      });
+    } else if (esDetallePartidaCalidad) {
+      // Exportar detalle de partida CALIDAD
+      datosDetallePartidaCalidad.value.forEach((item, idx) => {
+        const row = worksheet.addRow([
+          item.GRP_DEF || '',
+          item.COD_DE || '',
+          item.DEFEITO || '',
+          item.METRAGEM || 0,
+          item.QUALIDADE || '',
+          item.HORA || '',
+          item.EMENDAS || '',
+          item.PECA || item['PEÇA'] || '',
+          item.ETIQUETA || '',
+          item.LARGURA || '',
+          item.PONTUACAO || 0,
+          item.REVISOR_FINAL || ''
+        ]);
+        
+        row.height = 22;
+        row.eachCell((cell, colNumber) => {
+          cell.font = { size: 10 };
+          cell.border = { bottom: { style: 'thin', color: { argb: 'FFe2e8f0' } } };
+          cell.alignment = { vertical: 'middle' };
+          
+          // Alineación: A,B,C,E izquierda; resto centro
+          if (colNumber === 1 || colNumber === 2 || colNumber === 3 || colNumber === 5 || colNumber === 12) {
+            cell.alignment = { ...cell.alignment, horizontal: 'left' };
+          } else {
+            cell.alignment = { ...cell.alignment, horizontal: 'center' };
+          }
+          
+          // Colores especiales
+          if (colNumber === 5) { // Calidad
+            if (item.QUALIDADE === '1ª') {
+              cell.font = { size: 10, bold: true, color: { argb: colors.teal } };
+            } else if (item.QUALIDADE === '2ª') {
+              cell.font = { size: 10, color: { argb: colors.green } };
+            }
+          }
+          if (colNumber === 11) cell.font = { size: 10, color: { argb: colors.teal } }; // Puntuación
+        });
+        
+        // Formato numérico
+        row.getCell(4).numFmt = '#,##0'; // Metraje
+        row.getCell(11).numFmt = '0.0'; // Puntuación
+      });
     } else {
       datosTecelagem.value.forEach((item, idx) => {
         const row = worksheet.addRow([
@@ -2245,6 +2429,64 @@ const exportarModalAExcel = async () => {
       totalesRow.getCell(11).numFmt = '0.00';
       totalesRow.getCell(12).numFmt = '0.00';
       totalesRow.getCell(13).numFmt = '#,##0';
+    } else if (esCalidad && !esDetallePartidaCalidad) {
+      // Totales para vista agrupada de CALIDAD
+      totalesRow = worksheet.addRow([
+        'TOTAL',
+        '', '', '',
+        totalesCalidadAgrupados.value.metrosTotal,
+        totalesCalidadAgrupados.value.metros1era,
+        totalesCalidadAgrupados.value.metros2da,
+        totalesCalidadAgrupados.value.perc1era,
+        totalesCalidadAgrupados.value.perc2da,
+        totalesCalidadAgrupados.value.pontuacao,
+        ''
+      ]);
+      totalesRow.height = 26;
+      totalesRow.eachCell((cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+        cell.font = { bold: true, size: 10 };
+        cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        
+        if (colNumber === 8) cell.font = { bold: true, size: 10, color: { argb: colors.teal } };
+        if (colNumber === 9) cell.font = { bold: true, size: 10, color: { argb: colors.green } };
+        if (colNumber === 10) cell.font = { bold: true, size: 10, color: { argb: colors.teal } };
+      });
+      totalesRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      totalesRow.getCell(5).numFmt = '#,##0';
+      totalesRow.getCell(6).numFmt = '#,##0';
+      totalesRow.getCell(7).numFmt = '#,##0';
+      totalesRow.getCell(8).numFmt = '0.0';
+      totalesRow.getCell(9).numFmt = '0.0';
+      totalesRow.getCell(10).numFmt = '0.0';
+    } else if (esDetallePartidaCalidad) {
+      // Totales para detalle de partida de CALIDAD
+      totalesRow = worksheet.addRow([
+        'TOTAL',
+        '', '',
+        totalesDetallePartidaCalidad.value.metraje,
+        '', '', '', '', '', '',
+        totalesDetallePartidaCalidad.value.pontuacao,
+        ''
+      ]);
+      totalesRow.height = 26;
+      totalesRow.eachCell((cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.totalsBg } };
+        cell.font = { bold: true, size: 10 };
+        cell.border = { top: { style: 'medium', color: { argb: colors.border } } };
+        cell.alignment = { vertical: 'middle' };
+        
+        if (colNumber === 1 || colNumber === 2 || colNumber === 3 || colNumber === 5 || colNumber === 12) {
+          cell.alignment = { ...cell.alignment, horizontal: 'left' };
+        } else {
+          cell.alignment = { ...cell.alignment, horizontal: 'center' };
+        }
+        
+        if (colNumber === 11) cell.font = { bold: true, size: 10, color: { argb: colors.teal } };
+      });
+      totalesRow.getCell(4).numFmt = '#,##0';
+      totalesRow.getCell(11).numFmt = '0.0';
     } else {
       totalesRow = worksheet.addRow([
         'TOTAL',
@@ -2335,6 +2577,35 @@ const exportarModalAExcel = async () => {
         { width: 11 },    // K - Roturas TRAMA 10⁵
         { width: 11 },    // L - Roturas URDIDO 10⁵
         { width: 6 }      // M - RPM
+      ];
+    } else if (esDetallePartidaCalidad) {
+      worksheet.columns = [
+        { width: 8 },     // A - Grupo
+        { width: 8 },     // B - Código
+        { width: 25 },    // C - Defecto
+        { width: 10 },    // D - Metraje
+        { width: 8 },     // E - Calidad
+        { width: 10 },    // F - Hora
+        { width: 8 },     // G - Emendas
+        { width: 8 },     // H - Pieza
+        { width: 10 },    // I - Etiqueta
+        { width: 8 },     // J - Ancho
+        { width: 10 },    // K - Puntuación
+        { width: 20 }     // L - Revisor Final
+      ];
+    } else if (esCalidad) {
+      worksheet.columns = [
+        { width: 10 },    // A - Partida
+        { width: 12 },    // B - Proceso
+        { width: 8 },     // C - Reproc
+        { width: 8 },     // D - Telar
+        { width: 10 },    // E - Metros Total
+        { width: 10 },    // F - Metros 1ª
+        { width: 10 },    // G - Metros 2ª
+        { width: 8 },     // H - % 1ª
+        { width: 8 },     // I - % 2ª
+        { width: 10 },    // J - Puntuación
+        { width: 20 }     // K - Revisor
       ];
     } else {
       worksheet.columns = [
@@ -2982,6 +3253,7 @@ const exportarAExcel = async () => {
 // Imprimir tabla directamente
 const imprimirTabla = () => {
   if (datos.value.length === 0) return;
+  const fechaHoraImpresion = new Date().toLocaleString('es-ES');
   
   // Construir HTML de la tabla con estilo limpio
   let html = `
@@ -2993,27 +3265,62 @@ const imprimirTabla = () => {
       <style>
         @page { 
           size: landscape; 
-          margin: 10mm;
+          margin: 0;
         }
         body { 
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
           font-size: 9px;
           margin: 0;
-          padding: 15px;
+          padding: 5mm 5mm 10mm 5mm;
           background: white;
         }
+        .header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
+        .header-logo {
+          display: flex;
+          align-items: center;
+          height: 25px;
+          flex-shrink: 0;
+        }
+        .header-logo img {
+          height: 25px;
+          width: auto;
+          object-fit: contain;
+          max-width: 120px;
+        }
+        .header-text {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+          flex: 1;
+        }
         h2 { 
-          text-align: center; 
-          margin: 0 0 8px 0;
+          text-align: left; 
+          margin: 0;
           font-size: 16px;
           font-weight: 600;
           color: #1e293b;
         }
         .fecha-info {
-          text-align: center;
-          margin-bottom: 12px;
+          text-align: left;
+          margin: 0;
           color: #64748b;
           font-size: 10px;
+        }
+        .footer-info {
+          position: fixed;
+          bottom: 4mm;
+          left: 5mm;
+          width: calc(100% - 10mm);
+          font-size: 8px;
+          color: #64748b;
+          background: white;
         }
         table { 
           border-collapse: collapse; 
@@ -3069,9 +3376,16 @@ const imprimirTabla = () => {
       </style>
     </head>
     <body>
-      <h2>SEGUIMIENTO DE ROLADAS</h2>
-      <div class="fecha-info">
-        Período: Últimos ${diasSeleccionados.value} días hasta ${new Date(fechaSeleccionada.value + 'T00:00:00').toLocaleDateString('es-ES')} | ${datos.value.length} roladas encontradas
+      <div class="header-row">
+        <div class="header-logo">
+          <img src="/LogoSantana.jpg" alt="Logo Santana">
+        </div>
+        <div class="header-text">
+          <h2>SEGUIMIENTO DE ROLADAS</h2>
+          <div class="fecha-info">
+            Período: Últimos ${diasSeleccionados.value} días hasta ${new Date(fechaSeleccionada.value + 'T00:00:00').toLocaleDateString('es-ES')} | ${datos.value.length} roladas encontradas
+          </div>
+        </div>
       </div>
       <table>
         <thead>
@@ -3156,6 +3470,7 @@ const imprimirTabla = () => {
   html += `
         </tbody>
       </table>
+      <div class="footer-info">Impreso: ${fechaHoraImpresion}</div>
     </body>
     </html>`;
   
@@ -3167,7 +3482,37 @@ const imprimirTabla = () => {
   // Esperar a que cargue y luego imprimir
   ventana.onload = () => {
     ventana.focus();
-    ventana.print();
+    
+    // Esperar un momento antes de imprimir
+    setTimeout(() => {
+      let printed = false;
+
+      const cerrarVentana = () => {
+        if (!ventana.closed) ventana.close();
+      };
+
+      // Cerrar cuando termina el ciclo de impresión
+      ventana.onafterprint = cerrarVentana;
+
+      // Cerrar cuando el popup recupere foco luego del diálogo
+      ventana.onfocus = () => {
+        if (printed) cerrarVentana();
+      };
+
+      // Media query para detectar fin de impresión
+      const mediaQuery = ventana.matchMedia('print');
+      if (mediaQuery && mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', (e) => {
+          if (!e.matches) cerrarVentana();
+        });
+      }
+
+      // Timeout de seguridad
+      setTimeout(cerrarVentana, 30000);
+
+      ventana.print();
+      printed = true;
+    }, 100);
   };
 };
 
@@ -3368,6 +3713,10 @@ const imprimirModalDetalle = () => {
         @page { 
           size: landscape; 
           margin: 5mm 5mm 10mm 5mm;
+          @top-left {
+            content: url('/LogoSantana.jpg');
+            margin-top: 0;
+          }
           @bottom-left {
             content: 'Fecha: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}';
             font-size: 8px;
@@ -3380,6 +3729,17 @@ const imprimirModalDetalle = () => {
           margin: 0;
           padding: 15px;
           background: white;
+        }
+        .header-logo {
+          display: flex;
+          align-items: center;
+          margin-bottom: 12px;
+          height: 50px;
+        }
+        .header-logo img {
+          height: 50px;
+          width: auto;
+          object-fit: contain;
         }
         h2 { 
           text-align: center; 
@@ -3422,6 +3782,9 @@ const imprimirModalDetalle = () => {
       </style>
     </head>
     <body>
+      <div class="header-logo">
+        <img src="/LogoSantana.jpg" alt="Logo Santana">
+      </div>
       <h2>DETALLE ${titulo} - ROLADA ${roladaSeleccionada.value}</h2>
       <table>
         <thead>
@@ -3487,12 +3850,35 @@ const imprimirModalDetalle = () => {
   // Esperar a que cargue y luego imprimir
   setTimeout(() => {
     ventana.focus();
-    ventana.print();
     
-    // Cerrar la ventana después de imprimir o cancelar
-    // En Chrome y Firefox, esto se ejecuta después del diálogo de impresión
     setTimeout(() => {
-      ventana.close();
+      let printed = false;
+
+      const cerrarVentana = () => {
+        if (!ventana.closed) ventana.close();
+      };
+
+      // Cerrar cuando termina el ciclo de impresión
+      ventana.onafterprint = cerrarVentana;
+
+      // Cerrar cuando el popup recupere foco luego del diálogo
+      ventana.onfocus = () => {
+        if (printed) cerrarVentana();
+      };
+
+      // Media query para detectar fin de impresión
+      const mediaQuery = ventana.matchMedia('print');
+      if (mediaQuery && mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', (e) => {
+          if (!e.matches) cerrarVentana();
+        });
+      }
+
+      // Timeout de seguridad
+      setTimeout(cerrarVentana, 30000);
+
+      ventana.print();
+      printed = true;
     }, 100);
   }, 250);
 };
