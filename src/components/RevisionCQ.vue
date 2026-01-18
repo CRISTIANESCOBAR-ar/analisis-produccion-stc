@@ -259,7 +259,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in detallePartida" :key="index" class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150">
+            <tr 
+              v-for="(row, index) in detallePartida" 
+              :key="index" 
+              class="border-t border-slate-100 hover:bg-blue-50/30 transition-colors duration-150 cursor-pointer" 
+              @click="showDefectosModal(row)"
+              v-tippy="'Clic para ver defectos detallados'"
+            >
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.GRP_DEF }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.COD_DE }}</td>
               <td class="px-2 py-[0.3rem] text-center text-slate-700">{{ row.DEFEITO }}</td>
@@ -294,6 +300,98 @@
       <p class="empty-message">No hay datos de calidad disponibles</p>
       <p class="empty-hint">Intenta ajustar los filtros o verifica la importación</p>
     </div>
+
+    <!-- Modal de Defectos Detallados -->
+    <div v-if="showDefectosModalFlag" class="modal-overlay" @click.self="closeDefectosModal">
+      <div class="modal-content" style="max-width: 1200px; max-height: 80vh;">
+        <div class="modal-header">
+          <h3 class="modal-header-title">
+            🔍 Defectos Detallados - Pieza {{ selectedPieza?.ETIQUETA }}
+            <span class="text-xs text-slate-500 ml-2">({{ selectedPiezaIndex + 1 }} / {{ detallePartida.length }})</span>
+          </h3>
+          <div class="flex items-center gap-1.5">
+            <button 
+              @click="navigatePieza(-1)" 
+              :disabled="selectedPiezaIndex <= 0"
+              class="nav-btn"
+              v-tippy="'Pieza anterior (←)'"
+            >
+              ‹
+            </button>
+            <button 
+              @click="navigatePieza(1)" 
+              :disabled="selectedPiezaIndex >= detallePartida.length - 1"
+              class="nav-btn"
+              v-tippy="'Pieza siguiente (→)'"
+            >
+              ›
+            </button>
+            <button @click="closeDefectosModal" class="modal-close-btn">&times;</button>
+          </div>
+        </div>
+        <div class="modal-body" style="overflow-y: auto; max-height: calc(80vh - 90px);">
+          <div v-if="loadingDefectos" class="text-center py-8">
+            <div class="spinner mx-auto mb-3"></div>
+            <p class="text-slate-600">Cargando defectos...</p>
+          </div>
+          <div v-else-if="defectosDetalle.length === 0" class="text-center py-8 text-slate-500">
+            <p class="text-lg">📋 No se encontraron defectos para esta pieza</p>
+          </div>
+          <div v-else>
+            <div class="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200">
+              <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                <div><span class="font-semibold text-slate-700">Partida:</span> <span class="text-slate-900">{{ selectedPieza?.PARTIDA || formatPartida(selectedPartida?.Partidas) }}</span></div>
+                <div><span class="font-semibold text-slate-700">Pieza:</span> <span class="text-slate-900">{{ formatPieza(selectedPieza?.PEÇA) }}</span></div>
+                <div><span class="font-semibold text-slate-700">Etiqueta:</span> <span class="text-slate-900">{{ selectedPieza?.ETIQUETA }}</span></div>
+                <div><span class="font-semibold text-slate-700">Total Defectos:</span> <span class="text-slate-900 font-bold">{{ defectosDetalle.length }}</span></div>
+              </div>
+            </div>
+            <div class="overflow-auto rounded-lg border border-slate-200">
+              <table class="min-w-full divide-y divide-slate-200 text-xs">
+                <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">#</th>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">Partida</th>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">Pieza</th>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">Etiqueta</th>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">Cód. Defecto</th>
+                    <th class="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">Descripción</th>
+                    <th class="px-3 py-2 text-center font-semibold text-slate-700 border-b border-slate-200">Puntos</th>
+                    <th class="px-3 py-2 text-center font-semibold text-slate-700 border-b border-slate-200">Calidad</th>
+                    <th class="px-3 py-2 text-center font-semibold text-slate-700 border-b border-slate-200">Fecha Prod.</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-slate-100">
+                  <tr v-for="(defecto, idx) in defectosDetalle" :key="idx" class="hover:bg-slate-50 transition-colors">
+                    <td class="px-3 py-2 text-slate-600">{{ idx + 1 }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ defecto.PARTIDA }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ formatPieza(defecto.PECA) }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ defecto.ETIQUETA }}</td>
+                    <td class="px-3 py-2 text-slate-700 font-mono">{{ defecto.COD_DEF }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ defecto.DESC_DEFEITO }}</td>
+                    <td class="px-3 py-2 text-center text-slate-700 font-semibold">{{ defecto.PONTOS }}</td>
+                    <td class="px-3 py-2 text-center">
+                      <span :class="{
+                        'px-2 py-1 rounded text-xs font-medium': true,
+                        'bg-green-100 text-green-800': defecto.QUALIDADE === 'PRIMEIRA',
+                        'bg-yellow-100 text-yellow-800': defecto.QUALIDADE === 'SEGUNDA',
+                        'bg-red-100 text-red-800': defecto.QUALIDADE === 'TERCEIRA'
+                      }">
+                        {{ defecto.QUALIDADE }}
+                      </span>
+                    </td>
+                    <td class="px-3 py-2 text-center text-slate-700">{{ formatFecha(defecto.DATA_PROD) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeDefectosModal" class="btn-secondary">Cerrar</button>
+        </div>
+      </div>
+    </div>
     </main>
   </div>
 </template>
@@ -321,6 +419,13 @@ const detalleRevisor = ref([])
 // Variables para la tercera tabla (detalle de partida)
 const selectedPartida = ref(null)
 const detallePartida = ref([])
+
+// Variables para el modal de defectos detallados
+const showDefectosModalFlag = ref(false)
+const selectedPieza = ref(null)
+const selectedPiezaIndex = ref(-1)
+const defectosDetalle = ref([])
+const loadingDefectos = ref(false)
 
 // Totales del detalle
 const totalesDetalle = computed(() => {
@@ -549,6 +654,11 @@ function cambiarFecha(dias) {
 
 // Manejar teclas de flecha
 function handleKeydown(event) {
+  // Si el modal de defectos está activo, no manejar las flechas aquí
+  if (showDefectosModalFlag.value) {
+    return
+  }
+  
   if (event.key === 'ArrowLeft') {
     event.preventDefault()
     cambiarFecha(-1)
@@ -658,6 +768,76 @@ async function selectPartida(detalle) {
   }
 }
 
+async function showDefectosModal(pieza, index = -1) {
+  selectedPieza.value = pieza
+  
+  // Si no se proporciona índice, buscarlo en detallePartida
+  if (index === -1) {
+    selectedPiezaIndex.value = detallePartida.value.findIndex(p => p.ETIQUETA === pieza.ETIQUETA)
+  } else {
+    selectedPiezaIndex.value = index
+  }
+  
+  showDefectosModalFlag.value = true
+  loadingDefectos.value = true
+  defectosDetalle.value = []
+  
+  // Agregar listener de teclado
+  window.addEventListener('keydown', handleModalKeydown)
+  
+  try {
+    console.log('🔍 [FRONTEND] Pieza completa:', pieza)
+    console.log('🔍 [FRONTEND] Etiqueta:', pieza.ETIQUETA)
+    console.log('🔍 [FRONTEND] Tipo de etiqueta:', typeof pieza.ETIQUETA)
+    console.log('🔍 [FRONTEND] Longitud etiqueta:', pieza.ETIQUETA?.length)
+    console.log('🔍 [FRONTEND] Etiqueta con quote:', JSON.stringify(pieza.ETIQUETA))
+    
+    const result = await db.getDefectosDetalle(pieza.ETIQUETA)
+    console.log('📊 [FRONTEND] Defectos recibidos:', result?.length || 0, result)
+    defectosDetalle.value = result || []
+  } catch (err) {
+    console.error('❌ [FRONTEND] Error cargando defectos detallados:', err)
+    defectosDetalle.value = []
+  } finally {
+    loadingDefectos.value = false
+  }
+}
+
+function closeDefectosModal() {
+  showDefectosModalFlag.value = false
+  selectedPieza.value = null
+  selectedPiezaIndex.value = -1
+  defectosDetalle.value = []
+  // Remover listener de teclado
+  window.removeEventListener('keydown', handleModalKeydown)
+}
+
+function navigatePieza(direction) {
+  const newIndex = selectedPiezaIndex.value + direction
+  if (newIndex >= 0 && newIndex < detallePartida.value.length) {
+    const nuevaPieza = detallePartida.value[newIndex]
+    showDefectosModal(nuevaPieza, newIndex)
+  }
+}
+
+function handleModalKeydown(event) {
+  if (!showDefectosModalFlag.value) return
+  
+  switch(event.key) {
+    case 'Escape':
+      closeDefectosModal()
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      navigatePieza(-1)
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      navigatePieza(1)
+      break
+  }
+}
+
 function calculateTotals() {
   if (calidadData.value.length === 0) {
     totals.value = { Mts_Total: 0, Calidad_Perc: 0, Pts_100m2: 0, Rollos_1era: 0, Rollos_Sin_Pts: 0, Perc_Sin_Pts: 0 }
@@ -738,6 +918,17 @@ function formatPieza(pieza) {
   const str = pieza.toString()
   if (str.length < 3) return str
   return str.slice(0, -3) + ' ' + str.slice(-3)
+}
+
+// Formatea fecha "2026-01-16" o "2026-01-16 00:00:00" a "16/01/2026"
+function formatFecha(fecha) {
+  if (!fecha) return '-'
+  const str = fecha.toString()
+  // Extraer solo la parte de fecha si tiene timestamp
+  const datePart = str.split(' ')[0]
+  const [year, month, day] = datePart.split('-')
+  if (!year || !month || !day) return fecha
+  return `${day}/${month}/${year}`
 }
 </script>
 
@@ -1568,5 +1759,150 @@ function formatPieza(pieza) {
 
 :deep(.tippy-arrow) {
   color: #1f2937;
+}
+
+/* Modal de Defectos Detallados */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(to right, #f8f9fa, #e9ecef);
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.nav-btn {
+  background: transparent;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  width: 28px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+  color: #cbd5e1;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 22px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.modal-body {
+  padding: 0.75rem;
+}
+
+.modal-footer {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-secondary {
+  padding: 0.32rem 1rem;
+  background: transparent;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+.btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 </style>

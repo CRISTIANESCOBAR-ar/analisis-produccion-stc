@@ -1523,6 +1523,57 @@ app.get('/api/calidad/partida-detalle', async (req, res) => {
   }
 });
 
+// GET /api/calidad/defectos-detalle - Consulta detallada de defectos por etiqueta en tb_DEFECTOS
+app.get('/api/calidad/defectos-detalle', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['etiqueta']);
+    const etiqueta = params.etiqueta?.trim();
+
+    console.log(`🔍 [API] Consultando defectos para etiqueta: "${etiqueta}" (length: ${etiqueta?.length})`);
+
+    if (!etiqueta) {
+      return res.status(400).json({ error: 'Se requiere la etiqueta' });
+    }
+
+    // Primero verificamos si existe en la tabla
+    const checkSql = `SELECT COUNT(*) as count FROM tb_DEFECTOS WHERE trim(ETIQUETA) = ?`;
+    const checkResult = await dbGet(checkSql, [etiqueta]);
+    console.log(`📊 [API] Registros encontrados con trim(): ${checkResult.count}`);
+
+    // Consulta principal
+    const sql = `
+      SELECT
+        PARTIDA,
+        PECA,
+        ETIQUETA,
+        COD_DEF,
+        DESC_DEFEITO,
+        PONTOS,
+        QUALIDADE,
+        DATA_PROD
+      FROM tb_DEFECTOS
+      WHERE trim(ETIQUETA) = trim(?)
+      ORDER BY PECA ASC, COD_DEF ASC
+    `;
+
+    const rows = await dbAll(sql, [etiqueta]);
+    console.log(`📊 [API] Defectos retornados para ${etiqueta}: ${rows.length}`);
+    
+    if (rows.length === 0) {
+      // Debug: mostrar algunas etiquetas de ejemplo
+      const sampleSql = `SELECT DISTINCT quote(ETIQUETA) as etiq FROM tb_DEFECTOS LIMIT 5`;
+      const samples = await dbAll(sampleSql);
+      console.log(`🔍 [API] Ejemplos de etiquetas en tb_DEFECTOS:`, samples.map(s => s.etiq).join(', '));
+    }
+    
+    res.json(rows);
+
+  } catch (error) {
+    console.error('❌ [API] Error en defectos-detalle:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/test/produccion-partida - TEST: Ver datos raw de producción para una partida
 app.get('/api/test/produccion-partida', async (req, res) => {
   try {

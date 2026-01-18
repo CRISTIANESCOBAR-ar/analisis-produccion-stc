@@ -87,6 +87,10 @@ export function useDatabase() {
     return await fetchApi(`/calidad/partida-detalle?${queryString}`)
   }
 
+  const getDefectosDetalle = async (etiqueta) => {
+    return await fetchApi(`/calidad/defectos-detalle?etiqueta=${etiqueta}`)
+  }
+
   // ===================================================================
   // PARADAS
   // ===================================================================
@@ -169,6 +173,7 @@ export function useDatabase() {
     getAvailableDates,
     getRevisorDetalle,
     getPartidaDetalle,
+    getDefectosDetalle,
     getParadas,
     getTopMotivosParada,
     getFichas,
