@@ -554,22 +554,60 @@ async function forceImportAll() {
         const secondsUI = (elapsedUI / 1000).toFixed(2)
         const secondsServer = (elapsedServer / 1000).toFixed(2)
         
-        // Refrescar estado en background
-        fetchStatus().catch(err => console.error('Error refreshing status:', err))
+        // Refrescar estado para obtener los resultados actualizados
+        await fetchStatus().catch(err => console.error('Error refreshing status:', err))
         
-        // Calcular filas importadas (excluyendo tb_FICHAS que es catálogo)
-        const dataRows = statusList.value
+        // Detectar problemas en las importaciones
+        const tablesWithErrors = statusList.value.filter(s => 
+          s.status === 'MISSING' || 
+          s.status === 'ERRORED' || 
+          s.last_import_date === 'Archivo No Encontrado' ||
+          s.last_import_date === 'Error en importación'
+        )
+        
+        const successfulTables = statusList.value.filter(s => 
+          s.status !== 'MISSING' && 
+          s.status !== 'ERRORED' && 
+          s.last_import_date !== 'Archivo No Encontrado' &&
+          s.last_import_date !== 'Error en importación'
+        )
+        
+        // Calcular filas importadas (excluyendo tb_FICHAS que es catálogo y tablas con errores)
+        const dataRows = successfulTables
           .filter(s => s.table !== 'tb_FICHAS')
           .reduce((sum, s) => sum + (s.rows_imported || 0), 0)
         
+        // Determinar icono y título según el resultado
+        const hasErrors = tablesWithErrors.length > 0
+        const icon = hasErrors ? 'warning' : 'success'
+        const title = hasErrors 
+          ? '⚠️ Importación Completada con Advertencias' 
+          : '✓ Importación Completa'
+        
+        // Construir mensaje de advertencias si las hay
+        let warningsHtml = ''
+        if (hasErrors) {
+          const errorList = tablesWithErrors.map(t => 
+            `<li><strong>${t.table}</strong>: ${t.last_import_date || t.status}</li>`
+          ).join('')
+          warningsHtml = `
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 15px; border-radius: 4px; text-align: left;">
+              <div style="font-weight: bold; color: #92400e; margin-bottom: 8px;">⚠️ Problemas detectados:</div>
+              <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 0.9em;">
+                ${errorList}
+              </ul>
+            </div>
+          `
+        }
+        
         // Mostrar resultado en modal para que sea bien visible
-        Swal.fire({
-          icon: 'success',
-          title: '✓ Importación Completa',
+        await Swal.fire({
+          icon: icon,
+          title: title,
           html: `
             <div style="text-align: left; padding: 10px;">
               <div style="font-size: 1.1em; margin-bottom: 15px;">
-                <strong>${statusList.value.length} tablas</strong> • <strong>${dataRows.toLocaleString()}</strong> registros importados
+                <strong>${successfulTables.length} tablas</strong> • <strong>${dataRows.toLocaleString()}</strong> registros importados
               </div>
               <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-family: monospace;">
                 <div style="margin-bottom: 8px;">
@@ -581,12 +619,16 @@ async function forceImportAll() {
                   <span style="font-size: 1.2em; font-weight: bold;">${secondsUI}s</span>
                 </div>
               </div>
+              ${warningsHtml}
             </div>
           `,
           confirmButtonText: 'Entendido',
-          confirmButtonColor: '#059669',
+          confirmButtonColor: hasErrors ? '#f59e0b' : '#059669',
           allowOutsideClick: false
         })
+        
+        // Refrescar de nuevo después de cerrar el diálogo
+        await fetchStatus()
       } else {
         throw new Error(data.error || 'Error desconocido')
       }

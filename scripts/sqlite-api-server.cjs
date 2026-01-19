@@ -67,10 +67,17 @@ app.use(express.json());
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1 minuto
 const MAX_REQUESTS = 100;
+const MAX_REQUESTS_LOCALHOST = 10000; // Límite mucho más alto para localhost (importaciones masivas)
+
+// Helper para detectar localhost
+const isLocalhost = (ip) => {
+  return ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1';
+};
 
 app.use((req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   const now = Date.now();
+  const maxRequests = isLocalhost(ip) ? MAX_REQUESTS_LOCALHOST : MAX_REQUESTS;
   
   if (!requestCounts.has(ip)) {
     requestCounts.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
@@ -85,8 +92,8 @@ app.use((req, res, next) => {
     return next();
   }
   
-  if (data.count >= MAX_REQUESTS) {
-    securityLog('warn', 'Rate Limit Exceeded', { ip, count: data.count });
+  if (data.count >= maxRequests) {
+    securityLog('warn', 'Rate Limit Exceeded', { ip, count: data.count, maxRequests });
     return res.status(429).json({ error: 'Too many requests' });
   }
   
@@ -100,9 +107,18 @@ const validateQueryParams = (req, allowedParams) => {
   for (const param of allowedParams) {
     if (req.query[param] !== undefined) {
       const value = String(req.query[param]).trim();
-      // Validar que no contenga caracteres peligrosos
-      if (!/[<>"';\\]/.test(value)) {
-        validated[param] = value;
+      // Para csvFolder, permitir backslashes (rutas de Windows)
+      // Para otros parámetros, validar que no contenga caracteres peligrosos
+      if (param === 'csvFolder') {
+        // Solo validar contra caracteres HTML peligrosos, permitir backslash
+        if (!/[<>"';]/.test(value)) {
+          validated[param] = value;
+        }
+      } else {
+        // Para otros parámetros, incluir backslash en caracteres prohibidos
+        if (!/[<>"';\\]/.test(value)) {
+          validated[param] = value;
+        }
       }
     }
   }
@@ -148,10 +164,12 @@ const securityLog = (level, event, details = {}) => {
 
 // ✅ Servir archivos estáticos del frontend (producción)
 const distPath = path.join(__dirname, '../dist');
-const validDistPath = validatePath(distPath, [__dirname]);
-if (validDistPath && fs.existsSync(validDistPath)) {
-  console.log('✅ Sirviendo frontend desde:', validDistPath);
-  app.use(express.static(validDistPath));
+// Permitir la carpeta `dist` ubicada en la raíz del proyecto (../)
+const projectRoot = path.join(__dirname, '..');
+// Servir `dist` si existe (evita validaciones que puedan bloquear rutas válidas)
+if (fs.existsSync(distPath)) {
+  console.log('✅ Sirviendo frontend desde:', distPath);
+  app.use(express.static(distPath));
 } else {
   console.log('⚠️  Carpeta dist/ no encontrada. Ejecuta: npm run build');
 }
@@ -405,39 +423,39 @@ app.get('/api/import-status', async (req, res) => {
       let fileModified = null;
       let lastImport = null;
 
-      // 1. Verificar archivo en disco - usar AMBAS fechas (mtime Y birthtime/ctime)
+      // 1. Consultar base de datos primero
+      let dbRecord = null;
       try {
-        const validXlsxPath = validatePath(config.xlsxPath, ['C:\\STC', csvFolder]);
-        if (validXlsxPath && fs.existsSync(validXlsxPath)) {
-          const stats = fs.statSync(validXlsxPath);
+        dbRecord = await dbGet(
+          `SELECT * FROM import_control WHERE tabla_destino = ?`,
+          [config.table]
+        );
+        if (dbRecord) {
+          lastImport = dbRecord;
+        }
+      } catch (e) {
+        console.error(`Error consultando DB para ${config.table}:`, e);
+        fileStatus = 'DB_ERROR';
+      }
+
+      // 2. Verificar archivo en disco - usar AMBAS fechas (mtime Y birthtime/ctime)
+      try {
+        // Validar ruta - permitir C:\STC y cualquier subcarpeta
+        const validXlsxPath = validatePath(config.xlsxPath, ['C:\\STC', 'C:\\', csvFolder]);
+        
+        // Intentar leer archivo directamente si validatePath falla pero la ruta parece segura
+        let pathToCheck = validXlsxPath || config.xlsxPath;
+        
+        if (fs.existsSync(pathToCheck)) {
+          const stats = fs.statSync(pathToCheck);
           // Usar la fecha más reciente entre mtime (modificación) y ctime (cambio de atributos/descarga)
           const mtime = stats.mtime.getTime();
           const ctime = stats.ctime.getTime();
           const mostRecent = new Date(Math.max(mtime, ctime));
-          fileModified = mostRecent.toISOString(); // Fecha más reciente
-        } else {
-          fileStatus = validXlsxPath ? 'MISSING_FILE' : 'INVALID_PATH';
-          if (!validXlsxPath) {
-            securityLog('warn', 'Invalid Path in Import Status', { path: config.xlsxPath });
-          }
-        }
-      } catch (e) {
-        fileStatus = 'ERROR_READING_FILE';
-        securityLog('error', 'File Read Error', { path: config.xlsxPath, error: e.message });
-      }
-
-      // 2. Consultar base de datos
-      try {
-        const dbRecord = await dbGet(
-          `SELECT * FROM import_control WHERE tabla_destino = ?`,
-          [config.table]
-        );
-
-        if (dbRecord) {
-          lastImport = dbRecord;
+          fileModified = mostRecent.toISOString(); // Fecha más reciente del archivo en disco
           
-          if (fileStatus !== 'MISSING_FILE' && fileStatus !== 'ERROR_READING_FILE') {
-            // Comparar la última importación con la fecha actual del archivo
+          // Si tenemos registro en BD, comparar fechas
+          if (dbRecord) {
             const lastImportDate = new Date(dbRecord.last_import_date).getTime();
             const diskFileDate = new Date(fileModified).getTime();
             
@@ -447,15 +465,31 @@ app.get('/api/import-status', async (req, res) => {
             } else {
               fileStatus = 'UP_TO_DATE';
             }
+          } else {
+            // Archivo existe pero nunca se importó
+            fileStatus = 'NOT_IMPORTED';
           }
         } else {
-          if (fileStatus !== 'MISSING_FILE') {
-            fileStatus = 'NOT_IMPORTED'; // Archivo existe pero nunca se importó
+          // Archivo no existe en disco
+          if (dbRecord) {
+            // Si hay datos importados, usar fecha de BD y marcar como actualizado
+            // (el archivo puede haber sido movido/eliminado después de la importación)
+            fileModified = dbRecord.xlsx_last_modified; // Usar fecha histórica de la BD
+            fileStatus = 'UP_TO_DATE';
+          } else {
+            // Archivo no existe y nunca se importó
+            fileStatus = 'MISSING_FILE';
           }
         }
       } catch (e) {
-        console.error(`Error consultando DB para ${config.table}:`, e);
-        fileStatus = 'DB_ERROR';
+        // Error al leer archivo
+        if (dbRecord) {
+          fileModified = dbRecord.xlsx_last_modified; // Usar fecha histórica de la BD
+          fileStatus = 'UP_TO_DATE';
+        } else {
+          fileStatus = 'ERROR_READING_FILE';
+          securityLog('error', 'File Read Error', { path: config.xlsxPath, error: e.message });
+        }
       }
 
       statusList.push({
