@@ -4,12 +4,14 @@ import ImportControl from '../components/ImportControl.vue'
 import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
 import AnalisisMesaTest from '../components/AnalisisMesaTest.vue'
+import CalidadSectoresTabla from '../components/CalidadSectoresTabla.vue'
 import ResiduosIndigoTejeduria from '../components/ResiduosIndigoTejeduria.vue'
 import AnalisisResiduosIndigo from '../components/AnalisisResiduosIndigo.vue'
 import ConsultaRoladaIndigo from '../components/ConsultaRoladaIndigo.vue'
 import InformeProduccionIndigo from '../components/InformeProduccionIndigo.vue'
 import SeguimientoRoladas from '../components/SeguimientoRoladas.vue'
 import CostosMensuales from '../components/CostosMensuales.vue'
+import MetasCarga from '../components/MetasCarga.vue'
 
 const routes = [
   {
@@ -39,6 +41,12 @@ const routes = [
     name: 'AnalisisMesaTest',
     component: AnalisisMesaTest,
     meta: { title: 'Análisis Mesa de Test - Análisis Producción STC' }
+  },
+  {
+    path: '/calidad-sectores',
+    name: 'CalidadSectores',
+    component: CalidadSectoresTabla,
+    meta: { title: 'Metros por Sector - Análisis Producción STC' }
   },
   {
     path: '/importaciones',
@@ -79,6 +87,12 @@ const routes = [
     name: 'CostosMensuales',
     component: CostosMensuales,
     meta: { title: 'Costos Mensuales - Análisis Producción STC' }
+  },
+  {
+    path: '/metas',
+    name: 'Metas',
+    component: MetasCarga,
+    meta: { title: 'Carga de Metas - Análisis Producción STC' }
   }
 ]
 

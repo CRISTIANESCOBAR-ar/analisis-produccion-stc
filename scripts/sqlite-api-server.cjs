@@ -1858,6 +1858,323 @@ app.get('/api/residuos/sector', async (req, res) => {
 });
 
 // =====================================================================
+// ENDPOINTS - METAS
+// =====================================================================
+
+// GET /api/metas - Obtener metas de un mes específico
+app.get('/api/metas', async (req, res) => {
+  try {
+    const { mes, año } = req.query;
+    
+    if (!mes || !año) {
+      return res.status(400).json({ error: 'Se requieren parámetros mes y año' });
+    }
+    
+    // Construir rango de fechas
+    const fechaInicio = `${año}-${String(mes).padStart(2, '0')}-01`;
+    const ultimoDia = new Date(parseInt(año), parseInt(mes), 0).getDate();
+    const fechaFin = `${año}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+    
+    const data = await dbAll(
+      `SELECT * FROM tb_METAS 
+       WHERE Dia >= ? AND Dia <= ?
+       ORDER BY Dia ASC`,
+      [fechaInicio, fechaFin]
+    );
+    
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/metas/:fecha - Obtener meta de una fecha específica
+app.get('/api/metas/:fecha', async (req, res) => {
+  try {
+    const { fecha } = req.params;
+    
+    const data = await dbGet(
+      `SELECT * FROM tb_METAS WHERE Dia = ?`,
+      [fecha]
+    );
+    
+    if (!data) {
+      return res.status(404).json({ error: 'Meta no encontrada para esta fecha' });
+    }
+    
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/metas - Guardar/actualizar metas (batch)
+app.post('/api/metas', async (req, res) => {
+  try {
+    const metas = req.body;
+    
+    if (!Array.isArray(metas) || metas.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de metas' });
+    }
+    
+    let insertados = 0;
+    let actualizados = 0;
+    
+    for (const meta of metas) {
+      const existente = await dbGet(
+        `SELECT id FROM tb_METAS WHERE Dia = ?`,
+        [meta.Dia]
+      );
+      
+      if (existente) {
+        // Actualizar
+        await dbRun(
+          `UPDATE tb_METAS SET
+            Indigo = ?,
+            Meta_Eficiencia_INDIGO = ?,
+            Meta_Rotura_INDIGO = ?,
+            Meta_Estopa_Azul = ?,
+            Tejeduria = ?,
+            RU105 = ?,
+            RT105 = ?,
+            EFI_Percent = ?,
+            Meta_Estopa_Azul_Tejeduria = ?,
+            Integrada = ?,
+            Meta_Velocidad_Integrada = ?,
+            Meta_ENC_URD_Integrada = ?,
+            Revision = ?,
+            Dia_Invertido = ?
+           WHERE Dia = ?`,
+          [
+            meta.Indigo,
+            meta.Meta_Eficiencia_INDIGO,
+            meta.Meta_Rotura_INDIGO,
+            meta.Meta_Estopa_Azul,
+            meta.Tejeduria,
+            meta.RU105,
+            meta.RT105,
+            meta.EFI_Percent,
+            meta.Meta_Estopa_Azul_Tejeduria || meta.Meta_Estopa_Azul,
+            meta.Integrada,
+            meta.Meta_Velocidad_Integrada,
+            meta.Meta_ENC_URD_Integrada,
+            meta.Revision,
+            meta.Dia_Invertido,
+            meta.Dia
+          ]
+        );
+        actualizados++;
+      } else {
+        // Insertar
+        await dbRun(
+          `INSERT INTO tb_METAS (
+            Dia, Indigo, Meta_Eficiencia_INDIGO, Meta_Rotura_INDIGO, Meta_Estopa_Azul,
+            Tejeduria, RU105, RT105, EFI_Percent, Meta_Estopa_Azul_Tejeduria,
+            Integrada, Meta_Velocidad_Integrada, Meta_ENC_URD_Integrada,
+            Revision, Dia_Invertido
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            meta.Dia,
+            meta.Indigo,
+            meta.Meta_Eficiencia_INDIGO,
+            meta.Meta_Rotura_INDIGO,
+            meta.Meta_Estopa_Azul,
+            meta.Tejeduria,
+            meta.RU105,
+            meta.RT105,
+            meta.EFI_Percent,
+            meta.Meta_Estopa_Azul_Tejeduria || meta.Meta_Estopa_Azul,
+            meta.Integrada,
+            meta.Meta_Velocidad_Integrada,
+            meta.Meta_ENC_URD_Integrada,
+            meta.Revision,
+            meta.Dia_Invertido
+          ]
+        );
+        insertados++;
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      insertados, 
+      actualizados,
+      total: insertados + actualizados
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/metas/:fecha - Eliminar meta de una fecha específica
+app.delete('/api/metas/:fecha', async (req, res) => {
+  try {
+    const { fecha } = req.params;
+    
+    const result = await dbRun(
+      `DELETE FROM tb_METAS WHERE Dia = ?`,
+      [fecha]
+    );
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Meta no encontrada para esta fecha' });
+    }
+    
+    res.json({ success: true, deleted: result.changes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/metas/resumen/:fecha - Obtener meta del día y acumulado del mes
+app.get('/api/metas/resumen/:fecha', async (req, res) => {
+  try {
+    const { fecha } = req.params;
+    
+    // Extraer año y mes de la fecha
+    const [year, month] = fecha.split('-');
+    const monthStart = `${year}-${month}-01`;
+    
+    // Meta del día específico
+    const metaDia = await dbGet(
+      `SELECT Revision FROM tb_METAS WHERE Dia = ?`,
+      [fecha]
+    );
+    
+    // Acumulado del mes hasta la fecha
+    const metaMes = await dbGet(
+      `SELECT SUM(Revision) as total FROM tb_METAS 
+       WHERE Dia >= ? AND Dia <= ?`,
+      [monthStart, fecha]
+    );
+    
+    res.json({
+      day: metaDia ? (metaDia.Revision || 0) : 0,
+      month: metaMes ? (metaMes.total || 0) : 0,
+      fecha: fecha
+    });
+  } catch (error) {
+    console.error('Error en /api/metas/resumen/:fecha:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/pts100m2 - Calcular puntos por 100m² (Pts 100²)
+app.get('/api/calidad/pts100m2', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'monthStart', 'monthEnd']);
+    const { date, monthStart, monthEnd } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    const datePattern = date.split('T')[0];
+    const [year, month] = datePattern.split('-');
+    const mesInicio = monthStart || `${year}-${month}-01`;
+    const mesFin = monthEnd || datePattern;
+
+    console.log(`🎯 Calculando Pts 100m² para fecha: ${datePattern}, mes: ${mesInicio} a ${mesFin}`);
+
+    // Consulta para el día específico
+    const sqlDia = `
+      WITH PTS AS (
+        SELECT 
+          DATE(DAT_PROD) AS FECHA,
+          SUM(PONTUACAO_AVG) AS PONTUACAO
+        FROM (
+          SELECT DISTINCT
+            EMP,
+            DATE(DAT_PROD) AS DAT_PROD,
+            QUALIDADE,
+            PEÇA,
+            AVG(CAST(REPLACE(REPLACE(PONTUACAO, '.', ''), ',', '.') AS REAL)) AS PONTUACAO_AVG
+          FROM tb_CALIDAD
+          WHERE DATE(DAT_PROD) = DATE(?)
+            AND QUALIDADE = 'PRIMEIRA '
+          GROUP BY EMP, DATE(DAT_PROD), QUALIDADE, PEÇA
+        ) AS SUB
+        GROUP BY DATE(DAT_PROD)
+      ),
+      ANCHO AS (
+        SELECT
+          DATE(DAT_PROD) AS FECHA,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL)) / 
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS ANCHO_POND
+        FROM tb_CALIDAD
+        WHERE DATE(DAT_PROD) = DATE(?)
+          AND QUALIDADE = 'PRIMEIRA '
+        GROUP BY EMP, DATE(DAT_PROD), QUALIDADE
+      )
+      SELECT
+        CASE 
+          WHEN ANCHO.METROS > 0 AND ANCHO.ANCHO_POND > 0 THEN
+            (PTS.PONTUACAO * 100) / (ANCHO.METROS * ANCHO.ANCHO_POND) * 100
+          ELSE 0
+        END AS PTS1002
+      FROM ANCHO
+      LEFT JOIN PTS ON ANCHO.FECHA = PTS.FECHA
+    `;
+
+    // Consulta para el acumulado del mes
+    const sqlMes = `
+      WITH PTS AS (
+        SELECT 
+          SUM(PONTUACAO_AVG) AS PONTUACAO
+        FROM (
+          SELECT DISTINCT
+            EMP,
+            DATE(DAT_PROD) AS DAT_PROD,
+            QUALIDADE,
+            PEÇA,
+            AVG(CAST(REPLACE(REPLACE(PONTUACAO, '.', ''), ',', '.') AS REAL)) AS PONTUACAO_AVG
+          FROM tb_CALIDAD
+          WHERE DATE(DAT_PROD) >= DATE(?)
+            AND DATE(DAT_PROD) <= DATE(?)
+            AND QUALIDADE = 'PRIMEIRA '
+          GROUP BY EMP, DATE(DAT_PROD), QUALIDADE, PEÇA
+        ) AS SUB
+      ),
+      ANCHO AS (
+        SELECT
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL)) / 
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS ANCHO_POND
+        FROM tb_CALIDAD
+        WHERE DATE(DAT_PROD) >= DATE(?)
+          AND DATE(DAT_PROD) <= DATE(?)
+          AND QUALIDADE = 'PRIMEIRA '
+      )
+      SELECT
+        CASE 
+          WHEN ANCHO.METROS > 0 AND ANCHO.ANCHO_POND > 0 THEN
+            (PTS.PONTUACAO * 100) / (ANCHO.METROS * ANCHO.ANCHO_POND) * 100
+          ELSE 0
+        END AS PTS1002
+      FROM ANCHO, PTS
+    `;
+
+    const resultDia = await dbGet(sqlDia, [datePattern, datePattern]);
+    const resultMes = await dbGet(sqlMes, [mesInicio, mesFin, mesInicio, mesFin]);
+
+    console.log(`✅ Pts 100m² calculado - Día: ${resultDia?.PTS1002 || 0}, Mes: ${resultMes?.PTS1002 || 0}`);
+
+    res.json({
+      day: resultDia?.PTS1002 || 0,
+      month: resultMes?.PTS1002 || 0,
+      date: datePattern
+    });
+
+  } catch (error) {
+    console.error('Error en /api/calidad/pts100m2:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================================
 // Iniciar servidor
 // =====================================================================
 
@@ -1884,6 +2201,10 @@ app.listen(PORT, () => {
   console.log('   GET  /api/residuos/sector         - Residuos sector');
   console.log('   GET  /api/calidad/revisores       - Lista de revisores');
   console.log('   GET  /api/calidad/historico-revisor - Análisis histórico por revisor');
+  console.log('   GET  /api/metas?mes=1&año=2026    - Obtener metas del mes');
+  console.log('   GET  /api/metas/:fecha            - Obtener meta de fecha específica');
+  console.log('   POST /api/metas                   - Guardar/actualizar metas (batch)');
+  console.log('   DEL  /api/metas/:fecha            - Eliminar meta de una fecha');
   console.log('');
 });
 
@@ -1999,6 +2320,201 @@ app.get('/api/calidad/historico-revisor', async (req, res) => {
 
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/debug-sectores - Diagnóstico para tabla de sectores
+app.get('/api/calidad/debug-sectores', async (req, res) => {
+  try {
+    console.log('\n=== DEBUG: DIAGNOSTICO tb_CALIDAD ===\n');
+
+    // 1. Columnas de tb_CALIDAD
+    const columnas = await dbAll(`PRAGMA table_info(tb_CALIDAD)`);
+    console.log('📋 Columnas en tb_CALIDAD:');
+    columnas.forEach((col, idx) => {
+      console.log(`  ${idx + 1}. ${col.name} (${col.type})`);
+    });
+
+    // 2. Contador de registros
+    const count = await dbGet(`SELECT COUNT(*) as total FROM tb_CALIDAD`);
+    console.log(`\n📊 Total de registros: ${count.total}`);
+
+    // 3. Rango de fechas disponibles
+    const dateRange = await dbGet(`
+      SELECT MIN(DAT_PROD) as min_date, MAX(DAT_PROD) as max_date 
+      FROM tb_CALIDAD
+    `);
+    console.log(`📅 Rango de fechas: ${dateRange.min_date} a ${dateRange.max_date}`);
+
+    // 4. Valores únicos de GRP_DEF
+    const sectors = await dbAll(`
+      SELECT DISTINCT GRP_DEF, COUNT(*) as count
+      FROM tb_CALIDAD
+      GROUP BY GRP_DEF
+      ORDER BY count DESC
+    `);
+    console.log('\n🏭 Sectores (GRP_DEF):');
+    sectors.forEach(s => {
+      console.log(`  ${s.GRP_DEF}: ${s.count} registros`);
+    });
+
+    // 5. Ejemplo de registros
+    const sample = await dbAll(`
+      SELECT 
+        DAT_PROD,
+        GRP_DEF,
+        EMP,
+        METRAGEM,
+        QUALIDADE
+      FROM tb_CALIDAD
+      LIMIT 5
+    `);
+    console.log('\n📋 Ejemplo de registros:');
+    sample.forEach((row, idx) => {
+      console.log(`  ${idx + 1}. Fecha: ${row.DAT_PROD}, Sector: ${row.GRP_DEF}, Emp: ${row.EMP}, Metros: ${row.METRAGEM}`);
+    });
+
+    // 6. Datos para la fecha especificada (19/01/2026)
+    const testDate = '19/01/2026';
+    const testData = await dbAll(`
+      SELECT 
+        DAT_PROD,
+        GRP_DEF,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) as total_metros,
+        COUNT(*) as registros
+      FROM tb_CALIDAD
+      WHERE DAT_PROD = ?
+        AND EMP = 'STC'
+      GROUP BY GRP_DEF
+    `, [testDate]);
+    console.log(`\n🔍 Datos para ${testDate} (EMP='STC'):`);
+    if (testData.length === 0) {
+      console.log('  ⚠️ NO HAY DATOS');
+    } else {
+      testData.forEach(row => {
+        console.log(`  ${row.GRP_DEF}: ${row.total_metros} metros (${row.registros} registros)`);
+      });
+    }
+
+    // 7. Datos para cualquier fecha
+    const anyDate = await dbGet(`
+      SELECT DISTINCT DAT_PROD
+      FROM tb_CALIDAD
+      LIMIT 1
+    `);
+    if (anyDate) {
+      const anyDateData = await dbAll(`
+        SELECT 
+          DAT_PROD,
+          GRP_DEF,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) as total_metros
+        FROM tb_CALIDAD
+        WHERE DAT_PROD = ?
+          AND EMP = 'STC'
+        GROUP BY GRP_DEF
+      `, [anyDate.DAT_PROD]);
+      console.log(`\n✅ Datos para ${anyDate.DAT_PROD} (EMP='STC'):`);
+      anyDateData.forEach(row => {
+        console.log(`  ${row.GRP_DEF}: ${row.total_metros} metros`);
+      });
+    }
+
+    console.log('\n====================================\n');
+
+    res.json({
+      totalRegistros: count.total,
+      rango: dateRange,
+      sectores: sectors,
+      ejemplo: sample,
+      testDate19Jan: testData,
+      primeraFecha: anyDate
+    });
+  } catch (error) {
+    console.error('❌ Error en debug-sectores:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/calidad/sectores-resumen - Metros revisados por sector (similar al VBA)
+app.get('/api/calidad/sectores-resumen', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'monthStart', 'monthEnd']);
+    const { date, monthStart, monthEnd } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    // Las fechas en tb_CALIDAD están en formato YYYY-MM-DD HH:MM:SS
+    // Usar LIKE para comparar solo la parte de fecha
+    const datePattern = date.split('T')[0]; // Obtener solo YYYY-MM-DD si viene con T
+    
+    // Usar monthStart y monthEnd si se proporcionan, si no calcular mes actual
+    const [year, month] = datePattern.split('-');
+    const mesInicio = monthStart || `${year}-${month}-01`;
+    const mesFin = monthEnd || `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+
+    console.log(`🔍 Consultando sectores para fecha: ${datePattern}, mes: ${mesInicio} a ${mesFin}`);
+
+    const sql = `
+      WITH Sectores AS (
+        -- Tabla de sectores con su número de orden y porcentaje meta
+        SELECT 
+          'S/ Def.' AS SECTOR,
+          1 AS NRO,
+          95.5 AS PORCENTAJE_META
+        UNION ALL
+        SELECT 'FIACAO', 2, 0.15
+        UNION ALL
+        SELECT 'INDIGO', 3, 1.4
+        UNION ALL
+        SELECT 'TECELAGEM', 4, 2.5
+        UNION ALL
+        SELECT 'ACABMTO', 5, 0.3
+        UNION ALL
+        SELECT 'GERAL', 6, 0.15
+      ),
+      CalidadDia AS (
+        -- Metros por sector para el día especificado
+        -- Comparar solo la parte YYYY-MM-DD de DAT_PROD
+        SELECT 
+          GRP_DEF AS SECTOR,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND DATE(DAT_PROD) = DATE(?)
+        GROUP BY GRP_DEF
+      ),
+      CalidadMes AS (
+        -- Metros por sector acumulados en el mes
+        -- Usar DATE() para comparar solo la parte de fecha
+        SELECT 
+          GRP_DEF AS SECTOR,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND DATE(DAT_PROD) >= DATE(?)
+          AND DATE(DAT_PROD) <= DATE(?)
+        GROUP BY GRP_DEF
+      )
+      SELECT 
+        s.SECTOR,
+        COALESCE(d.METROS, 0) AS metrosDia,
+        COALESCE(m.METROS, 0) AS metrosMes,
+        s.PORCENTAJE_META AS metaPct
+      FROM Sectores s
+      LEFT JOIN CalidadDia d ON s.SECTOR = d.SECTOR
+      LEFT JOIN CalidadMes m ON s.SECTOR = m.SECTOR
+      ORDER BY s.NRO ASC
+    `;
+
+    const rows = await dbAll(sql, [datePattern, mesInicio, mesFin]);
+    console.log(`📊 Resultados para ${datePattern}:`, rows.map(r => `${r.SECTOR}: ${r.metrosDia}m`).join(', '));
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/calidad/sectores-resumen:', error);
     res.status(500).json({ error: error.message });
   }
 });

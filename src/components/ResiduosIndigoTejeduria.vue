@@ -80,6 +80,7 @@
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 border-l-2 text-right">Tejeduría Metros</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Tejeduría Kg</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Residuos Tejeduría Kg</th>
+              <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Residuos Tejeduría en %</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Meta Tejeduría %</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Desvío Tejeduría en Kg</th>
               <th scope="col" class="px-2 py-1 font-bold border-b border-slate-200 text-right">Desvío Tejeduría en Metros</th>
@@ -94,29 +95,30 @@
           <tbody class="divide-y divide-slate-200">
             <tr v-for="(item, index) in datosCompletos" :key="index" :class="index % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'" class="transition-colors cursor-pointer" @dblclick="abrirDetalle(item.DT_BASE_PRODUCAO)">
               <td class="pl-2 pr-2 py-0 font-medium text-slate-900 whitespace-nowrap">{{ item.DT_BASE_PRODUCAO }}</td>
-              <td class="px-2 py-0 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.TotalMetros) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-blue-700">{{ formatNumber(item.ResiduosKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold" :class="(item.TotalKg > 0 && (item.ResiduosKg / item.TotalKg * 100) > metaPercent) ? 'text-red-600' : 'text-green-600'">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-slate-600">{{ formatDecimal(metaPercent) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatDesvio(item.ResiduosKg, item.TotalKg, metaPercent) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatDesvioMetros(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatCurrency(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent, costoUrdidoTenido) }}</td>
-              <td class="px-2 py-0 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(item.TejeduriaMetros) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-cyan-700">{{ formatNumber(item.TejeduriaKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-rose-700">{{ formatNumber(item.ResiduosTejeduriaKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-slate-600">{{ formatDecimal(metaTejeduriaPercent) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatDesvio(item.ResiduosTejeduriaKg, item.TejeduriaKg, metaTejeduriaPercent) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatDesvioMetros(item.TejeduriaMetros, item.TejeduriaKg, item.ResiduosTejeduriaKg, metaTejeduriaPercent) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-amber-600">{{ formatNumber(item.AnudadosCount) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-emerald-600">{{ formatPromedioAnudado(item.ResiduosTejeduriaKg, item.AnudadosCount) }}</td>
-              <td class="px-2 py-0 text-right font-mono font-semibold text-red-600">{{ formatCurrency(item.TejeduriaMetros, item.TejeduriaKg, item.ResiduosTejeduriaKg, metaTejeduriaPercent, costoUrdidoTenido) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-blue-600 border-l-2 border-slate-200">{{ formatNumber(item.EstopaAzulProducida) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-green-600">{{ formatNumber(item.ResiduosPrensadaKg) }}</td>
-              <td class="px-2 py-0 text-right font-mono text-red-500">{{ formatNumber(item.DiferenciaEstopa) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] border-l-2 border-slate-200">{{ formatNumber(item.TotalMetros) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-blue-700">{{ formatNumber(item.TotalKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-blue-700">{{ formatNumber(item.ResiduosKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold" :class="(item.TotalKg > 0 && (item.ResiduosKg / item.TotalKg * 100) > metaPercent) ? 'text-red-600' : 'text-green-600'">{{ formatPercent(item.ResiduosKg, item.TotalKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-slate-600">{{ formatDecimal(metaPercent) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold text-red-600">{{ formatDesvio(item.ResiduosKg, item.TotalKg, metaPercent) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold text-red-600">{{ formatDesvioMetros(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold text-red-600">{{ formatCurrency(item.TotalMetros, item.TotalKg, item.ResiduosKg, metaPercent, costoUrdidoTenido) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] border-l-2 border-slate-200">{{ formatNumber(item.TejeduriaMetros) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-cyan-700">{{ formatNumber(item.TejeduriaKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-rose-700">{{ formatNumber(item.ResiduosTejeduriaKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold" :class="(item.TejeduriaKg > 0 && (item.ResiduosTejeduriaKg / item.TejeduriaKg * 100) > metaTejeduriaPercent) ? 'text-red-600' : 'text-green-600'">{{ formatPercent(item.ResiduosTejeduriaKg, item.TejeduriaKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-slate-600">{{ formatDecimal(metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold text-red-600">{{ formatDesvio(item.ResiduosTejeduriaKg, item.TejeduriaKg, metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold text-red-600">{{ formatDesvioMetros(item.TejeduriaMetros, item.TejeduriaKg, item.ResiduosTejeduriaKg, metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-amber-600">{{ formatNumber(item.AnudadosCount) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-emerald-600">{{ formatPromedioAnudado(item.ResiduosTejeduriaKg, item.AnudadosCount) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] font-semibold text-red-600">{{ formatCurrency(item.TejeduriaMetros, item.TejeduriaKg, item.ResiduosTejeduriaKg, metaTejeduriaPercent, costoUrdidoTenido) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-blue-600 border-l-2 border-slate-200">{{ formatNumber(item.EstopaAzulProducida) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-green-600">{{ formatNumber(item.ResiduosPrensadaKg) }}</td>
+              <td class="px-2 py-0 text-right font-[Verdana] text-red-500">{{ formatNumber(item.DiferenciaEstopa) }}</td>
             </tr>
             <tr v-if="datosCompletos.length === 0 && !cargando">
-              <td colspan="21" class="px-6 py-8 text-center text-slate-500">
+              <td colspan="22" class="px-6 py-8 text-center text-slate-500">
                 No se encontraron datos para el período seleccionado.
               </td>
             </tr>
@@ -132,18 +134,19 @@
               <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioKg > 0 ? formatNumber(totales.desvioKg) : '' }}</td>
               <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioMetros > 0 ? formatNumber(totales.desvioMetros) : '' }}</td>
               <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioIndigoPesos > 0 ? formatCurrencyValue(totales.desvioIndigoPesos) : '' }}</td>
-              <td class="px-2 py-1 text-right font-mono border-l-2 border-slate-200">{{ formatNumber(totales.tejeduriaMetros) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-cyan-800">{{ formatNumber(totales.tejeduriaKg) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-rose-800">{{ formatNumber(totales.residuosTejeduriaKg) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-slate-700">{{ formatDecimal(metaTejeduriaPercent) }}</td>
-              <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioTejeduriaKg > 0 ? formatNumber(totales.desvioTejeduriaKg) : '' }}</td>
-              <td class="px-2 py-1 text-right font-mono font-semibold text-red-700">{{ totales.desvioTejeduriaMetros > 0 ? formatNumber(totales.desvioTejeduriaMetros) : '' }}</td>
-              <td class="px-2 py-1 text-right font-mono text-amber-700">{{ formatNumber(totales.anudadosCount) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-emerald-700">{{ formatPromedioAnudadoTotal(totales.residuosTejeduriaKg, totales.anudadosCount) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-green-800">{{ totales.desvioTejeduriaPesos > 0 ? formatCurrencyValue(totales.desvioTejeduriaPesos) : '' }}</td>
-              <td class="px-2 py-1 text-right font-mono text-blue-700 border-l-2 border-slate-200">{{ formatNumber(totales.estopaAzulProducida) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-green-700">{{ formatNumber(totales.residuosPrensadaKg) }}</td>
-              <td class="px-2 py-1 text-right font-mono text-red-600">{{ formatNumber(totales.diferenciaEstopa) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] border-l-2 border-slate-200">{{ formatNumber(totales.tejeduriaMetros) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-cyan-800">{{ formatNumber(totales.tejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-rose-800">{{ formatNumber(totales.residuosTejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] font-semibold" :class="(totales.tejeduriaKg > 0 && (totales.residuosTejeduriaKg / totales.tejeduriaKg * 100) > metaTejeduriaPercent) ? 'text-red-700' : 'text-green-700'">{{ formatPercent(totales.residuosTejeduriaKg, totales.tejeduriaKg) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-slate-700">{{ formatDecimal(metaTejeduriaPercent) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] font-semibold text-red-700">{{ totales.desvioTejeduriaKg > 0 ? formatNumber(totales.desvioTejeduriaKg) : '' }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] font-semibold text-red-700">{{ totales.desvioTejeduriaMetros > 0 ? formatNumber(totales.desvioTejeduriaMetros) : '' }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-amber-700">{{ formatNumber(totales.anudadosCount) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-emerald-700">{{ formatPromedioAnudadoTotal(totales.residuosTejeduriaKg, totales.anudadosCount) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-green-800">{{ totales.desvioTejeduriaPesos > 0 ? formatCurrencyValue(totales.desvioTejeduriaPesos) : '' }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-blue-700 border-l-2 border-slate-200">{{ formatNumber(totales.estopaAzulProducida) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-green-700">{{ formatNumber(totales.residuosPrensadaKg) }}</td>
+              <td class="px-2 py-1 text-right font-[Verdana] text-red-600">{{ formatNumber(totales.diferenciaEstopa) }}</td>
             </tr>
           </tfoot>
         </table>
@@ -564,6 +567,7 @@ const exportarAExcel = async () => {
       { header: 'Tejeduría Metros', key: 'tej_m', width: 7.71 },
       { header: 'Tejeduría Kg', key: 'tej_kg', width: 7.71 },
       { header: 'Residuos Tejeduría Kg', key: 'res_tej_kg', width: 9.57 },
+      { header: 'Residuos Tejeduría en %', key: 'res_tej_pct', width: 8.43 },
       { header: 'Meta Tejeduría %', key: 'meta_tej', width: 7.71 },
       { header: 'Desvío Tejeduría en Kg', key: 'desv_tej_kg', width: 7.71 },
       { header: 'Desvío Tejeduría en Metros', key: 'desv_tej_m', width: 10 },
@@ -575,9 +579,9 @@ const exportarAExcel = async () => {
       { header: 'Diferencia', key: 'diferencia', width: 6.14 }
     ]
     
-    // Estilo del encabezado (solo hasta la columna U = 21)
+    // Estilo del encabezado (solo hasta la columna V = 22)
     worksheet.getRow(1).height = 55
-    for (let colNumber = 1; colNumber <= 21; colNumber++) {
+    for (let colNumber = 1; colNumber <= 22; colNumber++) {
       const cell = worksheet.getRow(1).getCell(colNumber)
       cell.font = { bold: true, color: { argb: 'FF334155' } }
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
@@ -589,8 +593,8 @@ const exportarAExcel = async () => {
         right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
       }
       
-      // Aplicar línea vertical de separación en el encabezado (columnas 2, 10, 19)
-      if (colNumber === 2 || colNumber === 10 || colNumber === 19) {
+      // Aplicar línea vertical de separación en el encabezado (columnas 2, 10, 20)
+      if (colNumber === 2 || colNumber === 10 || colNumber === 20) {
         cell.border.left = { style: 'medium', color: { argb: 'FF94A3B8' } }
       }
     }
@@ -649,6 +653,7 @@ const exportarAExcel = async () => {
         tej_m: item.TejeduriaMetros ?? null,
         tej_kg: item.TejeduriaKg ?? null,
         res_tej_kg: item.ResiduosTejeduriaKg ?? null,
+        res_tej_pct: item.TejeduriaKg ? (item.ResiduosTejeduriaKg / item.TejeduriaKg) : null,
         meta_tej: metaTejeduriaPercent.value / 100,
         desv_tej_kg: desvioTejKg,
         desv_tej_m: desvioTejMetros,
@@ -679,6 +684,7 @@ const exportarAExcel = async () => {
       tej_m: totales.value.tejeduriaMetros,
       tej_kg: totales.value.tejeduriaKg,
       res_tej_kg: totales.value.residuosTejeduriaKg,
+      res_tej_pct: totales.value.tejeduriaKg ? (totales.value.residuosTejeduriaKg / totales.value.tejeduriaKg) : null,
       meta_tej: metaTejeduriaPercent.value / 100,
       desv_tej_kg: totales.value.desvioTejeduriaKg > 0 ? totales.value.desvioTejeduriaKg : null,
       desv_tej_m: totales.value.desvioTejeduriaMetros > 0 ? totales.value.desvioTejeduriaMetros : null,
@@ -690,9 +696,9 @@ const exportarAExcel = async () => {
       diferencia: totales.value.diferenciaEstopa
     })
     
-    // Estilo de fila de totales (solo hasta la columna U = 21)
+    // Estilo de fila de totales (solo hasta la columna V = 22)
     totalRow.height = 25
-    for (let colNumber = 1; colNumber <= 21; colNumber++) {
+    for (let colNumber = 1; colNumber <= 22; colNumber++) {
       const cell = totalRow.getCell(colNumber)
       cell.font = { bold: true, color: { argb: 'FF1E293B' } }
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }
@@ -706,22 +712,23 @@ const exportarAExcel = async () => {
       3: '#,##0', // Producción Kg
       4: '#,##0', // Residuos Kg
       5: '0.0%', // Residuos %
-      6: '0.0%', // Meta
+      6: '0.0%', // Meta Índigo
       7: '#,##0', // Desvío Kg
       8: '#,##0', // Desvío Metros
       9: '"$"#,##0', // Desvío $
       10: '#,##0', // Tejeduría Metros
       11: '#,##0', // Tejeduría Kg
       12: '#,##0', // Residuos Tej Kg
-      13: '0.0%', // Meta Tej
-      14: '#,##0', // Desvío Tej Kg
-      15: '#,##0', // Desvío Tej Metros
-      16: '#,##0', // Anudados
-      17: '#,##0.00', // Promedio
-      18: '"$"#,##0', // Desvío Tej $
-      19: '#,##0', // Estopa Prod
-      20: '#,##0', // Estopa Prens
-      21: '#,##0'  // Diferencia
+      13: '0.0%', // Residuos Tej %
+      14: '0.0%', // Meta Tej
+      15: '#,##0', // Desvío Tej Kg
+      16: '#,##0', // Desvío Tej Metros
+      17: '#,##0', // Anudados
+      18: '#,##0.00', // Promedio
+      19: '"$"#,##0', // Desvío Tej $
+      20: '#,##0', // Estopa Prod
+      21: '#,##0', // Estopa Prens
+      22: '#,##0'  // Diferencia
     }
 
     // Aplicar colores y estilos a TODAS las celdas de datos y totales
@@ -730,8 +737,8 @@ const exportarAExcel = async () => {
       
       const isTotalRow = (rowNumber === worksheet.rowCount)
       
-      // Iterar por todas las columnas (1 a 21) para asegurar bordes en todas
-      for (let colNumber = 1; colNumber <= 21; colNumber++) {
+      // Iterar por todas las columnas (1 a 22) para asegurar bordes en todas
+      for (let colNumber = 1; colNumber <= 22; colNumber++) {
         const cell = row.getCell(colNumber)
         
         // Bordes para todas las celdas
@@ -742,8 +749,8 @@ const exportarAExcel = async () => {
           right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
         }
         
-        // Línea vertical de separación (columnas 2, 10, 19)
-        if (colNumber === 2 || colNumber === 10 || colNumber === 19) {
+        // Línea vertical de separación (columnas 2, 10, 20)
+        if (colNumber === 2 || colNumber === 10 || colNumber === 20) {
           cell.border.left = { style: 'medium', color: { argb: 'FF94A3B8' } }
         }
         
@@ -776,22 +783,26 @@ const exportarAExcel = async () => {
         else if (colNumber === 12) {
           color = isTotalRow ? 'FF9F1239' : 'FFBE123C' // Rose 800 o 700
         }
-        else if (colNumber === 14 || colNumber === 15 || colNumber === 18) {
+        else if (colNumber === 13) {
+          const meta = row.getCell(14).value
+          color = (val > meta) ? 'FFDC2626' : 'FF16A34A'
+        }
+        else if (colNumber === 15 || colNumber === 16 || colNumber === 19) {
           if (val > 0) color = 'FFDC2626' // Rojo para desvíos positivos
         }
-        else if (colNumber === 16) {
+        else if (colNumber === 17) {
           color = isTotalRow ? 'FFB45309' : 'FFD97706' // Amber 700 o 600
         }
-        else if (colNumber === 17) {
+        else if (colNumber === 18) {
           color = isTotalRow ? 'FF047857' : 'FF059669' // Emerald 700 o 600
         }
-        else if (colNumber === 19) {
+        else if (colNumber === 20) {
           color = isTotalRow ? 'FF1D4ED8' : 'FF2563EB' // Blue 700 o 600
         }
-        else if (colNumber === 20) {
+        else if (colNumber === 21) {
           color = isTotalRow ? 'FF15803D' : 'FF16A34A' // Green 700 o 600
         }
-        else if (colNumber === 21) {
+        else if (colNumber === 22) {
           if (val !== 0 && val !== null) color = 'FFEF4444' // Red 500
         }
 
@@ -803,9 +814,9 @@ const exportarAExcel = async () => {
       }
     })
     
-    // Establecer área de impresión (A1 hasta U[última fila])
+    // Establecer área de impresión (A1 hasta V[última fila])
     const lastRow = worksheet.rowCount
-    worksheet.pageSetup.printArea = `A1:U${lastRow}`
+    worksheet.pageSetup.printArea = `A1:V${lastRow}`
     
     // Generar nombre de archivo
     const ahora = new Date()

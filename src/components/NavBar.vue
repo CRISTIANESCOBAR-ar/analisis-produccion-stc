@@ -87,6 +87,12 @@
             label: 'Mesa de Test', 
             path: '/analisis-mesa-test',
             active: isActive('/analisis-mesa-test')
+          },
+          { 
+            icon: '🧮', 
+            label: 'Metros por Sector', 
+            path: '/calidad-sectores',
+            active: isActive('/calidad-sectores')
           }
         ]"
         @navigate="handleNavClick"
@@ -135,6 +141,13 @@
         :active="isActive('/costos-mensuales')" 
         :collapsed="isCollapsed"
         @click="handleNavClick('/costos-mensuales')"
+      />
+      <SidebarItem 
+        icon="🎯" 
+        label="Carga de Metas" 
+        :active="isActive('/metas')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/metas')"
       />
       <SidebarItem 
         icon="📥" 
