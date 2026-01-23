@@ -27,7 +27,8 @@ const TABLE_DEFINITIONS = [
   { table: 'tb_PRODUCCION', filename: 'rptProducaoMaquina.csv', sheet: 'rptProdMaq' },
   { table: 'tb_CALIDAD', filename: 'rptAcompDiarioPBI.csv', sheet: 'report5' },
   { table: 'tb_PROCESO', filename: 'rpsPosicaoEstoquePRD.csv', sheet: 'rptStock' },
-  { table: 'tb_DEFECTOS', filename: 'rptDefPeca.csv', sheet: 'rptDefPeca' }
+  { table: 'tb_DEFECTOS', filename: 'rptDefPeca.csv', sheet: 'rptDefPeca' },
+  { table: 'tb_CALIDAD_FIBRA', filename: 'rptMovimMP.csv', sheet: 'rptMovimMP' }
 ];
 
 // Helper para obtener configuración con ruta dinámica
@@ -612,7 +613,8 @@ app.post('/api/import/force-table', async (req, res) => {
     'tb_PRODUCCION': 'import-produccion-fast.ps1',
     'tb_CALIDAD': 'import-calidad-fast.ps1',
     'tb_PROCESO': 'import-proceso-fast.ps1',
-    'tb_DEFECTOS': 'import-defectos-fast.ps1'
+    'tb_DEFECTOS': 'import-defectos-fast.ps1',
+    'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1'
   };
 
   const scriptFile = scriptMap[table] || 'import-calidad-fast.ps1';
@@ -721,7 +723,8 @@ app.post('/api/import/update-outdated', async (req, res) => {
     'tb_PRODUCCION': 'import-produccion-fast.ps1',
     'tb_CALIDAD': 'import-calidad-fast.ps1',
     'tb_PROCESO': 'import-proceso-fast.ps1',
-    'tb_DEFECTOS': 'import-defectos-fast.ps1'
+    'tb_DEFECTOS': 'import-defectos-fast.ps1',
+    'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1'
   };
 
   // Importar cada tabla secuencialmente (SQLite no beneficia de paralelización)
@@ -2059,6 +2062,53 @@ app.get('/api/metas/resumen/:fecha', async (req, res) => {
   }
 });
 
+// GET /api/calidad-fibra/resumen - Resumen de análisis HVI agrupado por mezcla
+app.get('/api/calidad-fibra/resumen', async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        CAST(CAST(MISTURA AS INTEGER) AS TEXT) as MISTURA,
+        CAST(CAST(LOTE_FIAC AS INTEGER) AS TEXT) as LOTE_FIAC,
+        MIN(DT_ENTRADA_PROD) as fecha_ingreso,
+        MIN(HR_ENTRADA_PROD) as hora_ingreso,
+        ROUND(AVG(SCI), 2) as sci_avg,
+        ROUND(AVG(MST), 2) as mst_avg,
+        ROUND(AVG(MIC), 2) as mic_avg,
+        ROUND(AVG(MAT), 2) as mat_avg,
+        ROUND(AVG(UHML), 2) as uhml_avg,
+        ROUND(AVG(UI), 2) as ui_avg,
+        ROUND(AVG(SF), 2) as sf_avg,
+        ROUND(AVG(STR), 2) as str_avg,
+        ROUND(AVG(ELG), 2) as elg_avg,
+        ROUND(AVG(RD), 2) as rd_avg,
+        ROUND(AVG(PLUS_B), 2) as plus_b_avg,
+        ROUND(AVG(TrCNT), 2) as trcnt_avg,
+        ROUND(AVG(TrAR), 2) as trar_avg,
+        ROUND(AVG(TRID), 2) as trid_avg,
+        ROUND((SUM(CASE WHEN COR='BCO' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 2) as color_bco_pct,
+        ROUND((SUM(CASE WHEN COR='GRI' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 2) as color_gri_pct,
+        ROUND((SUM(CASE WHEN COR='LG' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 2) as color_lg_pct,
+        ROUND((SUM(CASE WHEN COR='AMA' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 2) as color_ama_pct,
+        ROUND((SUM(CASE WHEN COR='LA' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 2) as color_la_pct,
+        CAST(SUM(QTDE) AS INTEGER) as fardos_total,
+        ROUND(SUM(PESO), 2) as peso_total_kg,
+        COUNT(DISTINCT SEQ) as seq_count
+      FROM tb_CALIDAD_FIBRA
+      WHERE MISTURA IS NOT NULL AND MISTURA != ''
+        AND TIPO_MOV = 'MIST'
+      GROUP BY MISTURA, LOTE_FIAC
+      ORDER BY CAST(MISTURA AS INTEGER) ASC, CAST(LOTE_FIAC AS INTEGER) ASC
+    `;
+    
+    const rows = await dbAll(sql);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/calidad-fibra/resumen:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/calidad/pts100m2 - Calcular puntos por 100m² (Pts 100²)
 app.get('/api/calidad/pts100m2', async (req, res) => {
   try {
@@ -2515,6 +2565,65 @@ app.get('/api/calidad/sectores-resumen', async (req, res) => {
 
   } catch (error) {
     console.error('Error en /api/calidad/sectores-resumen:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/produccion/eficiencia-roturas - Eficiencias y Roturas de Trama (similar al gráfico Excel)
+app.get('/api/produccion/eficiencia-roturas', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'trama']);
+    const { date, trama } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    // Calcular inicio y fin del mes de la fecha seleccionada
+    const [year, month, day] = date.split('-');
+    const monthStart = `01/${month}/${year}`;  // DD/MM/YYYY
+    // Para obtener el último día: usar mes+1 con día 0 (mes debe ser number)
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const monthEnd = `${String(lastDay).padStart(2, '0')}/${month}/${year}`;  // DD/MM/YYYY
+
+    console.log(`🔍 Consultando eficiencias y roturas para mes: ${monthStart} a ${monthEnd}, trama: ${trama || 'todas'}`);
+
+    // Construir filtro de trama si se especifica
+    const tramaFilter = trama ? `AND "TRAMA REDUZIDA 1" = ?` : '';
+    const queryParams = trama 
+      ? [month, year, trama] 
+      : [month, year];
+
+    // DT_BASE_PRODUCAO está en formato DD/MM/YYYY
+    const sql = `
+      SELECT 
+        -- Convertir DD/MM/YYYY a YYYY-MM-DD para el resultado
+        substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        substr(DT_BASE_PRODUCAO, 1, 2) AS fecha,
+        "TRAMA REDUZIDA 1" AS trama,
+        ROUND(
+          (SUM(COALESCE(PONTOS_LIDOS, 0)) * 100.0) / NULLIF(SUM(COALESCE("PONTOS_100%", 0)), 0)
+        , 1) AS eficiencia,
+        ROUND(
+          (SUM(COALESCE("PARADA TEC TRAMA", 0)) * 100000.0) / NULLIF((SUM(COALESCE(PONTOS_LIDOS, 0)) * 1000), 0)
+        , 1) AS rt105
+      FROM tb_PRODUCCION
+      WHERE FILIAL = '05'
+        AND SELETOR = 'TECELAGEM'
+        AND substr(DT_BASE_PRODUCAO, 4, 2) = ?  -- mes (MM)
+        AND substr(DT_BASE_PRODUCAO, 7, 4) = ?  -- año (YYYY)
+        ${tramaFilter}
+      GROUP BY fecha, "TRAMA REDUZIDA 1"
+      ORDER BY fecha ASC
+    `;
+
+    const rows = await dbAll(sql, queryParams);
+    console.log(`📊 Resultados encontrados: ${rows.length} días`);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error en /api/produccion/eficiencia-roturas:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -4318,6 +4427,433 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
 
   } catch (error) {
     console.error('Error en /api/seguimiento-roladas:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ====================================
+// 📈 SEGUIMIENTO DE ROLADAS CON FIBRA HVI
+// ====================================
+app.get('/api/seguimiento-roladas-fibra', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['fechaInicio', 'fechaFin']);
+    const { fechaInicio, fechaFin } = params;
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
+    }
+
+    // Convertir fechas de YYYY-MM-DD a DD/MM/YYYY para comparar con la base de datos
+    const convertirFecha = (fecha) => {
+      const [year, month, day] = fecha.split('-');
+      return `${day}/${month}/${year}`;
+    };
+
+    const fechaInicioDB = convertirFecha(fechaInicio);
+    const fechaFinDB = convertirFecha(fechaFin);
+
+    console.log(`📅 Consultando seguimiento de roladas + fibra desde ${fechaInicioDB} hasta ${fechaFinDB}`);
+
+    // Consulta SQL con JOIN a tb_CALIDAD_FIBRA por LOTE
+    const sql = `
+      WITH R_IND AS (
+        SELECT 
+          CAST(ROLADA AS INTEGER) AS ROLADA
+        FROM tb_PRODUCCION
+        WHERE FILIAL = '05'
+          AND substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+              substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+              substr(DT_BASE_PRODUCAO, 1, 2) BETWEEN ? AND ?
+          AND SELETOR = 'INDIGO'
+          AND DT_BASE_PRODUCAO != '19/10/2025'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA
+      ),
+      URD AS (
+        SELECT
+          inner_urd.ROLADA,
+          GROUP_CONCAT(DISTINCT CAST(CAST(TRIM(substr(inner_urd."MAQ  FIACAO", -2)) AS INTEGER) AS TEXT)) AS MAQ_OE,
+          GROUP_CONCAT(DISTINCT CAST(CAST(inner_urd."LOTE FIACAO" AS INTEGER) AS TEXT)) AS LOTE,
+          SUM(inner_urd.METRAGEM) / NULLIF(COUNT(DISTINCT inner_urd.PARTIDA), 0) AS URDIDORA_METROS,
+          SUM(inner_urd.RUPTURAS) AS URDIDORA_ROTURAS,
+          SUM(inner_urd.NUM_FIOS_MAX) AS NUM_FIOS
+        FROM (
+          SELECT 
+            CAST(ROLADA AS INTEGER) AS ROLADA,
+            PARTIDA,
+            "MAQ  FIACAO",
+            "LOTE FIACAO",
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM,
+            SUM(CAST(RUPTURAS AS INTEGER)) AS RUPTURAS,
+            MAX(CAST(REPLACE(REPLACE(NUM_FIOS, '.', ''), ',', '.') AS REAL)) AS NUM_FIOS_MAX
+          FROM tb_PRODUCCION
+          WHERE SELETOR = 'URDIDEIRA'
+            AND ROLADA IS NOT NULL
+            AND PARTIDA IS NOT NULL
+            AND NUM_FIOS IS NOT NULL
+          GROUP BY ROLADA, PARTIDA
+        ) AS inner_urd
+        WHERE inner_urd.ROLADA IS NOT NULL
+          AND inner_urd."MAQ  FIACAO" IS NOT NULL
+          AND inner_urd."LOTE FIACAO" IS NOT NULL
+        GROUP BY inner_urd.ROLADA
+      ),
+      IND AS (
+        SELECT
+          MIN(DT_BASE_PRODUCAO) AS FECHA,
+          CAST(ROLADA AS INTEGER) AS ROLADA,
+          substr(ARTIGO, 1, 10) AS BASE,
+          COR AS COLOR,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS MTS_IND,
+          SUM(CAST(RUPTURAS AS INTEGER)) AS ROT_IND,
+          SUM(CAST(REPLACE(REPLACE(CAVALOS, '.', ''), ',', '.') AS REAL)) AS CAV,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL)) / 
+              NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS VEL_PROM
+        FROM tb_PRODUCCION
+        WHERE FILIAL = '05'
+          AND DT_BASE_PRODUCAO != '19/10/2025'
+          AND SELETOR = 'INDIGO'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA, ARTIGO, COR
+      ),
+      VEL_MODA AS (
+        SELECT 
+          CAST(ROLADA AS INTEGER) AS ROLADA,
+          CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) AS VELOC,
+          COUNT(*) AS cnt
+        FROM tb_PRODUCCION
+        WHERE FILIAL = '05'
+          AND SELETOR = 'INDIGO'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+          AND VELOC IS NOT NULL
+          AND VELOC != ''
+        GROUP BY ROLADA, VELOC
+      ),
+      VEL_NOM AS (
+        SELECT 
+          ROLADA,
+          VELOC AS VEL_NOM
+        FROM VEL_MODA v1
+        WHERE cnt = (SELECT MAX(cnt) FROM VEL_MODA v2 WHERE v2.ROLADA = v1.ROLADA)
+        GROUP BY ROLADA
+      ),
+      INDI AS (
+        SELECT
+          R_IND.ROLADA,
+          URD.MAQ_OE,
+          URD.LOTE,
+          URD.URDIDORA_METROS,
+          URD.URDIDORA_ROTURAS,
+          URD.NUM_FIOS,
+          IND.FECHA,
+          IND.BASE,
+          IND.COLOR,
+          IND.MTS_IND,
+          (IND.ROT_IND * 1000.0) / NULLIF(IND.MTS_IND, 0) AS R103,
+          IND.CAV,
+          VEL_NOM.VEL_NOM,
+          IND.VEL_PROM
+        FROM R_IND
+        LEFT JOIN URD ON R_IND.ROLADA = URD.ROLADA
+        LEFT JOIN IND ON R_IND.ROLADA = IND.ROLADA
+        LEFT JOIN VEL_NOM ON R_IND.ROLADA = VEL_NOM.ROLADA
+      ),
+      TEJ AS (
+        SELECT
+          CAST(ROLADA AS INTEGER) AS ROLADA,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS MTS_CRUDOS,
+          SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) AS PONTOS_LIDOS,
+          SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) AS PONTOS_100,
+          SUM(CAST(REPLACE(REPLACE("PARADA TEC URDUME", '.', ''), ',', '.') AS REAL)) AS PARADA_TEC_URDUME,
+          SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) AS PARADA_TEC_TRAMA
+        FROM tb_PRODUCCION
+        WHERE FILIAL = '05'
+          AND SELETOR = 'TECELAGEM'
+          AND DT_BASE_PRODUCAO != '19/10/2025'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA
+      ),
+      IT AS (
+        SELECT
+          INDI.ROLADA,
+          INDI.MAQ_OE,
+          INDI.LOTE,
+          INDI.URDIDORA_METROS,
+          INDI.URDIDORA_ROTURAS,
+          INDI.NUM_FIOS,
+          INDI.FECHA,
+          INDI.BASE,
+          INDI.COLOR,
+          INDI.MTS_IND,
+          INDI.R103,
+          INDI.CAV,
+          INDI.VEL_NOM,
+          INDI.VEL_PROM,
+          TEJ.MTS_CRUDOS,
+          (TEJ.PONTOS_LIDOS / NULLIF(TEJ.PONTOS_100, 0)) * 100.0 AS EFI_TEJ,
+          (TEJ.PARADA_TEC_URDUME * 100000.0) / NULLIF((TEJ.PONTOS_LIDOS * 1000.0), 0) AS RU105,
+          (TEJ.PARADA_TEC_TRAMA * 100000.0) / NULLIF((TEJ.PONTOS_LIDOS * 1000.0), 0) AS RT105
+        FROM INDI
+        LEFT JOIN TEJ ON INDI.ROLADA = TEJ.ROLADA
+      ),
+      CAL_M AS (
+        SELECT
+          CAST(ROLADA AS INTEGER) AS ROLADA,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS MTS_CAL,
+          ROUND(
+            (SUM(CASE WHEN QUALIDADE = 'PRIMEIRA ' THEN CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0) / 
+            NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0), 
+            1
+          ) AS CAL_PERCENT
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA
+      ),
+      PTS AS (
+        SELECT
+          CAST(ROLADA AS INTEGER) AS ROLADA,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS MTS_1ERA,
+          SUM(CAST(REPLACE(REPLACE(PONTUACAO, '.', ''), ',', '.') AS REAL)) AS PUNTOS,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) / 100.0 AS ANC_POND
+        FROM tb_CALIDAD
+        WHERE EMP = 'STC'
+          AND QUALIDADE = 'PRIMEIRA '
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA
+      ),
+      CAL AS (
+        SELECT
+          CAL_M.ROLADA,
+          CAL_M.MTS_CAL,
+          CAL_M.CAL_PERCENT,
+          (PTS.PUNTOS * 100.0) / NULLIF((PTS.MTS_1ERA * PTS.ANC_POND), 0) AS PTS_100M2
+        FROM CAL_M
+        LEFT JOIN PTS ON CAL_M.ROLADA = PTS.ROLADA
+      ),
+      -- Datos HVI por lote (promedio de cada parámetro)
+      FIBRA_HVI AS (
+        SELECT 
+          CAST(CAST(LOTE_FIAC AS INTEGER) AS TEXT) as LOTE_NUM,
+          CASE WHEN MISTURA IS NULL OR TRIM(MISTURA) = '' THEN NULL 
+               ELSE CAST(CAST(MISTURA AS INTEGER) AS TEXT) END as MISTURA,
+          MIN(CASE WHEN DT_ENTRADA_PROD IS NOT NULL AND TRIM(DT_ENTRADA_PROD) != '' THEN DT_ENTRADA_PROD END) as FECHA_INGRESO,
+          ROUND(AVG(CAST(REPLACE(SCI, ',', '.') AS REAL)), 2) as SCI,
+          ROUND(AVG(CAST(REPLACE(MST, ',', '.') AS REAL)), 2) as MST,
+          ROUND(AVG(CAST(REPLACE(MIC, ',', '.') AS REAL)), 2) as MIC,
+          ROUND(AVG(CAST(REPLACE(MAT, ',', '.') AS REAL)), 2) as MAT,
+          ROUND(AVG(CAST(REPLACE(UHML, ',', '.') AS REAL)), 2) as UHML,
+          ROUND(AVG(CAST(REPLACE(UI, ',', '.') AS REAL)), 2) as UI,
+          ROUND(AVG(CAST(REPLACE(SF, ',', '.') AS REAL)), 2) as SF,
+          ROUND(AVG(CAST(REPLACE(STR, ',', '.') AS REAL)), 2) as STR,
+          ROUND(AVG(CAST(REPLACE(ELG, ',', '.') AS REAL)), 2) as ELG,
+          ROUND(AVG(CAST(REPLACE(RD, ',', '.') AS REAL)), 2) as RD,
+          ROUND(AVG(CAST(REPLACE(PLUS_B, ',', '.') AS REAL)), 2) as PLUS_B,
+          ROUND(AVG(CAST(REPLACE(TrCNT, ',', '.') AS REAL)), 2) as TrCNT,
+          ROUND(AVG(CAST(REPLACE(TrAR, ',', '.') AS REAL)), 2) as TrAR,
+          ROUND(AVG(CAST(REPLACE(TRID, ',', '.') AS REAL)), 2) as TRID,
+          ROUND((SUM(CASE WHEN COR='BCO' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_BCO_PCT,
+          ROUND((SUM(CASE WHEN COR='GRI' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_GRI_PCT,
+          ROUND((SUM(CASE WHEN COR='LG' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_LG_PCT,
+          ROUND((SUM(CASE WHEN COR='AMA' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_AMA_PCT,
+          ROUND((SUM(CASE WHEN COR='LA' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_LA_PCT
+        FROM tb_CALIDAD_FIBRA
+        WHERE LOTE_FIAC IS NOT NULL AND LOTE_FIAC != ''
+          AND MISTURA IS NOT NULL AND TRIM(MISTURA) != ''
+          AND TIPO_MOV = 'MIST'
+        GROUP BY LOTE_FIAC
+      ),
+      -- JOIN expandido: buscar cada lote individual (separado por coma) y promediar
+      IT_FIBRA AS (
+        SELECT 
+          IT.ROLADA,
+          GROUP_CONCAT(DISTINCT FIBRA_HVI.MISTURA) as MISTURA,
+          MIN(FIBRA_HVI.FECHA_INGRESO) as FECHA_INGRESO,
+          ROUND(AVG(FIBRA_HVI.SCI), 2) as SCI,
+          ROUND(AVG(FIBRA_HVI.MST), 2) as MST,
+          ROUND(AVG(FIBRA_HVI.MIC), 2) as MIC,
+          ROUND(AVG(FIBRA_HVI.MAT), 2) as MAT,
+          ROUND(AVG(FIBRA_HVI.UHML), 2) as UHML,
+          ROUND(AVG(FIBRA_HVI.UI), 2) as UI,
+          ROUND(AVG(FIBRA_HVI.SF), 2) as SF,
+          ROUND(AVG(FIBRA_HVI.STR), 2) as STR,
+          ROUND(AVG(FIBRA_HVI.ELG), 2) as ELG,
+          ROUND(AVG(FIBRA_HVI.RD), 2) as RD,
+          ROUND(AVG(FIBRA_HVI.PLUS_B), 2) as PLUS_B,
+          ROUND(AVG(FIBRA_HVI.TrCNT), 2) as TrCNT,
+          ROUND(AVG(FIBRA_HVI.TrAR), 2) as TrAR,
+          ROUND(AVG(FIBRA_HVI.TRID), 2) as TRID,
+          ROUND(AVG(FIBRA_HVI.COLOR_BCO_PCT), 1) as COLOR_BCO_PCT,
+          ROUND(AVG(FIBRA_HVI.COLOR_GRI_PCT), 1) as COLOR_GRI_PCT,
+          ROUND(AVG(FIBRA_HVI.COLOR_LG_PCT), 1) as COLOR_LG_PCT,
+          ROUND(AVG(FIBRA_HVI.COLOR_AMA_PCT), 1) as COLOR_AMA_PCT,
+          ROUND(AVG(FIBRA_HVI.COLOR_LA_PCT), 1) as COLOR_LA_PCT
+        FROM IT
+        LEFT JOIN FIBRA_HVI ON (
+          -- Buscar coincidencia exacta o como parte de lista separada por comas
+          ',' || REPLACE(IT.LOTE, ' ', '') || ',' LIKE '%,' || FIBRA_HVI.LOTE_NUM || ',%'
+        )
+        GROUP BY IT.ROLADA
+      )
+      SELECT
+        IT.ROLADA,
+        IT.MAQ_OE,
+        IT.LOTE,
+        ROUND(IT.URDIDORA_METROS, 0) AS URDIDORA_METROS,
+        IT.URDIDORA_ROTURAS,
+        IT.NUM_FIOS,
+        IT.FECHA AS FECHA,
+        IT.BASE,
+        IT.COLOR,
+        ROUND(IT.MTS_IND, 0) AS MTS_IND,
+        ROUND(IT.R103, 1) AS R103,
+        IT.CAV,
+        ROUND(IT.VEL_NOM, 0) AS VEL_NOM,
+        ROUND(IT.VEL_PROM, 0) AS VEL_PROM,
+        ROUND(IT.MTS_CRUDOS, 0) AS MTS_CRUDOS,
+        ROUND(IT.EFI_TEJ, 1) AS EFI_TEJ,
+        ROUND(IT.RU105, 1) AS RU105,
+        ROUND(IT.RT105, 1) AS RT105,
+        ROUND(CAL.MTS_CAL, 0) AS MTS_CAL,
+        ROUND(CAL.CAL_PERCENT, 1) AS CAL_PERCENT,
+        ROUND(CAL.PTS_100M2, 1) AS PTS_100M2,
+        -- Datos HVI (promediados si hay múltiples lotes)
+        IT_FIBRA.MISTURA,
+        IT_FIBRA.FECHA_INGRESO,
+        IT_FIBRA.SCI,
+        IT_FIBRA.MST,
+        IT_FIBRA.MIC,
+        IT_FIBRA.MAT,
+        IT_FIBRA.UHML,
+        IT_FIBRA.UI,
+        IT_FIBRA.SF,
+        IT_FIBRA.STR,
+        IT_FIBRA.ELG,
+        IT_FIBRA.RD,
+        IT_FIBRA.PLUS_B,
+        IT_FIBRA.TrCNT,
+        IT_FIBRA.TrAR,
+        IT_FIBRA.TRID,
+        IT_FIBRA.COLOR_BCO_PCT,
+        IT_FIBRA.COLOR_GRI_PCT,
+        IT_FIBRA.COLOR_LG_PCT,
+        IT_FIBRA.COLOR_AMA_PCT,
+        IT_FIBRA.COLOR_LA_PCT
+      FROM IT
+      LEFT JOIN CAL ON IT.ROLADA = CAL.ROLADA
+      LEFT JOIN IT_FIBRA ON IT.ROLADA = IT_FIBRA.ROLADA
+      ORDER BY IT.ROLADA ASC
+    `;
+
+    const rows = await dbAll(sql, [fechaInicio, fechaFin]);
+    
+    // Calcular totales (sin fibra, ya que los promedios no tienen sentido para el total)
+    if (rows.length > 0) {
+      const roladas = rows.map(r => r.ROLADA);
+      
+      const sqlTotales = `
+        WITH 
+        ROLADAS_SEL AS (
+          SELECT CAST(value AS INTEGER) AS ROLADA FROM json_each('[' || ? || ']')
+        ),
+        URD_RAW AS (
+          SELECT
+            SUM(inner_urd.METRAGEM) / NULLIF(COUNT(DISTINCT inner_urd.PARTIDA), 0) AS TOTAL_URDIDORA_METROS,
+            SUM(inner_urd.RUPTURAS) AS TOTAL_URDIDORA_ROTURAS,
+            SUM(inner_urd.NUM_FIOS_MAX) AS TOTAL_NUM_FIOS
+          FROM (
+            SELECT 
+              PARTIDA,
+              SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM,
+              SUM(CAST(RUPTURAS AS INTEGER)) AS RUPTURAS,
+              MAX(CAST(REPLACE(REPLACE(NUM_FIOS, '.', ''), ',', '.') AS REAL)) AS NUM_FIOS_MAX
+            FROM tb_PRODUCCION
+            WHERE SELETOR = 'URDIDEIRA'
+              AND ROLADA IS NOT NULL
+              AND ROLADA != ''
+              AND CAST(ROLADA AS INTEGER) IN (SELECT ROLADA FROM ROLADAS_SEL)
+            GROUP BY ROLADA, PARTIDA
+          ) AS inner_urd
+        ),
+        IND_RAW AS (
+          SELECT
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS TOTAL_MTS_IND,
+            SUM(CAST(RUPTURAS AS INTEGER)) AS TOTAL_ROT_IND,
+            SUM(CAST(REPLACE(REPLACE(CAVALOS, '.', ''), ',', '.') AS REAL)) AS TOTAL_CAV,
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+                CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL)) AS SUM_VEL_MTS,
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS SUM_MTS_VEL
+          FROM tb_PRODUCCION
+          WHERE FILIAL = '05'
+            AND SELETOR = 'INDIGO'
+            AND DT_BASE_PRODUCAO != '19/10/2025'
+            AND CAST(ROLADA AS INTEGER) IN (SELECT ROLADA FROM ROLADAS_SEL)
+        ),
+        TEJ_RAW AS (
+          SELECT
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS TOTAL_MTS_CRUDOS,
+            SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) AS TOTAL_PONTOS_LIDOS,
+            SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) AS TOTAL_PONTOS_100,
+            SUM(CAST(REPLACE(REPLACE("PARADA TEC URDUME", '.', ''), ',', '.') AS REAL)) AS TOTAL_PARADA_URD,
+            SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) AS TOTAL_PARADA_TRAMA
+          FROM tb_PRODUCCION
+          WHERE FILIAL = '05'
+            AND SELETOR = 'TECELAGEM'
+            AND DT_BASE_PRODUCAO != '19/10/2025'
+            AND CAST(ROLADA AS INTEGER) IN (SELECT ROLADA FROM ROLADAS_SEL)
+        ),
+        CAL_RAW AS (
+          SELECT
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS TOTAL_MTS_CAL,
+            SUM(CASE WHEN QUALIDADE = 'PRIMEIRA ' THEN CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) ELSE 0 END) AS TOTAL_MTS_1ERA,
+            SUM(CASE WHEN QUALIDADE = 'PRIMEIRA ' THEN CAST(REPLACE(REPLACE(PONTUACAO, '.', ''), ',', '.') AS REAL) ELSE 0 END) AS TOTAL_PUNTOS,
+            SUM(CASE WHEN QUALIDADE = 'PRIMEIRA ' THEN 
+                CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+                CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL) 
+              ELSE 0 END) AS SUM_MTS_ANCHO
+          FROM tb_CALIDAD
+          WHERE EMP = 'STC'
+            AND CAST(ROLADA AS INTEGER) IN (SELECT ROLADA FROM ROLADAS_SEL)
+        )
+        SELECT
+          ROUND(URD.TOTAL_URDIDORA_METROS, 0) AS URDIDORA_METROS,
+          URD.TOTAL_URDIDORA_ROTURAS AS URDIDORA_ROTURAS,
+          URD.TOTAL_NUM_FIOS AS NUM_FIOS,
+          ROUND(IND.TOTAL_MTS_IND, 0) AS MTS_IND,
+          ROUND((IND.TOTAL_ROT_IND * 1000.0) / NULLIF(IND.TOTAL_MTS_IND, 0), 1) AS R103,
+          IND.TOTAL_CAV AS CAV,
+          ROUND(IND.SUM_VEL_MTS / NULLIF(IND.SUM_MTS_VEL, 0), 0) AS VEL_PROM,
+          ROUND(TEJ.TOTAL_MTS_CRUDOS, 0) AS MTS_CRUDOS,
+          ROUND((TEJ.TOTAL_PONTOS_LIDOS / NULLIF(TEJ.TOTAL_PONTOS_100, 0)) * 100.0, 1) AS EFI_TEJ,
+          ROUND((TEJ.TOTAL_PARADA_URD * 100000.0) / NULLIF((TEJ.TOTAL_PONTOS_LIDOS * 1000.0), 0), 1) AS RU105,
+          ROUND((TEJ.TOTAL_PARADA_TRAMA * 100000.0) / NULLIF((TEJ.TOTAL_PONTOS_LIDOS * 1000.0), 0), 1) AS RT105,
+          ROUND(CAL.TOTAL_MTS_CAL, 0) AS MTS_CAL,
+          ROUND((CAL.TOTAL_MTS_1ERA * 100.0) / NULLIF(CAL.TOTAL_MTS_CAL, 0), 1) AS CAL_PERCENT,
+          ROUND((CAL.TOTAL_PUNTOS * 100.0) / NULLIF(CAL.SUM_MTS_ANCHO / 100.0, 0), 1) AS PTS_100M2
+        FROM URD_RAW URD, IND_RAW IND, TEJ_RAW TEJ, CAL_RAW CAL
+      `;
+      
+      const roladasStr = roladas.join(',');
+      const totalesRows = await dbAll(sqlTotales, [roladasStr]);
+      const totales = totalesRows[0] || {};
+      totales.TOTAL_ROLADAS = rows.length;
+      
+      res.json({ datos: rows, totales });
+    } else {
+      res.json({ datos: [], totales: null });
+    }
+
+  } catch (error) {
+    console.error('Error en /api/seguimiento-roladas-fibra:', error);
     res.status(500).json({ error: error.message });
   }
 });

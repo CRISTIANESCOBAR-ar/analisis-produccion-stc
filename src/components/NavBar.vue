@@ -93,6 +93,12 @@
             label: 'Metros por Sector', 
             path: '/calidad-sectores',
             active: isActive('/calidad-sectores')
+          },
+          { 
+            icon: '🧵', 
+            label: 'Calidad de Fibra', 
+            path: '/calidad-fibra',
+            active: isActive('/calidad-fibra')
           }
         ]"
         @navigate="handleNavClick"
@@ -131,6 +137,12 @@
             label: 'Seguimiento de Roladas', 
             path: '/seguimiento-roladas',
             active: isActive('/seguimiento-roladas')
+          },
+          { 
+            icon: '🧬', 
+            label: 'Roladas + Fibra HVI', 
+            path: '/seguimiento-roladas-fibra',
+            active: isActive('/seguimiento-roladas-fibra')
           }
         ]"
         @navigate="handleNavClick"

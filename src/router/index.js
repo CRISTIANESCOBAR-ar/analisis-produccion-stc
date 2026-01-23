@@ -5,11 +5,13 @@ import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
 import AnalisisMesaTest from '../components/AnalisisMesaTest.vue'
 import CalidadSectoresTabla from '../components/CalidadSectoresTabla.vue'
+import CalidadFibra from '../components/CalidadFibra.vue'
 import ResiduosIndigoTejeduria from '../components/ResiduosIndigoTejeduria.vue'
 import AnalisisResiduosIndigo from '../components/AnalisisResiduosIndigo.vue'
 import ConsultaRoladaIndigo from '../components/ConsultaRoladaIndigo.vue'
 import InformeProduccionIndigo from '../components/InformeProduccionIndigo.vue'
 import SeguimientoRoladas from '../components/SeguimientoRoladas.vue'
+import SeguimientoRoladasFibra from '../components/SeguimientoRoladasFibra.vue'
 import CostosMensuales from '../components/CostosMensuales.vue'
 import MetasCarga from '../components/MetasCarga.vue'
 
@@ -49,6 +51,12 @@ const routes = [
     meta: { title: 'Metros por Sector - Análisis Producción STC' }
   },
   {
+    path: '/calidad-fibra',
+    name: 'CalidadFibra',
+    component: CalidadFibra,
+    meta: { title: 'Calidad de Fibra - Análisis Producción STC' }
+  },
+  {
     path: '/importaciones',
     name: 'ImportControl',
     component: ImportControl,
@@ -82,6 +90,12 @@ const routes = [
     name: 'SeguimientoRoladas',
     component: SeguimientoRoladas,
     meta: { title: 'Seguimiento de Roladas - Análisis Producción STC' }
+  },
+  {
+    path: '/seguimiento-roladas-fibra',
+    name: 'SeguimientoRoladasFibra',
+    component: SeguimientoRoladasFibra,
+    meta: { title: 'Seguimiento Roladas + Fibra HVI - Análisis Producción STC' }
   },
   {    path: '/costos-mensuales',
     name: 'CostosMensuales',

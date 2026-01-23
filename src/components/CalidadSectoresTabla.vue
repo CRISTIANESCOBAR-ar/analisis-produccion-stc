@@ -71,6 +71,14 @@
           </div>
           <div class="flex gap-1.5">
             <button 
+              ref="prevMonthBtnRef"
+              class="inline-flex items-center justify-center px-2.5 py-1 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded-md text-sm font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150 shadow-sm" 
+              @click="saltarMes(-1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              :disabled="loading"
+            >&lt;&lt;</button>
+            <button 
               class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm" 
               @click="cambiarFecha(-1)" 
               @mousedown.prevent
@@ -84,6 +92,14 @@
               tabindex="-1"
               :disabled="loading"
             >&gt;</button>
+            <button 
+              ref="nextMonthBtnRef"
+              class="inline-flex items-center justify-center px-2.5 py-1 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded-md text-sm font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150 shadow-sm" 
+              @click="saltarMes(1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              :disabled="loading"
+            >&gt;&gt;</button>
           </div>
           <button
             class="px-2 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60"
@@ -95,8 +111,10 @@
         </div>
       </div>
 
-      <!-- Tabla fija estilo Excel -->
-      <div class="quality-card flex-1 min-h-0 shadow border border-slate-200 rounded overflow-hidden flex flex-col relative">
+      <!-- Layout con Tabla y Gráfico -->
+      <div class="flex gap-3 flex-1 min-h-0">
+        <!-- Tabla fija estilo Excel -->
+        <div class="quality-card flex-1 min-h-0 shadow border border-slate-200 rounded overflow-hidden flex flex-col relative" style="max-width: 500px;">
         <!-- Overlay de carga -->
         <div v-if="loading" class="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center z-50 rounded transition-all duration-300">
           <div class="flex flex-col items-center gap-4 bg-white/90 px-10 py-8 rounded-2xl shadow-2xl border border-blue-100">
@@ -133,13 +151,54 @@
         <div v-if="fetchError" class="px-2 py-1 text-xs text-amber-700 bg-amber-50 border-t border-amber-200">
           ⚠️ {{ fetchError }}
         </div>
+        </div>
+
+        <!-- Gráfico de Eficiencias y Roturas -->
+        <div ref="chartContainerRef" class="flex-1 min-h-0 shadow border border-slate-200 rounded bg-white flex flex-col">
+          <div class="flex items-center justify-between bg-gray-100 text-slate-800 px-2 py-2.5 text-xs font-semibold border-b border-slate-200 chart-header">
+            <span>Eficiencias y Roturas de Trama 105 - Tejeduría</span>
+            <div class="flex items-center gap-2">
+              <span>{{ chartMonthYear }}</span>
+              <span>-</span>
+              <span>Trama:</span>
+              <select 
+                v-model="selectedTrama" 
+                class="px-2 py-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option v-for="trama in availableTramas" :key="trama" :value="trama">
+                  {{ trama }}
+                </option>
+              </select>
+              <button 
+                ref="copyBtnRef"
+                @click="copyChartToClipboard"
+                class="inline-flex items-center justify-center w-8 h-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors duration-150"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="flex-1 p-3 overflow-hidden">
+            <canvas ref="chartCanvas"></canvas>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
+import { Chart, registerables } from 'chart.js'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
+import Swal from 'sweetalert2'
+import tippy from 'tippy.js'
+import 'tippy.js/dist/tippy.css'
+
+// Registrar componentes de Chart.js
+Chart.register(...registerables, ChartDataLabels)
 
 const API_URL = 'http://localhost:3002/api'
 
@@ -152,6 +211,20 @@ const selectedDate = ref(defaultDate)
 const rows = ref([])
 const loading = ref(false)
 const fetchError = ref('')
+const isLoadingData = ref(false)
+
+// Estado para el gráfico
+const chartCanvas = ref(null)
+const chartContainerRef = ref(null)
+const chartInstance = ref(null)
+const chartData = ref([])
+const selectedTrama = ref('7/1 OE') // Trama por defecto
+const availableTramas = ref(['7/1 OE']) // Tramas disponibles para el período
+
+// Refs para tooltips
+const prevMonthBtnRef = ref(null)
+const nextMonthBtnRef = ref(null)
+const copyBtnRef = ref(null)
 
 // Datepicker state
 const showCalendar = ref(false)
@@ -289,6 +362,35 @@ function cambiarFecha(dias) {
   loadData()
 }
 
+function saltarMes(direccion) {
+  if (!selectedDate.value) return
+  const [y, m, d] = selectedDate.value.split('-').map(Number)
+  
+  // Calcular el mes de destino
+  let targetMonth = m + direccion
+  let targetYear = y
+  
+  // Ajustar año si es necesario
+  if (targetMonth > 12) {
+    targetMonth = 1
+    targetYear++
+  } else if (targetMonth < 1) {
+    targetMonth = 12
+    targetYear--
+  }
+  
+  // Obtener el último día del mes de destino
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonth, 0).getDate()
+  
+  const newY = targetYear
+  const newM = targetMonth.toString().padStart(2, '0')
+  const newD = lastDayOfTargetMonth.toString().padStart(2, '0')
+  
+  selectedDate.value = `${newY}-${newM}-${newD}`
+  console.log(`🔄 Saltando al mes ${direccion > 0 ? 'siguiente' : 'anterior'}: ${selectedDate.value}`)
+  loadData()
+}
+
 function handleBlur(event) {
   // Dar tiempo suficiente para que el clic se registre antes de cerrar
   setTimeout(() => {
@@ -308,13 +410,52 @@ function handleClickOutside(event) {
 const metaTargets = ref({ day: 16667, month: 49996 })
 const pts100m2 = ref({ day: 0, month: 0 })
 
+// Watch para recargar el gráfico cuando cambie la trama seleccionada (solo si no se está cargando)
+watch(selectedTrama, (newTrama, oldTrama) => {
+  if (!isLoadingData.value) {
+    console.log(`🔄 Cambio manual de trama detectado: ${oldTrama} → ${newTrama}`)
+    loadChartData()
+  }
+})
+
 onMounted(() => {
-  loadData(true)
+  loadData()
   document.addEventListener('mousedown', handleClickOutside)
+  
+  // Inicializar tooltips con Tippy
+  nextTick(() => {
+    if (prevMonthBtnRef.value) {
+      tippy(prevMonthBtnRef.value, {
+        content: 'Mes anterior (último día)',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
+    if (nextMonthBtnRef.value) {
+      tippy(nextMonthBtnRef.value, {
+        content: 'Mes siguiente (último día)',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
+    if (copyBtnRef.value) {
+      tippy(copyBtnRef.value, {
+        content: 'Copiar gráfico al portapapeles',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
+  })
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutside)
+  if (chartInstance.value) {
+    chartInstance.value.destroy()
+  }
 })
 
 // Definición inicial de la cuadrícula fija (filas 5-15 de la hoja Excel)
@@ -456,8 +597,39 @@ const excelCells = computed(() => {
     color: differences.value.month >= 0 ? '#3C7D22' : '#FF0000'
   },
   { id: 'N15', rowIndex: 11, colIndex: 13, colSpan: 2, rowSpan: 1, text: fmtPct(pts100m2.value.day) },
-  { id: 'O15', rowIndex: 11, colIndex: 15, colSpan: 2, rowSpan: 1, text: fmtPct(pts100m2.value.month) }
+  { id: 'O15', rowIndex: 11, colIndex: 15, colSpan: 2, rowSpan: 1, text: fmtPct(pts100m2.value.month) },
+
+  // Fila 16 (rowIndex 12) - Headers para nueva sección INDIGO
+  { id: 'B16', rowIndex: 12, colIndex: 1, colSpan: 2, rowSpan: 1, text: 'Sec' },
+  { id: 'D16', rowIndex: 12, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Variable' },
+  { id: 'G16', rowIndex: 12, colIndex: 6, colSpan: 3, rowSpan: 1, text: 'Meta Día' },
+  { id: 'J16', rowIndex: 12, colIndex: 9, colSpan: 3, rowSpan: 1, text: 'Prod. Día' },
+  { id: 'M16', rowIndex: 12, colIndex: 12, colSpan: 3, rowSpan: 1, text: 'Acumulado' },
+  { id: 'P16', rowIndex: 12, colIndex: 15, colSpan: 2, rowSpan: 1, text: 'Sob./Fal. Mes' },
+
+  // Fila 17 (rowIndex 13) - INDIGO / Metros
+  { id: 'B17', rowIndex: 13, colIndex: 1, colSpan: 2, rowSpan: 3, text: 'INDIGO' },
+  { id: 'D17', rowIndex: 13, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Metros' },
+  { id: 'G17', rowIndex: 13, colIndex: 6, colSpan: 3, rowSpan: 1, text: '43.654' },
+  { id: 'J17', rowIndex: 13, colIndex: 9, colSpan: 3, rowSpan: 1, text: '31.511', color: '#FF0000' },
+  { id: 'M17', rowIndex: 13, colIndex: 12, colSpan: 3, rowSpan: 1, text: '189.695', color: '#FF0000' },
+  { id: 'P17', rowIndex: 13, colIndex: 15, colSpan: 2, rowSpan: 1, text: '-17.611', color: '#FF0000' },
+
+  // Fila 18 (rowIndex 14) - INDIGO / Roturas 10³
+  { id: 'D18', rowIndex: 14, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Roturas 10³' },
+  { id: 'G18', rowIndex: 14, colIndex: 6, colSpan: 3, rowSpan: 1, text: '1,0' },
+  { id: 'J18', rowIndex: 14, colIndex: 9, colSpan: 3, rowSpan: 1, text: '1,94', color: '#FF0000' },
+  { id: 'M18', rowIndex: 14, colIndex: 12, colSpan: 3, rowSpan: 1, text: '1,58', color: '#FF0000' },
+  { id: 'P18', rowIndex: 14, colIndex: 15, colSpan: 2, rowSpan: 1, text: '+0,58', color: '#FF0000' },
+
+  // Fila 19 (rowIndex 15) - INDIGO / Est. Azul %
+  { id: 'D19', rowIndex: 15, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Est. Azul %' },
+  { id: 'G19', rowIndex: 15, colIndex: 6, colSpan: 3, rowSpan: 1, text: '1,8' },
+  { id: 'J19', rowIndex: 15, colIndex: 9, colSpan: 3, rowSpan: 1, text: '5,12', color: '#FF0000' },
+  { id: 'M19', rowIndex: 15, colIndex: 12, colSpan: 3, rowSpan: 1, text: '7,33', color: '#FF0000' },
+  { id: 'P19', rowIndex: 15, colIndex: 15, colSpan: 2, rowSpan: 1, text: '+5,5', color: '#FF0000' }
 ]})
+
 
 const totals = computed(() => {
   const day = rows.value.reduce((sum, row) => sum + (Number(row.metrosDia) || 0), 0)
@@ -487,6 +659,13 @@ const differences = computed(() => {
 })
 
 const formattedDate = computed(() => formatDate(selectedDate.value))
+
+const chartMonthYear = computed(() => {
+  if (!selectedDate.value) return ''
+  const [year, month] = selectedDate.value.split('-')
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  return `${monthNames[parseInt(month) - 1]} ${year}`
+})
 
 function gridPlacement(cell) {
   const rowSpan = cell.rowSpan || 1
@@ -558,6 +737,7 @@ async function getLastAvailableDate() {
 
 async function loadData(useLastAvailable = false) {
   loading.value = true
+  isLoadingData.value = true
   fetchError.value = ''
   try {
     const dateToUse = selectedDate.value
@@ -652,15 +832,447 @@ async function loadData(useLastAvailable = false) {
     ]
   } finally {
     loading.value = false
+    isLoadingData.value = false
+    // Cargar tramas disponibles y luego el gráfico DESPUÉS de desactivar el flag
+    await loadAvailableTramas()
+    await loadChartData()
   }
 }
 
-onMounted(() => {
-  loadData()
+async function loadChartData() {
+  try {
+    // Limpiar datos del gráfico antes de cargar nuevos
+    chartData.value = []
+    
+    const dateToUse = selectedDate.value
+    const [year, month] = dateToUse.split('-')
+    const monthStart = `${year}-${month}-01`
+    const monthEnd = dateToUse  // Hasta la fecha seleccionada
+    const url = `${API_URL}/produccion/eficiencia-roturas?date=${dateToUse}&monthStart=${monthStart}&monthEnd=${monthEnd}&trama=${encodeURIComponent(selectedTrama.value)}`
+    
+    console.log(`📈 Cargando datos de gráfico desde ${monthStart} hasta ${monthEnd}, trama: ${selectedTrama.value}`)
+    console.log(`🔗 URL: ${url}`)
+    
+    const res = await fetch(url)
+    
+    if (!res.ok) {
+      console.warn(`⚠️ No se pudieron cargar datos del gráfico - HTTP ${res.status}`)
+      chartData.value = []
+      renderChart()
+      return
+    }
+    
+    const data = await res.json()
+    chartData.value = data
+    console.log(`📊 Datos de gráfico cargados: ${data.length} registros`)
+    
+    if (data.length > 0) {
+      console.log(`📅 Primer registro:`, data[0])
+      console.log(`📅 Último registro:`, data[data.length - 1])
+    }
+    
+    // Actualizar el gráfico
+    await nextTick()
+    renderChart()
+    
+  } catch (err) {
+    console.error('Error cargando datos del gráfico:', err)
+    chartData.value = []
+    renderChart()
+  }
+}
+
+async function loadAvailableTramas() {
+  try {
+    const dateToUse = selectedDate.value
+    const [year, month] = dateToUse.split('-')
+    const monthStart = `${year}-${month}-01`
+    const monthEnd = dateToUse
+    const url = `${API_URL}/produccion/eficiencia-roturas?date=${dateToUse}&monthStart=${monthStart}&monthEnd=${monthEnd}`
+    
+    console.log(`🔍 Cargando tramas disponibles desde ${monthStart} hasta ${monthEnd}`)
+    
+    const res = await fetch(url)
+    if (!res.ok) return
+    
+    const data = await res.json()
+    
+    // Extraer tramas únicas
+    const tramas = [...new Set(data.map(d => d.trama))].filter(Boolean).sort()
+    
+    if (tramas.length > 0) {
+      availableTramas.value = tramas
+      console.log(`📋 Tramas disponibles: ${tramas.join(', ')}`)
+      
+      // Si la trama seleccionada no está en la lista, seleccionar la primera
+      if (!tramas.includes(selectedTrama.value)) {
+        selectedTrama.value = tramas[0]
+      }
+    }
+  } catch (err) {
+    console.error('Error cargando tramas disponibles:', err)
+  }
+}
+
+// Configuración del Toast
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 1500,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer
+    toast.onmouseleave = Swal.resumeTimer
+  }
 })
+
+// Copiar gráfico al portapapeles
+async function copyChartToClipboard() {
+  try {
+    if (!chartCanvas.value || !chartContainerRef.value) {
+      console.error('❌ Elementos del gráfico no disponibles')
+      return
+    }
+
+    console.log('📸 Capturando gráfico con header...')
+    
+    const sourceCanvas = chartCanvas.value
+    
+    // Configuración del header
+    const headerHeight = 40
+    const padding = 12
+    const borderWidth = 1
+    const scale = 3  // Mayor escala para mejor nitidez
+    
+    // Obtener dimensiones reales del canvas del gráfico
+    const chartWidth = sourceCanvas.width
+    const chartHeight = sourceCanvas.height
+    
+    // Crear canvas final (con espacio para el borde)
+    const tempCanvas = document.createElement('canvas')
+    tempCanvas.width = chartWidth + (padding * 2 * scale) + (borderWidth * 2 * scale)
+    tempCanvas.height = (headerHeight * scale) + chartHeight + (padding * scale) + (borderWidth * 2 * scale)
+    
+    const ctx = tempCanvas.getContext('2d')
+    
+    // Borde exterior (mismo color que header)
+    ctx.fillStyle = '#e2e8f0'
+    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
+    
+    // Fondo blanco interior (dejando el borde visible)
+    const borderOffset = borderWidth * scale
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(borderOffset, borderOffset, tempCanvas.width - (borderOffset * 2), tempCanvas.height - (borderOffset * 2))
+    
+    // Header: fondo gris claro
+    ctx.fillStyle = '#f3f4f6'
+    ctx.fillRect(borderOffset, borderOffset, tempCanvas.width - (borderOffset * 2), headerHeight * scale)
+    
+    // Línea inferior del header
+    ctx.strokeStyle = '#e2e8f0'
+    ctx.lineWidth = scale
+    ctx.beginPath()
+    ctx.moveTo(borderOffset, borderOffset + (headerHeight * scale))
+    ctx.lineTo(tempCanvas.width - borderOffset, borderOffset + (headerHeight * scale))
+    ctx.stroke()
+    
+    // Textos del header
+    const fontSize = 13 * scale
+    ctx.font = `600 ${fontSize}px Verdana, sans-serif`
+    ctx.fillStyle = '#1e293b'
+    ctx.textBaseline = 'middle'
+    
+    // Título izquierdo
+    ctx.fillText('Eficiencias y Roturas de Trama 105 - Tejeduría', borderOffset + (padding * scale), borderOffset + (headerHeight * scale) / 2)
+    
+    // Texto derecho (mes y trama)
+    const rightText = `${chartMonthYear.value} - Trama: ${selectedTrama.value}`
+    const rightTextWidth = ctx.measureText(rightText).width
+    ctx.fillText(rightText, tempCanvas.width - rightTextWidth - borderOffset - (padding * scale), borderOffset + (headerHeight * scale) / 2)
+    
+    // Dibujar el gráfico
+    ctx.drawImage(sourceCanvas, borderOffset + (padding * scale), borderOffset + (headerHeight * scale), chartWidth, chartHeight)
+    
+    // Mostrar toast de "copiando..."
+    Toast.fire({
+      icon: 'info',
+      title: 'Copiando gráfico...',
+      timer: 1500
+    })
+    
+    // Convertir a blob y copiar
+    tempCanvas.toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ])
+        console.log('✅ Gráfico copiado al portapapeles')
+        Toast.fire({
+          icon: 'success',
+          title: 'Gráfico copiado!',
+          text: 'Puedes pegarlo en WhatsApp, email, etc.'
+        })
+      } catch (err) {
+        console.error('❌ Error copiando al portapapeles:', err)
+        Toast.fire({
+          icon: 'error',
+          title: 'Error al copiar',
+          text: 'Intenta de nuevo'
+        })
+      }
+    }, 'image/png', 1.0)
+  } catch (err) {
+    console.error('❌ Error capturando gráfico:', err)
+    Toast.fire({
+      icon: 'error',
+      title: 'Error al capturar',
+      text: 'No se pudo generar la imagen'
+    })
+  }
+}
+
+function renderChart() {
+  if (!chartCanvas.value) return
+  
+  // Destruir gráfico anterior si existe
+  if (chartInstance.value) {
+    try {
+      // Detener cualquier animación en progreso
+      chartInstance.value.stop()
+      chartInstance.value.destroy()
+    } catch (e) {
+      // Ignorar errores de limpieza
+    }
+    chartInstance.value = null
+  }
+  
+  // Si no hay datos, no crear el gráfico
+  if (!chartData.value || chartData.value.length === 0) {
+    console.warn('⚠️ No hay datos para renderizar el gráfico')
+    return
+  }
+  
+  // Preparar datos - extraer fecha sin conversión de zona horaria
+  const labels = chartData.value.map(d => {
+    // d.fecha viene en formato 'YYYY-MM-DD', extraer directamente
+    const [year, month, day] = d.fecha.split('-')
+    return `${day}-${month}-${year.slice(-2)}`
+  })
+  
+  const eficiencias = chartData.value.map(d => d.eficiencia || 0)
+  const rt105 = chartData.value.map(d => d.rt105 || 0)
+  
+  // Calcular el máximo de RT105 y añadir 15% de margen para los labels
+  const maxRT105 = Math.max(...rt105)
+  const scaleMaxY1 = maxRT105 * 1.15  // 15% de margen
+  
+  console.log(`🎨 Renderizando gráfico con ${labels.length} puntos de datos`)
+  console.log(`📊 Max RT105: ${maxRT105}, Scale Max: ${scaleMaxY1.toFixed(2)}`)
+  
+  // Usar setTimeout para dar tiempo de limpiar animaciones del gráfico anterior
+  setTimeout(() => {
+    try {
+      // Crear el gráfico
+      const ctx = chartCanvas.value?.getContext('2d')
+      if (!ctx) {
+        console.error('❌ No se pudo obtener el contexto del canvas')
+        return
+      }
+
+      chartInstance.value = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Eficiencia %',
+          data: eficiencias,
+          backgroundColor: '#46B1E1',
+          borderColor: '#46B1E1',
+          borderWidth: 1,
+          yAxisID: 'y',
+          order: 2,
+          datalabels: {
+            display: true,
+            align: 'end',
+            anchor: 'start',
+            color: '#000000',
+            rotation: -90,
+            font: {
+              family: 'Verdana',
+              weight: 'bold',
+              size: 11
+            },
+            formatter: function(value) {
+              return value !== null && value !== 0 ? value.toFixed(1) : '';
+            }
+          }
+        },
+        {
+          type: 'line',
+          label: 'RT105',
+          data: rt105,
+          backgroundColor: 'rgba(233, 113, 50, 0.2)',
+          borderColor: '#E97132',
+          borderWidth: 2,
+          pointRadius: 5,
+          pointStyle: 'rectRot',
+          pointBackgroundColor: '#E97132',
+          pointBorderColor: '#E97132',
+          yAxisID: 'y1',
+          order: 1,
+          tension: 0.3,
+          datalabels: {
+            display: true,
+            align: 'top',
+            anchor: 'end',
+            offset: 10,
+            color: '#E97132',
+            clip: false,
+            font: {
+              family: 'Verdana',
+              weight: 'bold',
+              size: 11
+            },
+            formatter: function(value) {
+              return value !== null && value !== 0 ? value.toFixed(1) : '';
+            }
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      devicePixelRatio: 3,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        datalabels: {
+          clip: false
+        },
+        legend: {
+          display: false
+        },
+        title: {
+          display: false
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          titleColor: '#1e293b',
+          bodyColor: '#475569',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          cornerRadius: 8,
+          padding: 12,
+          boxPadding: 6,
+          usePointStyle: true,
+          titleFont: {
+            family: 'Verdana',
+            size: 12,
+            weight: '600'
+          },
+          bodyFont: {
+            family: 'Verdana',
+            size: 11
+          },
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || ''
+              if (label) {
+                label += ': '
+              }
+              if (context.parsed.y !== null) {
+                label += context.parsed.y.toFixed(1)
+              }
+              return label
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              family: 'Verdana',
+              size: 10
+            },
+            autoSkip: false,
+            maxRotation: labels.length > 15 ? 90 : 0,
+            minRotation: labels.length > 15 ? 90 : 0,
+            maxTicksLimit: undefined
+          }
+        },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: false
+          },
+          ticks: {
+            color: '#000000',
+            font: {
+              family: 'Verdana',
+              size: 10
+            }
+          },
+          grid: {
+            display: true,
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          max: scaleMaxY1,
+          title: {
+            display: false
+          },
+          ticks: {
+            color: '#000000',
+            font: {
+              family: 'Verdana',
+              size: 10
+            }
+          },
+          grid: {
+            drawOnChartArea: false
+          }
+        }
+      }
+    },
+    layout: {
+      padding: {
+        top: 10,
+        bottom: 0,
+        left: 0,
+        right: 0
+      }
+    }
+      })
+    } catch (err) {
+      console.error('❌ Error renderizando gráfico:', err)
+    }
+  }, 200)  // 200ms de delay para limpiar el gráfico anterior
+}
 </script>
 
 <style scoped>
+.chart-header {
+  font-family: Verdana, sans-serif;
+}
+
 .quality-card {
   display: flex;
   flex-direction: column;
@@ -679,7 +1291,7 @@ onMounted(() => {
   grid-template-columns:
     32px 22px 42px 22px 21px 21px 21px 21px 21px 21px 22px 22px 22px 22px 22px 22px;
   grid-template-rows:
-    32px 32px 31px 31px 31px 31px 31px 31px 33px 31px 33px;
+    32px 32px 31px 31px 31px 31px 31px 31px 33px 31px 33px 31px 31px 31px 31px;
   width: max-content;
   font-family: Verdana, sans-serif;
   font-size: 10pt;
