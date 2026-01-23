@@ -40,7 +40,7 @@ const getTableConfig = (folderPath) => {
   }));
 };
 
-// Middleware - CORS restrictivo
+// Middleware - CORS permisivo para ngrok
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -51,13 +51,28 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir requests sin origin (como Postman) o de orígenes permitidos
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Permitir requests sin origin (como Postman o ngrok)
+    if (!origin) {
       callback(null, true);
-    } else {
-      securityLog('warn', 'CORS Violation', { origin, timestamp: new Date().toISOString() });
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+    
+    // Permitir orígenes de localhost
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    
+    // Permitir cualquier origen de ngrok
+    if (origin.includes('ngrok') || origin.includes('ngrok-free.app')) {
+      callback(null, true);
+      return;
+    }
+    
+    // Permitir cualquier origen en desarrollo (para flexibilidad)
+    // En producción, esto debería ser más restrictivo
+    console.log(`⚠️ CORS: Permitiendo origen no listado: ${origin}`);
+    callback(null, true);
   },
   credentials: true
 }));
