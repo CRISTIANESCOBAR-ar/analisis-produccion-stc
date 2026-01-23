@@ -144,7 +144,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in datos" :key="item.ROLADA" 
+            <tr v-for="(item, index) in datosVisibles" :key="item.ROLADA" 
                 class="border-b border-slate-200 hover:bg-slate-50/80 transition-colors">
               <!-- Rolada (sticky) -->
               <td class="px-2 py-2 font-semibold text-slate-800 text-center tabular-nums border-r-2 border-slate-300 bg-slate-50/50 sticky left-0 z-10">{{ item.ROLADA }}</td>
@@ -226,7 +226,21 @@
           </tfoot>
         </table>
         
-        <!-- Mensaje cuando no hay datos -->
+        <!-- Mensaje cuando hay más filas de las mostradas -->
+        <div v-if="!cargando && datos.length > 50 && !mostrarTodasFilas" class="flex items-center justify-center py-4 bg-amber-50 border-t border-amber-200">
+          <div class="text-center">
+            <p class="text-sm text-slate-700">
+              Mostrando <span class="font-semibold">50</span> de <span class="font-semibold">{{ datos.length }}</span> roladas
+            </p>
+            <button 
+              @click="mostrarTodasFilas = true"
+              class="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+            >
+              Mostrar todas las roladas ({{ datos.length }})
+            </button>
+          </div>
+        </div>
+
         <div v-if="!cargando && datos.length === 0" class="flex items-center justify-center h-64 bg-white">
           <div class="text-center">
             <svg class="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,7 +256,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import * as ExcelJS from 'exceljs'
 
 // Estados
@@ -251,6 +265,17 @@ const datos = ref([])
 const totalesMes = ref(null)
 const fechaInicio = ref('')
 const fechaFin = ref('')
+const mostrarTodasFilas = ref(false)
+
+// Computed para limitar filas iniciales (evitar bloqueo con datasets grandes)
+const datosVisibles = computed(() => {
+  // Si hay menos de 50 filas, mostrar todas
+  if (datos.value.length <= 50 || mostrarTodasFilas.value) {
+    return datos.value
+  }
+  // Si hay más de 50, mostrar solo las primeras 50
+  return datos.value.slice(0, 50)
+})
 
 // Refs
 const mainContentRef = ref(null)
@@ -303,6 +328,8 @@ const cargarDatos = async () => {
   }
   
   cargando.value = true
+  mostrarTodasFilas.value = false // Resetear al cargar nuevos datos
+  
   try {
     const url = `${API_BASE}/api/seguimiento-roladas-fibra?fechaInicio=${fechaInicio.value}&fechaFin=${fechaFin.value}`
     const response = await fetch(url)
@@ -327,7 +354,13 @@ const cargarDatos = async () => {
 const exportarAExcel = async () => {
   if (datos.value.length === 0) return
   
+  // Mostrar indicador de que se está procesando
+  cargando.value = true
+  
   try {
+    // Usar setTimeout para dar tiempo al navegador de actualizar la UI
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Roladas + Fibra HVI')
     
@@ -636,6 +669,8 @@ const exportarAExcel = async () => {
   } catch (error) {
     console.error('Error exportando a Excel:', error)
     alert('Error al exportar: ' + error.message)
+  } finally {
+    cargando.value = false
   }
 }
 
