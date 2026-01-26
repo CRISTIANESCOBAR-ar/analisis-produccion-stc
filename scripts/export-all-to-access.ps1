@@ -30,7 +30,7 @@ function Measure-AccessStep {
 	try {
 		& $Action
 		$sw.Stop()
-		Write-Host "✓ COMPLETADO: $Name ($($sw.Elapsed.TotalSeconds.ToString('F2'))s)" -ForegroundColor Green
+		Write-Host "[OK] COMPLETADO: $Name ($($sw.Elapsed.TotalSeconds.ToString('F2'))s)" -ForegroundColor Green
 		$script:timings += [pscustomobject]@{
 			Proceso  = $Name
 			Segundos = [math]::Round($sw.Elapsed.TotalSeconds, 2)
@@ -44,7 +44,7 @@ function Measure-AccessStep {
 		
 	} catch {
 		$sw.Stop()
-		Write-Host "✗ ERROR EN: $Name" -ForegroundColor Red
+		Write-Host "[ERROR] ERROR EN: $Name" -ForegroundColor Red
 		Write-Host "Error: $_" -ForegroundColor Red
 		Write-Host "StackTrace: $($_.ScriptStackTrace)" -ForegroundColor Red
 		$script:timings += [pscustomobject]@{
@@ -84,9 +84,9 @@ Write-Host "`nVerificando existencia de archivos Excel..." -ForegroundColor Cyan
 $archivosNoEncontrados = @()
 foreach ($archivo in $archivosAVerificar) {
 	if (Test-Path $archivo.Path) {
-		Write-Host "  ✓ $($archivo.Nombre): $($archivo.Path)" -ForegroundColor Green
+		Write-Host "  [OK] $($archivo.Nombre): $($archivo.Path)" -ForegroundColor Green
 	} else {
-		Write-Host "  ✗ $($archivo.Nombre): NO ENCONTRADO - $($archivo.Path)" -ForegroundColor Red
+		Write-Host "  [X] $($archivo.Nombre): NO ENCONTRADO - $($archivo.Path)" -ForegroundColor Red
 		$archivosNoEncontrados += $archivo
 	}
 }
@@ -144,10 +144,10 @@ Write-Host ("Total: {0:N2} segundos ({1:N2} minutos)" -f $globalStopwatch.Elapse
 # Verificar si hubo errores
 $errores = $script:timings | Where-Object { $_.Estado -eq "ERROR" }
 if ($errores.Count -gt 0) {
-	Write-Host "`n⚠ ADVERTENCIA: $($errores.Count) proceso(s) con errores:" -ForegroundColor Red
+	Write-Host "`n[WARN] ADVERTENCIA: $($errores.Count) proceso(s) con errores:" -ForegroundColor Red
 	$errores | Format-Table -AutoSize
 	exit 1
 } else {
-	Write-Host "`n✓ Todos los procesos completados sin errores" -ForegroundColor Green
+	Write-Host "`n[OK] Todos los procesos completados sin errores" -ForegroundColor Green
 	exit 0
 }

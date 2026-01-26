@@ -36,12 +36,12 @@ Write-Host "`n[1/5] Iniciando Access.Application (COM)..." -ForegroundColor Cyan
 try {
     $app = New-Object -ComObject Access.Application
     $app.Visible = $false
-    Write-Host "  ✓ Access iniciado correctamente" -ForegroundColor Green
+    Write-Host "  [OK] Access iniciado correctamente" -ForegroundColor Green
     
     Write-Host "`n[2/5] Abriendo base de datos..." -ForegroundColor Cyan
     Write-Host "  Ruta: $AccessPath" -ForegroundColor Gray
     $app.OpenCurrentDatabase($AccessPath)
-    Write-Host "  ✓ Base de datos abierta" -ForegroundColor Green
+    Write-Host "  [OK] Base de datos abierta" -ForegroundColor Green
 
     # Determinar nombre de hoja/rango
     $range = $SheetName
@@ -57,9 +57,9 @@ try {
         try {
             Write-Host "  Intentando eliminar tabla existente..." -ForegroundColor Gray
             $app.DoCmd.DeleteObject(0, $TableName) # acTable = 0
-            Write-Host "  ✓ Tabla [$TableName] eliminada" -ForegroundColor Yellow
+            Write-Host "  [OK] Tabla [$TableName] eliminada" -ForegroundColor Yellow
         } catch {
-            Write-Host "  ℹ La tabla [$TableName] no existía" -ForegroundColor Gray
+            Write-Host "  [INFO] La tabla [$TableName] no existía" -ForegroundColor Gray
         }
 
         Write-Host "`n[4/5] Importando datos desde Excel..." -ForegroundColor Cyan
@@ -72,7 +72,7 @@ try {
         } else {
             $app.DoCmd.TransferSpreadsheet(0, 10, $TableName, $ExcelPath, $true, $range)
         }
-        Write-Host "  ✓ Importación completada" -ForegroundColor Green
+        Write-Host "  [OK] Importación completada" -ForegroundColor Green
 
     } elseif ($Mode -eq "Incremental") {
         # --- MODO INCREMENTAL ---
@@ -90,7 +90,7 @@ try {
         } else {
             $app.DoCmd.TransferSpreadsheet(0, 10, $tempTable, $ExcelPath, $true, $range)
         }
-        Write-Host "  ✓ Datos importados a tabla temporal" -ForegroundColor Green
+        Write-Host "  [OK] Datos importados a tabla temporal" -ForegroundColor Green
 
         # Desactivar advertencias para evitar popups en RunSQL
         $app.DoCmd.SetWarnings($false)
@@ -102,9 +102,9 @@ try {
             # Borramos si es Null o si IsDate es 0.
             $sqlClean = "DELETE FROM [$tempTable] WHERE [$DateColumn] IS NULL OR IsDate([$DateColumn]) = 0"
             $app.DoCmd.RunSQL($sqlClean)
-            Write-Host "  ✓ Registros inválidos eliminados" -ForegroundColor Green
+            Write-Host "  [OK] Registros inválidos eliminados" -ForegroundColor Green
         } catch {
-            Write-Host "  ⚠ Advertencia al limpiar datos: $_" -ForegroundColor Yellow
+            Write-Host "  [WARN] Advertencia al limpiar datos: $_" -ForegroundColor Yellow
         }
 
         # --- OPTIMIZACION 1: Crear índice en la tabla destino si no existe ---
@@ -121,9 +121,9 @@ try {
         try {
             $sqlIndexTemp = "CREATE INDEX [idx_temp_$DateColumn] ON [$tempTable] ([$DateColumn])"
             $app.DoCmd.RunSQL($sqlIndexTemp)
-            Write-Host "  ✓ Índice creado" -ForegroundColor Green
+            Write-Host "  [OK] Índice creado" -ForegroundColor Green
         } catch { 
-            Write-Host "  ⚠ No se pudo indexar tabla temporal: $_" -ForegroundColor Yellow
+            Write-Host "  [WARN] No se pudo indexar tabla temporal: $_" -ForegroundColor Yellow
         }
 
         # Borrar registros usando IN (SELECT ...) ahora que tenemos índices
@@ -131,7 +131,7 @@ try {
         Write-Host "  Eliminando registros duplicados..." -ForegroundColor Gray
         $sqlDelete = "DELETE FROM [$TableName] WHERE [$DateColumn] IN (SELECT [$DateColumn] FROM [$tempTable])"
         $app.DoCmd.RunSQL($sqlDelete)
-        Write-Host "  ✓ Duplicados eliminados" -ForegroundColor Green
+        Write-Host "  [OK] Duplicados eliminados" -ForegroundColor Green
         
         # Insertar nuevos registros con mapeo dinámico de columnas (Usando ADO para evitar error de DAO)
         Write-Host "  Analizando estructura de columnas..." -ForegroundColor Gray
@@ -175,7 +175,7 @@ try {
         
         Write-Host "  Insertando nuevos registros ($($insertCols.Count) columnas)..." -ForegroundColor Gray
         $app.DoCmd.RunSQL($sqlInsert)
-        Write-Host "  ✓ Registros insertados" -ForegroundColor Green
+        Write-Host "  [OK] Registros insertados" -ForegroundColor Green
 
         # Reactivar advertencias
         $app.DoCmd.SetWarnings($true)
@@ -183,16 +183,16 @@ try {
         # Borrar tabla temporal
         Write-Host "  Limpiando tabla temporal..." -ForegroundColor Gray
         $app.DoCmd.DeleteObject(0, $tempTable)
-        Write-Host "  ✓ Limpieza completada" -ForegroundColor Green
+        Write-Host "  [OK] Limpieza completada" -ForegroundColor Green
     }
 
-    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
-    Write-Host "✓ OPERACIÓN COMPLETADA EXITOSAMENTE" -ForegroundColor Green
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
+    Write-Host "`n═════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "[OK] OPERACIÓN COMPLETADA EXITOSAMENTE" -ForegroundColor Green
+    Write-Host "═════════════════════════════════════════════" -ForegroundColor Green
 
 } catch {
-    Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
-    Write-Host "✗ ERROR DURANTE LA OPERACIÓN" -ForegroundColor Red
+    Write-Host "`n═════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "[ERROR] ERROR DURANTE LA OPERACIÓN" -ForegroundColor Red
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Red
     Write-Host "Tipo de error: $($_.Exception.GetType().FullName)" -ForegroundColor Red
     Write-Host "Mensaje: $($_.Exception.Message)" -ForegroundColor Red
@@ -210,9 +210,9 @@ try {
             $app.Quit()
             [System.Runtime.Interopservices.Marshal]::ReleaseComObject($app) | Out-Null
             Remove-Variable app
-            Write-Host "  ✓ Access cerrado correctamente" -ForegroundColor Green
+            Write-Host "  [OK] Access cerrado correctamente" -ForegroundColor Green
         } catch {
-            Write-Host "  ⚠ Advertencia al cerrar Access: $_" -ForegroundColor Yellow
+            Write-Host "  [WARN] Advertencia al cerrar Access: $_" -ForegroundColor Yellow
         }
     }
 }
