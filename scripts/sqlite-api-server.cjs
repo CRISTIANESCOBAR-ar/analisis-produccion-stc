@@ -2240,9 +2240,10 @@ app.get('/api/calidad/pts100m2', async (req, res) => {
 });
 
 // =====================================================================
-// Iniciar servidor
+// NOTA: app.listen() movido al final del archivo después de todos los endpoints
 // =====================================================================
 
+/*
 app.listen(PORT, () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
@@ -2272,6 +2273,8 @@ app.listen(PORT, () => {
   console.log('   DEL  /api/metas/:fecha            - Eliminar meta de una fecha');
   console.log('');
 });
+*/
+
 
 // GET /api/calidad/revisores - Lista de revisores únicos
 app.get('/api/calidad/revisores', async (req, res) => {
@@ -4241,7 +4244,10 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
           CAST(ROLADA AS INTEGER) AS ROLADA,
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS MTS_CRUDOS,
           SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) AS PONTOS_LIDOS,
-          SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) AS PONTOS_100,
+          -- Solo sumar PONTOS_100% cuando PONTOS_LIDOS > 0 (excluir registros sin produccion)
+          SUM(CASE WHEN CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL) > 0 
+                   THEN CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL) 
+                   ELSE 0 END) AS PONTOS_100,
           SUM(CAST(REPLACE(REPLACE("PARADA TEC URDUME", '.', ''), ',', '.') AS REAL)) AS PARADA_TEC_URDUME,
           SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) AS PARADA_TEC_TRAMA
         FROM tb_PRODUCCION
@@ -4447,6 +4453,216 @@ app.get('/api/seguimiento-roladas', async (req, res) => {
 });
 
 // ====================================
+// � ESTADÍSTICAS HVI POR MEZCLA (DATOS CRUDOS)
+// ====================================
+// ====================================
+// 📊 ESTADÍSTICAS HVI POR MEZCLA (DATOS CRUDOS)
+// ====================================
+app.get('/api/hvi-estadisticas-mezcla', async (req, res) => {
+  const params = validateQueryParams(req, ['fechaInicio', 'fechaFin']);
+  const { fechaInicio, fechaFin } = params;
+
+  if (!fechaInicio || !fechaFin) {
+    return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
+  }
+
+  // Convertir fechas de YYYY-MM-DD a DD/MM/YYYY
+  const convertirFecha = (fecha) => {
+    const [year, month, day] = fecha.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  const fechaInicioDB = convertirFecha(fechaInicio);
+  const fechaFinDB = convertirFecha(fechaFin);
+
+  console.log(`📊 Calculando estadísticas HVI por mezcla desde ${fechaInicioDB} hasta ${fechaFinDB}`);
+
+    // Reutilizar la MISMA query del endpoint principal hasta obtener las mezclas
+    const mezclasSQL = `
+      WITH R_IND AS (
+        SELECT 
+          CAST(ROLADA AS INTEGER) AS ROLADA
+        FROM tb_PRODUCCION
+        WHERE FILIAL = '05'
+          AND substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+              substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+              substr(DT_BASE_PRODUCAO, 1, 2) BETWEEN ? AND ?
+          AND SELETOR = 'INDIGO'
+          AND DT_BASE_PRODUCAO != '19/10/2025'
+          AND ROLADA IS NOT NULL
+          AND ROLADA != ''
+        GROUP BY ROLADA
+      ),
+      URD AS (
+        SELECT
+          inner_urd.ROLADA,
+          GROUP_CONCAT(DISTINCT CAST(CAST(inner_urd."LOTE FIACAO" AS INTEGER) AS TEXT)) AS LOTE
+        FROM (
+          SELECT 
+            CAST(ROLADA AS INTEGER) AS ROLADA,
+            "LOTE FIACAO"
+          FROM tb_PRODUCCION
+          WHERE SELETOR = 'URDIDEIRA'
+            AND ROLADA IS NOT NULL
+            AND "LOTE FIACAO" IS NOT NULL
+            AND "LOTE FIACAO" != ''
+          GROUP BY ROLADA, "LOTE FIACAO"
+        ) AS inner_urd
+        WHERE inner_urd.ROLADA IS NOT NULL
+        GROUP BY inner_urd.ROLADA
+      ),
+      IT AS (
+        SELECT 
+          R_IND.ROLADA,
+          URD.LOTE
+        FROM R_IND
+        LEFT JOIN URD ON R_IND.ROLADA = URD.ROLADA
+      ),
+      FIBRA_HVI AS (
+        SELECT 
+          CAST(CAST(LOTE_FIAC AS INTEGER) AS TEXT) as LOTE_NUM,
+          MISTURA
+        FROM tb_CALIDAD_FIBRA
+        WHERE LOTE_FIAC IS NOT NULL AND LOTE_FIAC != ''
+          AND MISTURA IS NOT NULL AND TRIM(MISTURA) != ''
+          AND TIPO_MOV = 'MIST'
+        GROUP BY LOTE_FIAC
+      ),
+      IT_FIBRA AS (
+        SELECT DISTINCT
+          FIBRA_HVI.MISTURA
+        FROM IT
+        LEFT JOIN FIBRA_HVI ON (
+          ',' || REPLACE(IT.LOTE, ' ', '') || ',' LIKE '%,' || FIBRA_HVI.LOTE_NUM || ',%'
+        )
+        WHERE FIBRA_HVI.MISTURA IS NOT NULL
+      )
+      SELECT MISTURA FROM IT_FIBRA
+    `;
+
+    db.all(mezclasSQL, [fechaInicio, fechaFin], (err, mezclas) => {
+      if (err) {
+        console.error('❌ Error obteniendo mezclas del período:', err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (!mezclas || mezclas.length === 0) {
+        console.log('⚠️ No se encontraron mezclas en el período');
+        return res.json({ stats: {} });
+      }
+
+      const listaMezclas = mezclas.map(m => m.MISTURA);
+      console.log(`🔍 Mezclas encontradas: ${listaMezclas.join(', ')}`);
+
+      // Ahora obtener TODOS los datos crudos de esas mezclas
+      const placeholders = listaMezclas.map(() => '?').join(',');
+      const dataSQL = `
+        SELECT 
+          MISTURA,
+          CAST(REPLACE(SCI, ',', '.') AS REAL) as SCI,
+          CAST(REPLACE(MST, ',', '.') AS REAL) as MST,
+          CAST(REPLACE(MIC, ',', '.') AS REAL) as MIC,
+          CAST(REPLACE(MAT, ',', '.') AS REAL) as MAT,
+          CAST(REPLACE(UHML, ',', '.') AS REAL) as UHML,
+          CAST(REPLACE(UI, ',', '.') AS REAL) as UI,
+          CAST(REPLACE(SF, ',', '.') AS REAL) as SF,
+          CAST(REPLACE(STR, ',', '.') AS REAL) as STR,
+          CAST(REPLACE(ELG, ',', '.') AS REAL) as ELG,
+          CAST(REPLACE(RD, ',', '.') AS REAL) as RD,
+          CAST(REPLACE(PLUS_B, ',', '.') AS REAL) as PLUS_B,
+          CAST(REPLACE(TrCNT, ',', '.') AS REAL) as TrCNT,
+          CAST(REPLACE(TrAR, ',', '.') AS REAL) as TrAR,
+          CAST(REPLACE(TRID, ',', '.') AS REAL) as TRID
+        FROM tb_CALIDAD_FIBRA
+        WHERE TIPO_MOV = 'MIST'
+          AND MISTURA IN (${placeholders})
+        ORDER BY MISTURA
+      `;
+
+      db.all(dataSQL, listaMezclas, (err, rows) => {
+        if (err) {
+          console.error('❌ Error obteniendo datos crudos HVI:', err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        console.log(`📦 Registros crudos obtenidos: ${rows.length}`);
+
+        // Agrupar por mezcla (normalizando a número sin ceros)
+        const datosPorMezcla = {};
+        rows.forEach(row => {
+          // Normalizar mezcla: quitar ceros iniciales
+          const mezcla = String(parseInt(row.MISTURA, 10));
+          if (!datosPorMezcla[mezcla]) {
+            datosPorMezcla[mezcla] = {
+              SCI: [], MST: [], MIC: [], MAT: [], UHML: [], UI: [], SF: [],
+              STR: [], ELG: [], RD: [], PLUS_B: [], TrCNT: [], TrAR: [], TRID: []
+            };
+          }
+          
+          // Agregar valores no nulos (CAST ya convirtió a números)
+          if (row.SCI !== null) datosPorMezcla[mezcla].SCI.push(row.SCI);
+          if (row.MST !== null) datosPorMezcla[mezcla].MST.push(row.MST);
+          if (row.MIC !== null) datosPorMezcla[mezcla].MIC.push(row.MIC);
+          if (row.MAT !== null) datosPorMezcla[mezcla].MAT.push(row.MAT);
+          if (row.UHML !== null) datosPorMezcla[mezcla].UHML.push(row.UHML);
+          if (row.UI !== null) datosPorMezcla[mezcla].UI.push(row.UI);
+          if (row.SF !== null) datosPorMezcla[mezcla].SF.push(row.SF);
+          if (row.STR !== null) datosPorMezcla[mezcla].STR.push(row.STR);
+          if (row.ELG !== null) datosPorMezcla[mezcla].ELG.push(row.ELG);
+          if (row.RD !== null) datosPorMezcla[mezcla].RD.push(row.RD);
+          if (row.PLUS_B !== null) datosPorMezcla[mezcla].PLUS_B.push(row.PLUS_B);
+          if (row.TrCNT !== null) datosPorMezcla[mezcla].TrCNT.push(row.TrCNT);
+          if (row.TrAR !== null) datosPorMezcla[mezcla].TrAR.push(row.TrAR);
+          if (row.TRID !== null) datosPorMezcla[mezcla].TRID.push(row.TRID);
+        });
+
+        // Función para calcular estadísticas
+        const calcularEstadisticas = (valores) => {
+          if (valores.length === 0) return { MIN: null, MAX: null, DESV: 0 };
+          
+          const min = Math.min(...valores);
+          const max = Math.max(...valores);
+          
+          // Calcular desviación estándar
+          const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+          const varianza = valores.reduce((sum, val) => sum + Math.pow(val - media, 2), 0) / valores.length;
+          const desv = Math.sqrt(varianza);
+          
+          return { MIN: min, MAX: max, DESV: desv };
+        };
+
+        // Calcular estadísticas para cada mezcla
+        const stats = {};
+        Object.keys(datosPorMezcla).forEach(mezcla => {
+          const data = datosPorMezcla[mezcla];
+          const n = Math.max(...Object.values(data).map(arr => arr.length));
+          
+          stats[mezcla] = {
+            N: n,
+            SCI: calcularEstadisticas(data.SCI),
+            MST: calcularEstadisticas(data.MST),
+            MIC: calcularEstadisticas(data.MIC),
+            MAT: calcularEstadisticas(data.MAT),
+            UHML: calcularEstadisticas(data.UHML),
+            UI: calcularEstadisticas(data.UI),
+            SF: calcularEstadisticas(data.SF),
+            STR: calcularEstadisticas(data.STR),
+            ELG: calcularEstadisticas(data.ELG),
+            RD: calcularEstadisticas(data.RD),
+            PLUS_B: calcularEstadisticas(data.PLUS_B),
+            TrCNT: calcularEstadisticas(data.TrCNT),
+            TrAR: calcularEstadisticas(data.TrAR),
+            TRID: calcularEstadisticas(data.TRID)
+          };
+        });
+
+        console.log(`✅ Estadísticas calculadas para ${Object.keys(stats).length} mezclas (${rows.length} registros crudos)`);
+        res.json({ stats });
+      });
+    });
+});
+
+// ====================================
 // 📈 SEGUIMIENTO DE ROLADAS CON FIBRA HVI
 // ====================================
 app.get('/api/seguimiento-roladas-fibra', async (req, res) => {
@@ -4582,7 +4798,10 @@ app.get('/api/seguimiento-roladas-fibra', async (req, res) => {
           CAST(ROLADA AS INTEGER) AS ROLADA,
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS MTS_CRUDOS,
           SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) AS PONTOS_LIDOS,
-          SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) AS PONTOS_100,
+          -- Solo sumar PONTOS_100% cuando PONTOS_LIDOS > 0 (excluir registros sin produccion)
+          SUM(CASE WHEN CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL) > 0 
+                   THEN CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL) 
+                   ELSE 0 END) AS PONTOS_100,
           SUM(CAST(REPLACE(REPLACE("PARADA TEC URDUME", '.', ''), ',', '.') AS REAL)) AS PARADA_TEC_URDUME,
           SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) AS PARADA_TEC_TRAMA
         FROM tb_PRODUCCION
@@ -4655,32 +4874,107 @@ app.get('/api/seguimiento-roladas-fibra', async (req, res) => {
         FROM CAL_M
         LEFT JOIN PTS ON CAL_M.ROLADA = PTS.ROLADA
       ),
-      -- Datos HVI por lote (promedio de cada parámetro)
+      -- Datos HVI por lote (promedio ponderado por PESO de TODAS las misturas del lote, excluyendo valores nulos/cero)
       FIBRA_HVI AS (
         SELECT 
           CAST(CAST(LOTE_FIAC AS INTEGER) AS TEXT) as LOTE_NUM,
-          CASE WHEN MISTURA IS NULL OR TRIM(MISTURA) = '' THEN NULL 
-               ELSE CAST(CAST(MISTURA AS INTEGER) AS TEXT) END as MISTURA,
+          GROUP_CONCAT(DISTINCT CAST(CAST(MISTURA AS INTEGER) AS TEXT)) as MISTURA,
           MIN(CASE WHEN DT_ENTRADA_PROD IS NOT NULL AND TRIM(DT_ENTRADA_PROD) != '' THEN DT_ENTRADA_PROD END) as FECHA_INGRESO,
-          ROUND(AVG(CAST(REPLACE(SCI, ',', '.') AS REAL)), 2) as SCI,
-          ROUND(AVG(CAST(REPLACE(MST, ',', '.') AS REAL)), 2) as MST,
-          ROUND(AVG(CAST(REPLACE(MIC, ',', '.') AS REAL)), 2) as MIC,
-          ROUND(AVG(CAST(REPLACE(MAT, ',', '.') AS REAL)), 2) as MAT,
-          ROUND(AVG(CAST(REPLACE(UHML, ',', '.') AS REAL)), 2) as UHML,
-          ROUND(AVG(CAST(REPLACE(UI, ',', '.') AS REAL)), 2) as UI,
-          ROUND(AVG(CAST(REPLACE(SF, ',', '.') AS REAL)), 2) as SF,
-          ROUND(AVG(CAST(REPLACE(STR, ',', '.') AS REAL)), 2) as STR,
-          ROUND(AVG(CAST(REPLACE(ELG, ',', '.') AS REAL)), 2) as ELG,
-          ROUND(AVG(CAST(REPLACE(RD, ',', '.') AS REAL)), 2) as RD,
-          ROUND(AVG(CAST(REPLACE(PLUS_B, ',', '.') AS REAL)), 2) as PLUS_B,
-          ROUND(AVG(CAST(REPLACE(TrCNT, ',', '.') AS REAL)), 2) as TrCNT,
-          ROUND(AVG(CAST(REPLACE(TrAR, ',', '.') AS REAL)), 2) as TrAR,
-          ROUND(AVG(CAST(REPLACE(TRID, ',', '.') AS REAL)), 2) as TRID,
-          ROUND((SUM(CASE WHEN COR='BCO' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_BCO_PCT,
-          ROUND((SUM(CASE WHEN COR='GRI' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_GRI_PCT,
-          ROUND((SUM(CASE WHEN COR='LG' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_LG_PCT,
-          ROUND((SUM(CASE WHEN COR='AMA' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_AMA_PCT,
-          ROUND((SUM(CASE WHEN COR='LA' THEN PESO ELSE 0 END) * 100.0 / NULLIF(SUM(PESO), 0)), 1) as COLOR_LA_PCT
+          -- Promedio ponderado por PESO (convertido de formato europeo), excluyendo valores NULL o 0
+          ROUND(SUM(CASE WHEN CAST(REPLACE(SCI, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(SCI, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(SCI, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as SCI,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(MST, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(MST, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(MST, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as MST,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(MIC, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(MIC, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(MIC, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as MIC,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(MAT, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(MAT, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(MAT, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as MAT,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(UHML, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(UHML, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(UHML, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as UHML,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(UI, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(UI, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(UI, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as UI,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(SF, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(SF, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(SF, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as SF,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(STR, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(STR, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(STR, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as STR,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(ELG, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(ELG, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(ELG, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as ELG,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(RD, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(RD, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(RD, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as RD,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as PLUS_B,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(TrCNT, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(TrCNT, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(TrCNT, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as TrCNT,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(TrAR, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(TrAR, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(TrAR, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as TrAR,
+          ROUND(SUM(CASE WHEN CAST(REPLACE(TRID, ',', '.') AS REAL) > 0 
+                         THEN CAST(REPLACE(TRID, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                         ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN CAST(REPLACE(TRID, ',', '.') AS REAL) > 0 
+                               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) 
+                               ELSE 0 END), 0), 2) as TRID,
+          ROUND((SUM(CASE WHEN COR='BCO' THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 / 
+                 NULLIF(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)), 1) as COLOR_BCO_PCT,
+          ROUND((SUM(CASE WHEN COR='GRI' THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 / 
+                 NULLIF(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)), 1) as COLOR_GRI_PCT,
+          ROUND((SUM(CASE WHEN COR='LG' THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 / 
+                 NULLIF(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)), 1) as COLOR_LG_PCT,
+          ROUND((SUM(CASE WHEN COR='AMA' THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 / 
+                 NULLIF(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)), 1) as COLOR_AMA_PCT,
+          ROUND((SUM(CASE WHEN COR='LA' THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 / 
+                 NULLIF(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)), 1) as COLOR_LA_PCT
         FROM tb_CALIDAD_FIBRA
         WHERE LOTE_FIAC IS NOT NULL AND LOTE_FIAC != ''
           AND MISTURA IS NOT NULL AND TRIM(MISTURA) != ''
@@ -4871,6 +5165,209 @@ app.get('/api/seguimiento-roladas-fibra', async (req, res) => {
     console.error('Error en /api/seguimiento-roladas-fibra:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ✅ Endpoint para obtener datos detallados de MISTURA con promedios ponderados
+app.get('/api/calidad-fibra-mistura', (req, res) => {
+  const { mistura } = req.query;
+  
+  console.log('🔍 Solicitud de MISTURA:', mistura);
+  
+  if (!mistura) {
+    return res.status(400).json({ error: 'Parámetro mistura requerido' });
+  }
+  
+  const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (err) => {
+    if (err) {
+      console.error('❌ Error conectando a BD:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Primero verificar si la tabla existe
+  db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='tb_CALIDAD_FIBRA'", (err, tableCheck) => {
+    if (err) {
+      console.error('❌ Error verificando tabla:', err);
+      db.close();
+      return res.status(500).json({ error: err.message });
+    }
+    
+    if (!tableCheck) {
+      console.error('❌ Tabla tb_CALIDAD_FIBRA no existe');
+      db.close();
+      return res.status(404).json({ error: 'Tabla tb_CALIDAD_FIBRA no encontrada' });
+    }
+    
+    console.log('✓ Tabla tb_CALIDAD_FIBRA existe');
+    
+    // Consultar datos de tb_CALIDAD_FIBRA donde TIPO_MOV = 'MIST' y MISTURA coincide
+    const query = `
+      SELECT 
+        SEQ,
+        DT_ENTRADA_PROD,
+        HR_ENTRADA_PROD,
+        SCI,
+        MST,
+        MIC,
+        MAT,
+        UHML,
+        UI,
+        SF,
+        STR,
+        ELG,
+        RD,
+        PLUS_B,
+        TrCNT,
+        TrAR,
+        TRID,
+        PESO
+      FROM tb_CALIDAD_FIBRA
+      WHERE TIPO_MOV = 'MIST' 
+        AND MISTURA = ?
+      ORDER BY SEQ, DT_ENTRADA_PROD, HR_ENTRADA_PROD
+    `;
+    
+    db.all(query, [mistura], (err, rows) => {
+      if (err) {
+        console.error('❌ Error en query:', err);
+        db.close();
+        return res.status(500).json({ error: err.message });
+      }
+      
+      console.log(`📊 Encontrados ${rows.length} registros para MISTURA ${mistura}`);
+      
+      // Si no hay resultados con la MISTURA exacta, intentar con padding de ceros
+      if (rows.length === 0) {
+        const misturaPadded = mistura.padStart(10, '0');
+        console.log(`🔄 Reintentando con MISTURA padded: ${misturaPadded}`);
+        
+        db.all(query, [misturaPadded], (err2, rows2) => {
+          if (err2) {
+            console.error('❌ Error en query con padding:', err2);
+            db.close();
+            return res.status(500).json({ error: err2.message });
+          }
+          
+          console.log(`📊 Encontrados ${rows2.length} registros con padding`);
+          procesarResultados(rows2);
+        });
+        return;
+      }
+      
+      procesarResultados(rows);
+    });
+    
+    // Función para procesar los resultados y calcular promedios
+    function procesarResultados(rows) {
+      if (rows.length === 0) {
+        db.close();
+        return res.json({ seqs: [], mistura, totales: {} });
+      }
+      
+      // Calcular totales ponderados de TODA la MISTURA (sin agrupar por SEQ)
+      // Se mantiene un acumulador de peso por variable para excluir valores nulos/cero
+      const totalesMistura = {
+        SCI: 0, MST: 0, MIC: 0, MAT: 0, UHML: 0, UI: 0, SF: 0,
+        STR: 0, ELG: 0, RD: 0, PLUS_B: 0, TrCNT: 0, TrAR: 0, TRID: 0
+      };
+      
+      const pesosPorVariable = {
+        SCI: 0, MST: 0, MIC: 0, MAT: 0, UHML: 0, UI: 0, SF: 0,
+        STR: 0, ELG: 0, RD: 0, PLUS_B: 0, TrCNT: 0, TrAR: 0, TRID: 0
+      };
+      
+      rows.forEach(row => {
+        // Convertir PESO de formato europeo (1.100,00) a número
+        const pesoStr = String(row.PESO || '').replace(/\./g, '').replace(',', '.');
+        const peso = parseFloat(pesoStr);
+        if (!peso || peso <= 0) return; // Saltar si no hay peso válido
+        
+        const variables = ['SCI', 'MST', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B', 'TrCNT', 'TrAR', 'TRID'];
+        variables.forEach(v => {
+          // Convertir valor de formato europeo a número
+          const valueStr = String(row[v] || '').replace(/\./g, '').replace(',', '.');
+          const value = parseFloat(valueStr);
+          // Solo incluir si el valor es válido (no nulo, no cero, no NaN)
+          if (value !== null && value !== undefined && !isNaN(value) && value !== 0) {
+            totalesMistura[v] += value * peso;
+            pesosPorVariable[v] += peso;
+          }
+        });
+      });
+      
+      // Calcular promedios ponderados totales (solo con registros válidos de cada variable)
+      const promediosTotales = {};
+      const variables = ['SCI', 'MST', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B', 'TrCNT', 'TrAR', 'TRID'];
+      variables.forEach(v => {
+        promediosTotales[v] = pesosPorVariable[v] > 0 ? totalesMistura[v] / pesosPorVariable[v] : null;
+      });
+      promediosTotales['+b'] = promediosTotales.PLUS_B;
+      
+      // Agrupar por SEQ y calcular promedios ponderados
+      const seqMap = {};
+      
+      rows.forEach(row => {
+        const seq = row.SEQ;
+        if (!seqMap[seq]) {
+          seqMap[seq] = {
+            SEQ: seq,
+            DT_ENTRADA_PROD: row.DT_ENTRADA_PROD,
+            HR_ENTRADA_PROD: row.HR_ENTRADA_PROD,
+            // Acumuladores para promedios ponderados
+            SCI: 0, MST: 0, MIC: 0, MAT: 0, UHML: 0, UI: 0, SF: 0,
+            STR: 0, ELG: 0, RD: 0, PLUS_B: 0, TrCNT: 0, TrAR: 0, TRID: 0,
+            // Pesos válidos por variable
+            pesoSCI: 0, pesoMST: 0, pesoMIC: 0, pesoMAT: 0, pesoUHML: 0, pesoUI: 0, pesoSF: 0,
+            pesoSTR: 0, pesoELG: 0, pesoRD: 0, pesoPLUS_B: 0, pesoTrCNT: 0, pesoTrAR: 0, pesoTRID: 0
+          };
+        }
+        
+        // Convertir PESO de formato europeo (1.100,00) a número
+        const pesoStr = String(row.PESO || '').replace(/\./g, '').replace(',', '.');
+        const peso = parseFloat(pesoStr);
+        if (!peso || peso <= 0) return; // Saltar si no hay peso válido
+        
+        // Acumular valores ponderados por PESO solo si el valor es válido
+        const variables = ['SCI', 'MST', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B', 'TrCNT', 'TrAR', 'TRID'];
+        variables.forEach(v => {
+          // Convertir valor de formato europeo a número
+          const valueStr = String(row[v] || '').replace(/\./g, '').replace(',', '.');
+          const value = parseFloat(valueStr);
+          // Solo incluir si el valor es válido (no nulo, no cero, no NaN)
+          if (value !== null && value !== undefined && !isNaN(value) && value !== 0) {
+            seqMap[seq][v] += value * peso;
+            seqMap[seq]['peso' + v] += peso;
+          }
+        });
+      });
+      
+      // Calcular promedios ponderados dividiendo por peso válido de cada variable
+      const seqs = Object.values(seqMap).map(seq => {
+        const result = {
+          SEQ: seq.SEQ,
+          DT_ENTRADA_PROD: seq.DT_ENTRADA_PROD,
+          HR_ENTRADA_PROD: seq.HR_ENTRADA_PROD
+        };
+        
+        const variables = ['SCI', 'MST', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B', 'TrCNT', 'TrAR', 'TRID'];
+        variables.forEach(v => {
+          const pesoVariable = seq['peso' + v];
+          result[v] = pesoVariable > 0 ? seq[v] / pesoVariable : null;
+        });
+        
+        // Renombrar PLUS_B a +b para consistencia
+        result['+b'] = result.PLUS_B;
+        delete result.PLUS_B;
+        
+        return result;
+      });
+      
+      console.log(`✅ Devolviendo ${seqs.length} SEQs para MISTURA ${mistura} con promedios totales`);
+      
+      db.close();
+      res.json({ mistura, seqs, totales: promediosTotales });
+    }
+  });
 });
 
 // ✅ Health check endpoint
@@ -5096,3 +5593,4 @@ app.get('/api/metrics/daily', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
