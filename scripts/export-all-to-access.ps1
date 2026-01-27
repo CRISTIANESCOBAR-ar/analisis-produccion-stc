@@ -30,7 +30,8 @@ function Measure-AccessStep {
 	try {
 		& $Action
 		$sw.Stop()
-		Write-Host "[OK] COMPLETADO: $Name ($($sw.Elapsed.TotalSeconds.ToString('F2'))s)" -ForegroundColor Green
+		$secondsFormatted = $sw.Elapsed.TotalSeconds.ToString("F2")
+		Write-Host "[OK] COMPLETADO: $Name ($secondsFormatted s)" -ForegroundColor Green
 		$script:timings += [pscustomobject]@{
 			Proceso  = $Name
 			Segundos = [math]::Round($sw.Elapsed.TotalSeconds, 2)
@@ -139,7 +140,9 @@ Write-Host "  TODO COMPLETADO EXITOSAMENTE" -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "`nResumen de tiempos:" -ForegroundColor Cyan
 $script:timings | Format-Table -AutoSize
-Write-Host ("Total: {0:N2} segundos ({1:N2} minutos)" -f $globalStopwatch.Elapsed.TotalSeconds, $globalStopwatch.Elapsed.TotalMinutes) -ForegroundColor Yellow
+$totalSeconds = [math]::Round($globalStopwatch.Elapsed.TotalSeconds, 2)
+$totalMinutes = [math]::Round($globalStopwatch.Elapsed.TotalMinutes, 2)
+Write-Host "Total: $totalSeconds segundos ($totalMinutes minutos)" -ForegroundColor Yellow
 
 # Verificar si hubo errores
 $errores = $script:timings | Where-Object { $_.Estado -eq "ERROR" }
