@@ -139,9 +139,32 @@
         
         <div class="flex items-center justify-between bg-sky-900 text-white px-2 py-1.5 text-xs font-semibold">
           <span>{{ formattedDate }}</span>
-          <span>Replica de hoja Excel (borrador)</span>
+          <div class="flex items-center gap-2">
+            <span>Exportar:</span>
+            <button
+              class="px-2 py-0.5 bg-sky-700 hover:bg-sky-600 text-white rounded text-[10px] font-medium transition-colors flex items-center gap-1"
+              @click="copyTableToClipboard"
+              title="Copiar tabla como texto para pegar en Excel"
+            >
+              📋 Texto
+            </button>
+            <button
+              class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium transition-colors flex items-center gap-1"
+              @click="copyTableAsImage"
+              title="Copiar tabla como imagen al portapapeles"
+            >
+              📷 Imagen
+            </button>
+            <button
+              class="px-2 py-0.5 bg-green-700 hover:bg-green-600 text-white rounded text-[10px] font-medium transition-colors flex items-center gap-1"
+              @click="downloadExcelFormatted"
+              title="Descargar archivo Excel formateado"
+            >
+              📊 Excel
+            </button>
+          </div>
         </div>
-        <div class="overflow-auto flex-1 min-h-0 excel-wrapper">
+        <div ref="excelTableRef" class="overflow-auto flex-1 min-h-0 excel-wrapper">
           <div class="excel-grid">
             <div
               v-for="cell in excelCells"
@@ -230,6 +253,9 @@ import ChartDataLabels from 'chartjs-plugin-datalabels'
 import Swal from 'sweetalert2'
 import tippy from 'tippy.js'
 import 'tippy.js/dist/tippy.css'
+import html2canvas from 'html2canvas'
+import { generateExcelReport, downloadExcel } from '../utils/excelGenerator.js'
+import { copyTableToClipboard as copyCanvasImageToClipboard, generateTableImage } from '../utils/canvasTableRenderer.js'
 
 // Registrar componentes de Chart.js
 Chart.register(...registerables, ChartDataLabels)
@@ -255,6 +281,9 @@ const chartInstance = ref(null)
 const chartData = ref([])
 const selectedTrama = ref('7/1 OE') // Trama por defecto
 const availableTramas = ref(['7/1 OE']) // Tramas disponibles para el período
+
+// Ref para la tabla Excel (para captura de imagen)
+const excelTableRef = ref(null)
 
 // Refs para tooltips
 const prevMonthBtnRef = ref(null)
@@ -1518,6 +1547,279 @@ const Toast = Swal.mixin({
     toast.onmouseleave = Swal.resumeTimer
   }
 })
+
+// Copiar tabla Excel al portapapeles (formato texto tabulado)
+async function copyTableToClipboard() {
+  try {
+    const getSector = (nombre) => enrichedRows.value.find(r => r.sector === nombre) || { metrosDia: 0, metrosMes: 0, percDia: 0, percMes: 0, metaPct: 0 }
+    
+    const sDefecto = getSector('S/ Def.')
+    const fiacao = getSector('FIACAO')
+    const indigo = getSector('INDIGO')
+    const tecelagem = getSector('TECELAGEM')
+    const acabamento = getSector('ACABMTO')
+    const geral = getSector('GERAL')
+    
+    const fmt = (num) => formatNumber(num, 0)
+    const fmtPct = (num) => formatPercent(num)
+    const fmtPct2 = (num) => formatPercent2(num)
+    
+    // Construir tabla en formato texto tabulado
+    let tableText = ''
+    
+    // Header de fecha
+    tableText += `${formattedDate.value}\t\tMetros [m]\t\tPorcentaje [%]\n`
+    tableText += `Sector\tDia\tAcum.\tDia\tMes\tMeta\n`
+    
+    // Filas de sectores
+    tableText += `S/ Def.\t${fmt(sDefecto.metrosDia)}\t${fmt(sDefecto.metrosMes)}\t${fmtPct(sDefecto.percDia)}\t${fmtPct(sDefecto.percMes)}\t${fmtPct(sDefecto.metaPct)}\n`
+    tableText += `FIACAO\t${fmt(fiacao.metrosDia)}\t${fmt(fiacao.metrosMes)}\t${fmtPct2(fiacao.percDia)}\t${fmtPct2(fiacao.percMes)}\t${fmtPct2(fiacao.metaPct)}\n`
+    tableText += `INDIGO\t${fmt(indigo.metrosDia)}\t${fmt(indigo.metrosMes)}\t${fmtPct(indigo.percDia)}\t${fmtPct(indigo.percMes)}\t${fmtPct(indigo.metaPct)}\n`
+    tableText += `TECELAGEM\t${fmt(tecelagem.metrosDia)}\t${fmt(tecelagem.metrosMes)}\t${fmtPct(tecelagem.percDia)}\t${fmtPct(tecelagem.percMes)}\t${fmtPct(tecelagem.metaPct)}\n`
+    tableText += `ACABMTO\t${fmt(acabamento.metrosDia)}\t${fmt(acabamento.metrosMes)}\t${fmtPct(acabamento.percDia)}\t${fmtPct(acabamento.percMes)}\t${fmtPct(acabamento.metaPct)}\n`
+    tableText += `GERAL\t${fmt(geral.metrosDia)}\t${fmt(geral.metrosMes)}\t${fmtPct(geral.percDia)}\t${fmtPct(geral.percMes)}\t${fmtPct(geral.metaPct)}\n`
+    
+    // Fila Revisado
+    tableText += `Revisado\t${fmt(totals.value.day)}\t${fmt(totals.value.month)}\t100\t100\t100\n`
+    
+    // Fila Meta
+    tableText += `Meta\t${fmt(metaTargets.value.day)}\t${fmt(metaTargets.value.month)}\tPts 100²\tDia\tMes\n`
+    
+    // Fila Diferencia
+    tableText += `Diferencia\t${signNumber(differences.value.day)}\t${signNumber(differences.value.month)}\t\t${fmtPct2(pts100m2.value.day)}\t${fmtPct2(pts100m2.value.month)}\n`
+    
+    // Separador
+    tableText += `\n`
+    
+    // Segunda tabla: INDIGO, TECELAGEM, ACABMTO
+    tableText += `Sec\tVariable\tMeta Día\tProd. Día\tAcumulado\tSob./Fal. Mes\n`
+    
+    // INDIGO
+    const indigoDiffMetros = indigoData.value.month.metros - indigoData.value.month.metaAcumulada
+    const indigoDiffRot = indigoMetas.value.rot103 - indigoData.value.month.rot103
+    const indigoDiffEstopa = indigoMetas.value.estopaAzul - estopaAzulData.value.month.porcentaje
+    
+    tableText += `INDIGO\tMetros\t${fmt(indigoData.value.day.meta)}\t${fmt(indigoData.value.day.metros)}\t${fmt(indigoData.value.month.metros)}\t${signNumber(indigoDiffMetros)}\n`
+    tableText += `\tRoturas 10³\t${fmtPct(indigoMetas.value.rot103)}\t${fmtPct2(indigoData.value.day.rot103)}\t${fmtPct2(indigoData.value.month.rot103)}\t${(indigoDiffRot >= 0 ? '+' : '') + fmtPct2(indigoDiffRot)}\n`
+    tableText += `\tEst. Azul %\t${fmtPct(indigoMetas.value.estopaAzul)}\t${fmtPct2(estopaAzulData.value.day.porcentaje)}\t${fmtPct2(estopaAzulData.value.month.porcentaje)}\t${(indigoDiffEstopa >= 0 ? '+' : '') + fmtPct2(indigoDiffEstopa)}\n`
+    
+    // TECELAGEM
+    const tejDiffMetros = tecelagemData.value.month.metros - tecelagemData.value.month.metaAcumulada
+    const tejDiffEfi = tecelagemData.value.month.eficiencia - tecelagemData.value.month.metaEfi
+    const tejDiffRt = tecelagemData.value.month.rotTra105 - tecelagemData.value.month.metaRt105
+    const tejDiffRu = tecelagemData.value.month.rotUrd105 - tecelagemData.value.month.metaRu105
+    const tejDiffEstopa = tecelagemData.value.month.metaEstopaAzul - tecelagemData.value.month.estopaAzulPct
+    
+    tableText += `TECELAGEM\tMetros\t${fmt(tecelagemData.value.day.meta)}\t${fmt(tecelagemData.value.day.metros)}\t${fmt(tecelagemData.value.month.metros)}\t${signNumber(tejDiffMetros)}\n`
+    tableText += `\tEficiencia %\t${fmt(tecelagemData.value.day.metaEfi)}\t${fmtPct(tecelagemData.value.day.eficiencia)}\t${fmtPct(tecelagemData.value.month.eficiencia)}\t${(tejDiffEfi >= 0 ? '+' : '') + fmtPct(tejDiffEfi)}\n`
+    tableText += `\tRot. TRA 10⁵\t${fmtPct(tecelagemData.value.day.metaRt105)}\t${fmtPct(tecelagemData.value.day.rotTra105)}\t${fmtPct(tecelagemData.value.month.rotTra105)}\t${(tejDiffRt >= 0 ? '+' : '') + fmtPct(tejDiffRt)}\n`
+    tableText += `\tRot. URD 10⁵\t${fmtPct(tecelagemData.value.day.metaRu105)}\t${fmtPct(tecelagemData.value.day.rotUrd105)}\t${fmtPct(tecelagemData.value.month.rotUrd105)}\t${(tejDiffRu >= 0 ? '+' : '') + fmtPct(tejDiffRu)}\n`
+    tableText += `\tEst. Azul %\t${fmtPct(tecelagemData.value.day.metaEstopaAzul)}\t${fmtPct(tecelagemData.value.day.estopaAzulPct)}\t${fmtPct(tecelagemData.value.month.estopaAzulPct)}\t${(tejDiffEstopa >= 0 ? '+' : '') + fmtPct(tejDiffEstopa)}\n`
+    
+    // ACABMTO
+    const acabDiffMetros = acabamentoData.value.month.metros - acabamentoData.value.month.metaAcumulada
+    const acabDiffEncUrd = acabamentoData.value.month.encUrdPct - acabamentoData.value.month.metaEncUrd
+    
+    tableText += `ACABMTO\tMetros\t${fmt(acabamentoData.value.day.meta)}\t${fmt(acabamentoData.value.day.metros)}\t${fmt(acabamentoData.value.month.metros)}\t${signNumber(acabDiffMetros)}\n`
+    tableText += `\tENC URD %\t${fmtPct2(acabamentoData.value.day.metaEncUrd)}\t${fmtPct2(acabamentoData.value.day.encUrdPct)}\t${fmtPct2(acabamentoData.value.month.encUrdPct)}\t${(acabDiffEncUrd >= 0 ? '+' : '') + fmtPct2(acabDiffEncUrd)}\n`
+    
+    // Copiar al portapapeles
+    await navigator.clipboard.writeText(tableText)
+    
+    Toast.fire({
+      icon: 'success',
+      title: 'Tabla copiada al portapapeles'
+    })
+    
+    console.log('✅ Tabla copiada al portapapeles')
+  } catch (error) {
+    console.error('❌ Error al copiar tabla:', error)
+    Toast.fire({
+      icon: 'error',
+      title: 'Error al copiar tabla'
+    })
+  }
+}
+
+// Copiar tabla como imagen al portapapeles (usando Canvas 2D directo)
+async function copyTableAsImage() {
+  try {
+    Toast.fire({
+      icon: 'info',
+      title: 'Generando imagen...',
+      timer: 1500,
+      showConfirmButton: false
+    })
+
+    console.log('📸 Generando imagen con Canvas 2D...')
+
+    // Preparar los datos para el renderer
+    const renderData = {
+      fecha: formattedDate.value,
+      sectores: enrichedRows.value,
+      totals: totals.value,
+      metaTargets: metaTargets.value,
+      differences: differences.value,
+      pts100m2: pts100m2.value,
+      indigoData: indigoData.value,
+      indigoMetas: indigoMetas.value,
+      estopaAzulData: estopaAzulData.value,
+      tecelagemData: tecelagemData.value,
+      acabamentoData: acabamentoData.value
+    }
+
+    // Copiar imagen al portapapeles usando Canvas 2D
+    await copyCanvasImageToClipboard(renderData)
+
+    Toast.fire({
+      icon: 'success',
+      title: '¡Imagen copiada!',
+      text: 'Pega con Ctrl+V donde quieras'
+    })
+
+    console.log('✅ Imagen copiada al portapapeles con Canvas 2D')
+  } catch (error) {
+    console.error('❌ Error copiando imagen:', error)
+    
+    // Intentar fallback con captura directa de la UI
+    try {
+      console.log('⚠️ Intentando fallback con html2canvas...')
+      await copyTableAsImageFallback()
+    } catch (fallbackError) {
+      Toast.fire({
+        icon: 'error',
+        title: 'Error al copiar imagen',
+        text: error.message
+      })
+    }
+  }
+}
+
+// Fallback: capturar la tabla de la UI directamente
+async function copyTableAsImageFallback() {
+  if (!excelTableRef.value) {
+    throw new Error('Tabla no disponible')
+  }
+
+  const tableContainer = excelTableRef.value
+  const gridElement = tableContainer.querySelector('.excel-grid')
+  
+  if (!gridElement) {
+    throw new Error('Grid no encontrado')
+  }
+
+  const canvas = await html2canvas(gridElement, {
+    backgroundColor: '#ffffff',
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    logging: false
+  })
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => {
+      if (b) resolve(b)
+      else reject(new Error('Error creando blob'))
+    }, 'image/png', 1.0)
+  })
+
+  if (navigator.clipboard && navigator.clipboard.write) {
+    const clipboardItem = new ClipboardItem({ 'image/png': blob })
+    await navigator.clipboard.write([clipboardItem])
+    
+    Toast.fire({
+      icon: 'success',
+      title: '¡Imagen copiada!',
+      text: 'Pega con Ctrl+V'
+    })
+  } else {
+    // Descargar como archivo
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tabla-calidad-${selectedDate.value}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    
+    Toast.fire({
+      icon: 'info',
+      title: 'Imagen descargada',
+      text: 'Portapapeles no disponible'
+    })
+  }
+}
+
+// Descargar Excel formateado con los datos actuales
+async function downloadExcelFormatted() {
+  try {
+    Toast.fire({
+      icon: 'info',
+      title: 'Generando Excel e imagen...',
+      timer: 2000,
+      showConfirmButton: false
+    })
+
+    console.log('📊 Generando archivo Excel y copiando imagen al portapapeles...')
+
+    // Preparar los datos para el generador
+    const renderData = {
+      fecha: formattedDate.value,
+      sectores: enrichedRows.value,
+      totals: totals.value,
+      metaTargets: metaTargets.value,
+      differences: differences.value,
+      pts100m2: pts100m2.value,
+      indigoData: indigoData.value,
+      indigoMetas: indigoMetas.value,
+      estopaAzulData: estopaAzulData.value,
+      tecelagemData: tecelagemData.value,
+      acabamentoData: acabamentoData.value
+    }
+
+    // 1. Copiar imagen al portapapeles usando Canvas 2D
+    let imageCopied = false
+    try {
+      await copyCanvasImageToClipboard(renderData)
+      imageCopied = true
+      console.log('✅ Imagen copiada al portapapeles con Canvas 2D')
+    } catch (imgError) {
+      console.warn('⚠️ No se pudo copiar imagen:', imgError)
+    }
+
+    // 2. Generar y descargar el archivo Excel
+    const workbook = await generateExcelReport(renderData)
+    const [year, month, day] = selectedDate.value.split('-')
+    const filename = `calidad-sectores-${day}-${month}-${year}.xlsx`
+    await downloadExcel(workbook, filename)
+
+    // Mostrar mensaje de éxito
+    if (imageCopied) {
+      Toast.fire({
+        icon: 'success',
+        title: '¡Listo!',
+        html: `<b>Excel:</b> ${filename}<br><b>Imagen:</b> Copiada al portapapeles (Ctrl+V para pegar)`,
+        timer: 3000
+      })
+    } else {
+      Toast.fire({
+        icon: 'success',
+        title: 'Excel descargado!',
+        text: filename
+      })
+    }
+
+    console.log(`✅ Excel descargado: ${filename}`)
+  } catch (error) {
+    console.error('❌ Error generando Excel:', error)
+    Toast.fire({
+      icon: 'error',
+      title: 'Error al generar Excel',
+      text: error.message
+    })
+  }
+}
 
 // Copiar gráfico al portapapeles
 async function copyChartToClipboard() {
