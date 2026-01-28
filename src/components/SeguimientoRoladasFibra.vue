@@ -156,18 +156,18 @@
               <td class="px-1 py-2 text-center text-slate-500 text-xs border-r border-slate-200">{{ item.FECHA || '-' }}</td>
               <td class="px-1 py-2 text-center text-slate-700 border-r border-slate-200 text-xs">{{ item.BASE || '-' }}</td>
               <td class="px-1 py-2 text-center text-slate-600 border-r border-slate-200">{{ item.COLOR || '-' }}</td>
-              <td class="px-1 py-2 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_IND, 0) }}</td>
+              <td class="px-1 py-2 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatMetros(item.MTS_IND) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.R103, 2) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ calcularCav105(item.CAV, item.MTS_IND) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.VEL_NOM, 0) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatNumber(item.VEL_PROM, 0) }}</td>
               <!-- Tejeduría -->
-              <td class="px-1 py-2 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_CRUDOS, 0) }}</td>
+              <td class="px-1 py-2 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatMetros(item.MTS_CRUDOS) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.EFI_TEJ, 1) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.RU105, 1) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatNumber(item.RT105, 1) }}</td>
               <!-- Calidad -->
-              <td class="px-1 py-2 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatNumber(item.MTS_CAL, 0) }}</td>
+              <td class="px-1 py-2 text-center text-slate-700 font-medium tabular-nums border-r border-slate-200">{{ formatMetros(item.MTS_CAL) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r border-slate-200">{{ formatNumber(item.CAL_PERCENT, 1) }}</td>
               <td class="px-1 py-2 text-center text-slate-600 tabular-nums border-r-2 border-slate-300">{{ formatNumber(item.PTS_100M2, 1) }}</td>
               <!-- Fibra HVI -->
@@ -525,6 +525,21 @@ const formatNumber = (value, decimals = 0) => {
     minimumFractionDigits: decimals, 
     maximumFractionDigits: decimals 
   })
+}
+
+// Función específica para formatear metros con separador de miles europeo (punto) desde 1.000
+const formatMetros = (value) => {
+  if (value === null || value === undefined || value === '') return '-'
+  const num = parseFloat(value)
+  if (isNaN(num)) return '-'
+  // Usar formato europeo: punto como separador de miles
+  if (num >= 1000) {
+    return num.toLocaleString('de-DE', { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 0 
+    })
+  }
+  return Math.round(num).toString()
 }
 
 const formatPercent = (value) => {

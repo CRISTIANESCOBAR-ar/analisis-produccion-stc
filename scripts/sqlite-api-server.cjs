@@ -2142,6 +2142,11 @@ app.get('/api/calidad/pts100m2', async (req, res) => {
     console.log(`🎯 Calculando Pts 100m² para fecha: ${datePattern}, mes: ${mesInicio} a ${mesFin}`);
 
     // Consulta para el día específico
+    // Nota: LARGURA puede venir en formato europeo (sin decimales: 148, 165) o con punto decimal (165.16)
+    // Para evitar errores, usamos CASE para detectar el formato correcto:
+    // - Si contiene punto Y la parte antes del punto es < 4 dígitos, es decimal americano → usar directamente
+    // - Si no contiene punto o coma, es entero → usar directamente
+    // - Si contiene coma, es decimal europeo → reemplazar coma por punto
     const sqlDia = `
       WITH PTS AS (
         SELECT 
@@ -2166,7 +2171,13 @@ app.get('/api/calidad/pts100m2', async (req, res) => {
           DATE(DAT_PROD) AS FECHA,
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
-              CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL)) / 
+              CASE 
+                WHEN LARGURA LIKE '%.%' AND LENGTH(SUBSTR(LARGURA, 1, INSTR(LARGURA, '.') - 1)) <= 3 
+                  THEN CAST(LARGURA AS REAL)
+                WHEN LARGURA LIKE '%,%' 
+                  THEN CAST(REPLACE(LARGURA, ',', '.') AS REAL)
+                ELSE CAST(LARGURA AS REAL)
+              END) / 
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS ANCHO_POND
         FROM tb_CALIDAD
         WHERE DATE(DAT_PROD) = DATE(?)
@@ -2206,7 +2217,13 @@ app.get('/api/calidad/pts100m2', async (req, res) => {
         SELECT
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
-              CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL)) / 
+              CASE 
+                WHEN LARGURA LIKE '%.%' AND LENGTH(SUBSTR(LARGURA, 1, INSTR(LARGURA, '.') - 1)) <= 3 
+                  THEN CAST(LARGURA AS REAL)
+                WHEN LARGURA LIKE '%,%' 
+                  THEN CAST(REPLACE(LARGURA, ',', '.') AS REAL)
+                ELSE CAST(LARGURA AS REAL)
+              END) / 
           SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS ANCHO_POND
         FROM tb_CALIDAD
         WHERE DATE(DAT_PROD) >= DATE(?)
@@ -2235,6 +2252,707 @@ app.get('/api/calidad/pts100m2', async (req, res) => {
 
   } catch (error) {
     console.error('Error en /api/calidad/pts100m2:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/produccion/indigo-resumen - Metros y Roturas 10³ para sección INDIGO
+app.get('/api/produccion/indigo-resumen', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'monthStart', 'monthEnd']);
+    const { date, monthStart, monthEnd } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    const datePattern = date.split('T')[0];
+    const [year, month, day] = datePattern.split('-');
+    const mesInicio = monthStart || `${year}-${month}-01`;
+    const mesFin = monthEnd || datePattern;
+    
+    // Convertir fechas a formato DD/MM/YYYY para comparación con tb_PRODUCCION
+    const fechaDia = `${day}/${month}/${year}`;
+    const [yInicio, mInicio, dInicio] = mesInicio.split('-');
+    const [yFin, mFin, dFin] = mesFin.split('-');
+
+    console.log(`🎯 Calculando INDIGO resumen para fecha: ${fechaDia}, mes: ${mesInicio} a ${mesFin}`);
+
+    // Consulta para el día específico
+    // La fecha en tb_PRODUCCION está en formato DD/MM/YYYY, usamos conversión
+    const sqlDia = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE(RUPTURAS, '.', ''), ',', '.') AS REAL) * 1000) / 
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL))
+          ELSE 0
+        END AS ROT_103
+      FROM tb_PRODUCCION
+      WHERE (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) = ?
+        AND SELETOR = 'INDIGO'
+    `;
+
+    // Consulta para el acumulado del mes
+    // Convertimos la fecha DD/MM/YYYY a YYYY-MM-DD para comparación
+    const sqlMes = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE(RUPTURAS, '.', ''), ',', '.') AS REAL) * 1000) / 
+            SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL))
+          ELSE 0
+        END AS ROT_103
+      FROM tb_PRODUCCION
+      WHERE (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) >= ?
+        AND (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) <= ?
+        AND SELETOR = 'INDIGO'
+    `;
+
+    const resultDia = await dbGet(sqlDia, [datePattern]);
+    const resultMes = await dbGet(sqlMes, [mesInicio, mesFin]);
+
+    // Consulta para obtener la meta acumulada de INDIGO desde tb_METAS
+    const sqlMetaAcumulada = `
+      SELECT 
+        SUM(Indigo) AS META_ACUMULADA,
+        MAX(Indigo) AS META_DIA
+      FROM tb_METAS 
+      WHERE Dia >= ? AND Dia <= ?
+    `;
+    const resultMeta = await dbGet(sqlMetaAcumulada, [mesInicio, mesFin]);
+    
+    // Meta del día específico
+    const sqlMetaDia = `
+      SELECT Indigo AS META_DIA FROM tb_METAS WHERE Dia = ?
+    `;
+    const resultMetaDia = await dbGet(sqlMetaDia, [datePattern]);
+
+    console.log(`✅ INDIGO resumen - Día: ${resultDia?.METROS || 0} m, Rot: ${resultDia?.ROT_103 || 0}`);
+    console.log(`✅ INDIGO resumen - Mes: ${resultMes?.METROS || 0} m, Rot: ${resultMes?.ROT_103 || 0}`);
+    console.log(`✅ INDIGO metas - Acumulada: ${resultMeta?.META_ACUMULADA || 0}, Día: ${resultMetaDia?.META_DIA || 0}`);
+
+    res.json({
+      day: {
+        metros: resultDia?.METROS || 0,
+        rot103: resultDia?.ROT_103 || 0,
+        meta: resultMetaDia?.META_DIA || 0
+      },
+      month: {
+        metros: resultMes?.METROS || 0,
+        rot103: resultMes?.ROT_103 || 0,
+        metaAcumulada: resultMeta?.META_ACUMULADA || 0
+      },
+      date: datePattern
+    });
+
+  } catch (error) {
+    console.error('Error en /api/produccion/indigo-resumen:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/produccion/estopa-azul - Porcentaje de Estopa Azul INDIGO
+// Fórmula: (Estopa Azul kg) / (SUM(Metros × Peso_manta) / 1000 × 0.98) × 100
+app.get('/api/produccion/estopa-azul', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'monthStart', 'monthEnd']);
+    const { date, monthStart, monthEnd } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    const datePattern = date.split('T')[0];
+    const [year, month, day] = datePattern.split('-');
+    const mesInicio = monthStart || `${year}-${month}-01`;
+    const mesFin = monthEnd || datePattern;
+
+    console.log(`🎯 Calculando Estopa Azul % para fecha: ${datePattern}, mes: ${mesInicio} a ${mesFin}`);
+
+    // Subconsulta para obtener PESO_MANTA desde tb_FICHAS (reemplaza tb_BASES)
+    // SELECT URDUME AS ARTIGO, CONS#URD/m AS PESO_MANTA FROM tb_FICHAS WHERE URDUME != '' AND CONS#URD/m != 0
+    
+    // Consulta para el día específico
+    const sqlDia = `
+      WITH BASES AS (
+        SELECT DISTINCT
+          URDUME AS ARTIGO,
+          CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL) AS PESO_MANTA
+        FROM tb_FICHAS
+        WHERE URDUME != '' 
+          AND [CONS#URD/m] != '' 
+          AND [CONS#URD/m] != '0'
+          AND [CONS#URD/m] != '0,00'
+      ),
+      METROS_BASE AS (
+        SELECT
+          p.[BASE URDUME] AS BASE,
+          SUM(CAST(REPLACE(REPLACE(p.METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+        FROM tb_PRODUCCION p
+        WHERE (
+          SUBSTR(p.DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          SUBSTR(p.DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          SUBSTR(p.DT_BASE_PRODUCAO, 1, 2)
+        ) = ?
+          AND p.SELETOR = 'INDIGO'
+        GROUP BY p.[BASE URDUME]
+      ),
+      PESO_DIA AS (
+        SELECT
+          SUM(mb.METROS * COALESCE(b.PESO_MANTA, 0)) / 1000 * 0.98 AS SUMA_PRODUCTO
+        FROM METROS_BASE mb
+        LEFT JOIN BASES b ON mb.BASE = b.ARTIGO
+      ),
+      ESTOPA_AZUL AS (
+        SELECT
+          SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) AS ESTOPA
+        FROM tb_RESIDUOS_INDIGO
+        WHERE (
+          SUBSTR(DT_MOV, 7, 4) || '-' || 
+          SUBSTR(DT_MOV, 4, 2) || '-' || 
+          SUBSTR(DT_MOV, 1, 2)
+        ) = ?
+          AND SUBPRODUTO = 1746437
+      )
+      SELECT
+        ea.ESTOPA,
+        pd.SUMA_PRODUCTO,
+        CASE 
+          WHEN pd.SUMA_PRODUCTO > 0 THEN (ea.ESTOPA / pd.SUMA_PRODUCTO) * 100
+          ELSE 0
+        END AS PORCENTAJE
+      FROM PESO_DIA pd, ESTOPA_AZUL ea
+    `;
+
+    // Consulta para el acumulado del mes
+    const sqlMes = `
+      WITH BASES AS (
+        SELECT DISTINCT
+          URDUME AS ARTIGO,
+          CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL) AS PESO_MANTA
+        FROM tb_FICHAS
+        WHERE URDUME != '' 
+          AND [CONS#URD/m] != '' 
+          AND [CONS#URD/m] != '0'
+          AND [CONS#URD/m] != '0,00'
+      ),
+      METROS_BASE AS (
+        SELECT
+          p.[BASE URDUME] AS BASE,
+          SUM(CAST(REPLACE(REPLACE(p.METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+        FROM tb_PRODUCCION p
+        WHERE (
+          SUBSTR(p.DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          SUBSTR(p.DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          SUBSTR(p.DT_BASE_PRODUCAO, 1, 2)
+        ) >= ?
+          AND (
+          SUBSTR(p.DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          SUBSTR(p.DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          SUBSTR(p.DT_BASE_PRODUCAO, 1, 2)
+        ) <= ?
+          AND p.SELETOR = 'INDIGO'
+        GROUP BY p.[BASE URDUME]
+      ),
+      PESO_MES AS (
+        SELECT
+          SUM(mb.METROS * COALESCE(b.PESO_MANTA, 0)) / 1000 * 0.98 AS SUMA_PRODUCTO
+        FROM METROS_BASE mb
+        LEFT JOIN BASES b ON mb.BASE = b.ARTIGO
+      ),
+      ESTOPA_AZUL AS (
+        SELECT
+          SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) AS ESTOPA
+        FROM tb_RESIDUOS_INDIGO
+        WHERE (
+          SUBSTR(DT_MOV, 7, 4) || '-' || 
+          SUBSTR(DT_MOV, 4, 2) || '-' || 
+          SUBSTR(DT_MOV, 1, 2)
+        ) >= ?
+          AND (
+          SUBSTR(DT_MOV, 7, 4) || '-' || 
+          SUBSTR(DT_MOV, 4, 2) || '-' || 
+          SUBSTR(DT_MOV, 1, 2)
+        ) <= ?
+          AND SUBPRODUTO = 1746437
+      )
+      SELECT
+        ea.ESTOPA,
+        pm.SUMA_PRODUCTO,
+        CASE 
+          WHEN pm.SUMA_PRODUCTO > 0 THEN (ea.ESTOPA / pm.SUMA_PRODUCTO) * 100
+          ELSE 0
+        END AS PORCENTAJE
+      FROM PESO_MES pm, ESTOPA_AZUL ea
+    `;
+
+    const resultDia = await dbGet(sqlDia, [datePattern, datePattern]);
+    const resultMes = await dbGet(sqlMes, [mesInicio, mesFin, mesInicio, mesFin]);
+
+    console.log(`✅ Estopa Azul - Día: ${resultDia?.ESTOPA || 0} kg, Peso: ${resultDia?.SUMA_PRODUCTO || 0}, %: ${resultDia?.PORCENTAJE || 0}`);
+    console.log(`✅ Estopa Azul - Mes: ${resultMes?.ESTOPA || 0} kg, Peso: ${resultMes?.SUMA_PRODUCTO || 0}, %: ${resultMes?.PORCENTAJE || 0}`);
+
+    res.json({
+      day: {
+        estopaKg: resultDia?.ESTOPA || 0,
+        pesoProducto: resultDia?.SUMA_PRODUCTO || 0,
+        porcentaje: resultDia?.PORCENTAJE || 0
+      },
+      month: {
+        estopaKg: resultMes?.ESTOPA || 0,
+        pesoProducto: resultMes?.SUMA_PRODUCTO || 0,
+        porcentaje: resultMes?.PORCENTAJE || 0
+      },
+      date: datePattern
+    });
+
+  } catch (error) {
+    console.error('Error en /api/produccion/estopa-azul:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/produccion/tecelagem-resumen - Metros, Eficiencia, Roturas y Estopa Azul para sección TECELAGEM
+app.get('/api/produccion/tecelagem-resumen', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'monthStart', 'monthEnd']);
+    const { date, monthStart, monthEnd } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    const datePattern = date.split('T')[0];
+    const [year, month, day] = datePattern.split('-');
+    const mesInicio = monthStart || `${year}-${month}-01`;
+    const mesFin = monthEnd || datePattern;
+
+    console.log(`🎯 Calculando TECELAGEM resumen para fecha: ${datePattern}, mes: ${mesInicio} a ${mesFin}`);
+
+    // Consulta para el día específico - Metros, Eficiencia y Roturas
+    // Metros usa [METRAGEM ENCOLH], Roturas usan [PARADA TEC TRAMA/URDUME] / ([PONTOS_LIDOS] * 1000) * 100000
+    const sqlDia = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE([METRAGEM ENCOLH], '.', ''), ',', '.') AS REAL)) AS METROS,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE([PARADA TEC TRAMA], '.', ''), ',', '.') AS REAL)) * 100000.0 / 
+            (SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 1000)
+          ELSE 0
+        END AS ROT_TRA_105,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE([PARADA TEC URDUME], '.', ''), ',', '.') AS REAL)) * 100000.0 / 
+            (SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 1000)
+          ELSE 0
+        END AS ROT_URD_105,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 100.0 / 
+            SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL))
+          ELSE 0
+        END AS EFICIENCIA
+      FROM tb_PRODUCCION
+      WHERE (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) = ?
+        AND SELETOR = 'TECELAGEM'
+    `;
+
+    // Consulta para el acumulado del mes
+    const sqlMes = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE([METRAGEM ENCOLH], '.', ''), ',', '.') AS REAL)) AS METROS,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE([PARADA TEC TRAMA], '.', ''), ',', '.') AS REAL)) * 100000.0 / 
+            (SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 1000)
+          ELSE 0
+        END AS ROT_TRA_105,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE([PARADA TEC URDUME], '.', ''), ',', '.') AS REAL)) * 100000.0 / 
+            (SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 1000)
+          ELSE 0
+        END AS ROT_URD_105,
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 100.0 / 
+            SUM(CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL))
+          ELSE 0
+        END AS EFICIENCIA
+      FROM tb_PRODUCCION
+      WHERE (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) >= ?
+        AND (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) <= ?
+        AND SELETOR = 'TECELAGEM'
+    `;
+
+    const resultDia = await dbGet(sqlDia, [datePattern]);
+    const resultMes = await dbGet(sqlMes, [mesInicio, mesFin]);
+
+    // Consulta para obtener las metas de TECELAGEM desde tb_METAS
+    const sqlMetaAcumulada = `
+      SELECT 
+        SUM(Tejeduria) AS META_ACUMULADA,
+        MAX(Tejeduria) AS META_DIA,
+        AVG(EFI_Percent) AS META_EFI,
+        AVG(RT105) AS META_RT105,
+        AVG(RU105) AS META_RU105,
+        AVG(Meta_Estopa_Azul_Tejeduria) AS META_ESTOPA_AZUL
+      FROM tb_METAS 
+      WHERE Dia >= ? AND Dia <= ?
+    `;
+    const resultMeta = await dbGet(sqlMetaAcumulada, [mesInicio, mesFin]);
+    
+    // Meta del día específico
+    const sqlMetaDia = `
+      SELECT 
+        Tejeduria AS META_DIA,
+        EFI_Percent AS META_EFI,
+        RT105 AS META_RT105,
+        RU105 AS META_RU105,
+        Meta_Estopa_Azul_Tejeduria AS META_ESTOPA_AZUL
+      FROM tb_METAS WHERE Dia = ?
+    `;
+    const resultMetaDia = await dbGet(sqlMetaDia, [datePattern]);
+
+    // =====================================================================
+    // ESTOPA AZUL TEJEDURÍA - DÍA
+    // Usa producción INDIGO para peso, residuos de tb_RESIDUOS_INDIGO con SUBPRODUTO = 1746437
+    // Fórmula: ESTOPA_AZUL / (SUM(METROS * PESO_MANTA) / 1000 * 0.98) * 100
+    // =====================================================================
+    const sqlEstopaDiaPeso = `
+      WITH METROS_BASE AS (
+        SELECT
+          [BASE URDUME] AS BASE,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+        FROM tb_PRODUCCION
+        WHERE (
+          SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+        ) = ?
+          AND SELETOR = 'INDIGO'
+        GROUP BY [BASE URDUME]
+      ),
+      BASES AS (
+        SELECT DISTINCT
+          URDUME AS ARTIGO,
+          CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL) AS PESO_MANTA
+        FROM tb_FICHAS
+        WHERE URDUME != '' 
+          AND [CONS#URD/m] != '' 
+          AND [CONS#URD/m] != '0'
+          AND [CONS#URD/m] != '0,00'
+      )
+      SELECT
+        SUM(mb.METROS * COALESCE(b.PESO_MANTA, 0)) / 1000 * 0.98 AS SUMA_PRODUCTO
+      FROM METROS_BASE mb
+      LEFT JOIN BASES b ON mb.BASE = b.ARTIGO
+    `;
+
+    const sqlEstopaDiaResiduo = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) AS ESTOPA
+      FROM tb_RESIDUOS_INDIGO
+      WHERE (
+        SUBSTR(DT_MOV, 7, 4) || '-' || 
+        SUBSTR(DT_MOV, 4, 2) || '-' || 
+        SUBSTR(DT_MOV, 1, 2)
+      ) = ?
+        AND SUBPRODUTO = 1746437
+    `;
+
+    // =====================================================================
+    // ESTOPA AZUL TEJEDURÍA - MES
+    // Usa producción TECELAGEM con PESO_MANTA y ENC#TEC#URDUME de tb_FICHAS
+    // Fórmula: ESTOPA_AZUL / SUM(METRAGEM * ((100 + ENC_URD) / 100) * (PESO_MANTA / 1000)) * 100
+    // Residuos de tb_RESIDUOS_POR_SECTOR con SUBPRODUTO = 1785582
+    // =====================================================================
+    const sqlEstopaMesPeso = `
+      WITH TEJ AS (
+        SELECT
+          ARTIGO AS ARTICULO,
+          [BASE URDUME] AS BASE,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM
+        FROM tb_PRODUCCION
+        WHERE (
+          SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+        ) >= ?
+          AND (
+          SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+        ) <= ?
+          AND SELETOR = 'TECELAGEM'
+        GROUP BY ARTIGO, [BASE URDUME]
+      ),
+      FIC AS (
+        SELECT
+          [ARTIGO CODIGO] AS ARTICULO,
+          CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL) AS PESO_MANTA,
+          CAST(REPLACE(REPLACE([ENC#TEC#URDUME], '.', ''), ',', '.') AS REAL) AS ENC_URD
+        FROM tb_FICHAS
+        WHERE [ARTIGO CODIGO] IS NOT NULL AND [ARTIGO CODIGO] != ''
+      )
+      SELECT
+        SUM(TEJ.METRAGEM * ((100 + COALESCE(FIC.ENC_URD, 0)) / 100) * (COALESCE(FIC.PESO_MANTA, 0) / 1000)) AS PESO_URD
+      FROM TEJ
+      LEFT JOIN FIC ON TEJ.ARTICULO = FIC.ARTICULO
+    `;
+
+    const sqlEstopaMesResiduo = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) AS ESTOPA
+      FROM tb_RESIDUOS_POR_SECTOR
+      WHERE (
+        SUBSTR(DT_MOV, 7, 4) || '-' || 
+        SUBSTR(DT_MOV, 4, 2) || '-' || 
+        SUBSTR(DT_MOV, 1, 2)
+      ) >= ?
+        AND (
+        SUBSTR(DT_MOV, 7, 4) || '-' || 
+        SUBSTR(DT_MOV, 4, 2) || '-' || 
+        SUBSTR(DT_MOV, 1, 2)
+      ) <= ?
+        AND SUBPRODUTO = 1785582
+    `;
+
+    const resultEstopaDiaPeso = await dbGet(sqlEstopaDiaPeso, [datePattern]);
+    const resultEstopaDiaResiduo = await dbGet(sqlEstopaDiaResiduo, [datePattern]);
+    const resultEstopaMesPeso = await dbGet(sqlEstopaMesPeso, [mesInicio, mesFin]);
+    const resultEstopaMesResiduo = await dbGet(sqlEstopaMesResiduo, [mesInicio, mesFin]);
+
+    // Calcular porcentaje de estopa azul
+    // NOTA: Para TECELAGEM, Est. Azul % del día está vacío en Excel - solo se calcula mensualmente
+    const pesoProductoMes = resultEstopaMesPeso?.PESO_URD || 0;
+    const estopaAzulPctDia = 0; // No se calcula para el día en TECELAGEM
+    const estopaAzulPctMes = pesoProductoMes > 0 ? ((resultEstopaMesResiduo?.ESTOPA || 0) / pesoProductoMes) * 100 : 0;
+
+    console.log(`✅ TECELAGEM Estopa Azul - Mes: Peso=${pesoProductoMes}, Estopa=${resultEstopaMesResiduo?.ESTOPA || 0}, %=${estopaAzulPctMes.toFixed(2)}`);
+
+    console.log(`✅ TECELAGEM resumen - Día: ${resultDia?.METROS || 0} m, Efi: ${resultDia?.EFICIENCIA || 0}%`);
+    console.log(`✅ TECELAGEM resumen - Mes: ${resultMes?.METROS || 0} m, Efi: ${resultMes?.EFICIENCIA || 0}%`);
+    console.log(`✅ TECELAGEM metas - Acumulada: ${resultMeta?.META_ACUMULADA || 0}, Día: ${resultMetaDia?.META_DIA || 0}`);
+
+    res.json({
+      day: {
+        metros: resultDia?.METROS || 0,
+        eficiencia: resultDia?.EFICIENCIA || 0,
+        rotTra105: resultDia?.ROT_TRA_105 || 0,
+        rotUrd105: resultDia?.ROT_URD_105 || 0,
+        estopaAzulPct: estopaAzulPctDia,
+        meta: resultMetaDia?.META_DIA || 0,
+        metaEfi: resultMetaDia?.META_EFI || 0,
+        metaRt105: resultMetaDia?.META_RT105 || 0,
+        metaRu105: resultMetaDia?.META_RU105 || 0,
+        metaEstopaAzul: resultMetaDia?.META_ESTOPA_AZUL || 0
+      },
+      month: {
+        metros: resultMes?.METROS || 0,
+        eficiencia: resultMes?.EFICIENCIA || 0,
+        rotTra105: resultMes?.ROT_TRA_105 || 0,
+        rotUrd105: resultMes?.ROT_URD_105 || 0,
+        estopaAzulPct: estopaAzulPctMes,
+        metaAcumulada: resultMeta?.META_ACUMULADA || 0,
+        metaEfi: resultMeta?.META_EFI || 0,
+        metaRt105: resultMeta?.META_RT105 || 0,
+        metaRu105: resultMeta?.META_RU105 || 0,
+        metaEstopaAzul: resultMeta?.META_ESTOPA_AZUL || 0
+      },
+      date: datePattern
+    });
+
+  } catch (error) {
+    console.error('Error en /api/produccion/tecelagem-resumen:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/produccion/acabamento-resumen - Metros y ENC URD % para sección ACABAMENTO/INTEGRADA
+// MAQUINA = '165001' filtra los datos de la máquina integrada
+app.get('/api/produccion/acabamento-resumen', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['date', 'monthStart', 'monthEnd']);
+    const { date, monthStart, monthEnd } = params;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
+    }
+
+    const datePattern = date.split('T')[0];
+    const [year, month, day] = datePattern.split('-');
+    const mesInicio = monthStart || `${year}-${month}-01`;
+    const mesFin = monthEnd || datePattern;
+
+    console.log(`🟣 Calculando ACABAMENTO resumen para fecha: ${datePattern}, mes: ${mesInicio} a ${mesFin}`);
+
+    // =====================================================================
+    // METROS - Desde tb_PRODUCCION donde MAQUINA = '165001'
+    // =====================================================================
+    
+    // Metros del día
+    const sqlMetrosDia = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+      FROM tb_PRODUCCION
+      WHERE (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) = ?
+        AND MAQUINA = '165001'
+    `;
+
+    // Metros del mes (acumulado)
+    const sqlMetrosMes = `
+      SELECT
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+      FROM tb_PRODUCCION
+      WHERE (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) >= ?
+        AND (
+        SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+        SUBSTR(DT_BASE_PRODUCAO, 1, 2)
+      ) <= ?
+        AND MAQUINA = '165001'
+    `;
+
+    const resultMetrosDia = await dbGet(sqlMetrosDia, [datePattern]);
+    const resultMetrosMes = await dbGet(sqlMetrosMes, [mesInicio, mesFin]);
+
+    // =====================================================================
+    // ENC URD % - Desde tb_TESTES donde MAQUINA = '165001' y APROV = 'A'
+    // Fórmula: SUM(METRAGEM * %_ENC_URD) / SUM(METRAGEM)
+    // =====================================================================
+    
+    // ENC URD del día
+    const sqlEncUrdDia = `
+      SELECT
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(
+              CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE("%_ENC_URD", '.', ''), ',', '.') AS REAL)
+            ) / SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL))
+          ELSE 0
+        END AS ENC_URD_PCT
+      FROM tb_TESTES
+      WHERE (
+        SUBSTR(DT_PROD, 7, 4) || '-' || 
+        SUBSTR(DT_PROD, 4, 2) || '-' || 
+        SUBSTR(DT_PROD, 1, 2)
+      ) = ?
+        AND MAQUINA = '165001'
+        AND APROV = 'A'
+    `;
+
+    // ENC URD del mes (acumulado)
+    const sqlEncUrdMes = `
+      SELECT
+        CASE 
+          WHEN SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) > 0 THEN
+            SUM(
+              CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE("%_ENC_URD", '.', ''), ',', '.') AS REAL)
+            ) / SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL))
+          ELSE 0
+        END AS ENC_URD_PCT
+      FROM tb_TESTES
+      WHERE (
+        SUBSTR(DT_PROD, 7, 4) || '-' || 
+        SUBSTR(DT_PROD, 4, 2) || '-' || 
+        SUBSTR(DT_PROD, 1, 2)
+      ) >= ?
+        AND (
+        SUBSTR(DT_PROD, 7, 4) || '-' || 
+        SUBSTR(DT_PROD, 4, 2) || '-' || 
+        SUBSTR(DT_PROD, 1, 2)
+      ) <= ?
+        AND MAQUINA = '165001'
+        AND APROV = 'A'
+    `;
+
+    const resultEncUrdDia = await dbGet(sqlEncUrdDia, [datePattern]);
+    const resultEncUrdMes = await dbGet(sqlEncUrdMes, [mesInicio, mesFin]);
+
+    // =====================================================================
+    // METAS - Desde tb_METAS (columnas Integrada, Meta_ENC_URD_Integrada)
+    // =====================================================================
+    
+    // Meta del día específico
+    const sqlMetaDia = `
+      SELECT 
+        Integrada AS META_DIA,
+        Meta_ENC_URD_Integrada AS META_ENC_URD
+      FROM tb_METAS WHERE Dia = ?
+    `;
+    const resultMetaDia = await dbGet(sqlMetaDia, [datePattern]);
+
+    // Meta acumulada del mes
+    const sqlMetaAcumulada = `
+      SELECT 
+        SUM(Integrada) AS META_ACUMULADA,
+        AVG(Meta_ENC_URD_Integrada) AS META_ENC_URD
+      FROM tb_METAS 
+      WHERE Dia >= ? AND Dia <= ?
+    `;
+    const resultMetaAcumulada = await dbGet(sqlMetaAcumulada, [mesInicio, mesFin]);
+
+    console.log(`✅ ACABAMENTO Metros - Día: ${resultMetrosDia?.METROS || 0}, Mes: ${resultMetrosMes?.METROS || 0}`);
+    console.log(`✅ ACABAMENTO ENC URD - Día: ${resultEncUrdDia?.ENC_URD_PCT || 0}%, Mes: ${resultEncUrdMes?.ENC_URD_PCT || 0}%`);
+    console.log(`✅ ACABAMENTO Metas - Día: ${resultMetaDia?.META_DIA || 0}, Acumulada: ${resultMetaAcumulada?.META_ACUMULADA || 0}`);
+    console.log(`✅ ACABAMENTO Meta ENC URD - ${resultMetaDia?.META_ENC_URD || resultMetaAcumulada?.META_ENC_URD || -1.5}`);
+
+    res.json({
+      day: {
+        metros: resultMetrosDia?.METROS || 0,
+        encUrdPct: resultEncUrdDia?.ENC_URD_PCT || 0,
+        meta: resultMetaDia?.META_DIA || 0,
+        metaEncUrd: resultMetaDia?.META_ENC_URD || -1.5
+      },
+      month: {
+        metros: resultMetrosMes?.METROS || 0,
+        encUrdPct: resultEncUrdMes?.ENC_URD_PCT || 0,
+        metaAcumulada: resultMetaAcumulada?.META_ACUMULADA || 0,
+        metaEncUrd: resultMetaAcumulada?.META_ENC_URD || -1.5
+      },
+      date: datePattern
+    });
+
+  } catch (error) {
+    console.error('Error en /api/produccion/acabamento-resumen:', error);
     res.status(500).json({ error: error.message });
   }
 });

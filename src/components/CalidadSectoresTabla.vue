@@ -108,6 +108,12 @@
           >
             {{ loading ? '⟳' : '↻' }}
           </button>
+          <button
+            class="px-2 py-1 bg-slate-600 text-white rounded text-xs font-semibold hover:bg-slate-700 transition-colors"
+            @click="showDebugModal = true"
+          >
+            Ver celda
+          </button>
         </div>
       </div>
 
@@ -141,8 +147,8 @@
               v-for="cell in excelCells"
               :key="cell.id"
               class="excel-cell"
-              :class="[`cell-${cell.id}`, cell.colorClass]"
-              :style="{ ...gridPlacement(cell), ...(cell.color && { color: cell.color }) }"
+              :class="[`cell-${cell.id}`, cell.colorClass, { 'wrap-text': cell.wrapText }]"
+              :style="getCellStyle(cell, gridPlacement(cell))"
             >
               {{ cell.text }}
             </div>
@@ -187,6 +193,34 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de depuración de bordes -->
+  <div
+    v-if="showDebugModal"
+    class="fixed inset-0 z-[999] flex items-center justify-center bg-black/40"
+    @click.self="showDebugModal = false"
+  >
+    <div class="bg-white rounded-lg shadow-xl border border-slate-200 w-[420px]">
+      <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+        <span class="text-sm font-semibold text-slate-700">Depuración de bordes (INDIGO / TECELAGEM)</span>
+        <button class="text-slate-500 hover:text-slate-700" @click="showDebugModal = false">✕</button>
+      </div>
+      <div class="p-4">
+        <div class="excel-grid-debug">
+          <div
+            v-for="cell in debugCells"
+            :key="`debug-${cell.id}`"
+            class="excel-cell"
+            :class="[`cell-${cell.id}`, cell.colorClass]"
+            :style="getCellStyle(cell, debugPlacement(cell))"
+          >
+            {{ cell.text }}
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-slate-500">Este recorte usa las mismas celdas y estilos de la tabla (B17/C17/G17/J17).</p>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -212,6 +246,7 @@ const rows = ref([])
 const loading = ref(false)
 const fetchError = ref('')
 const isLoadingData = ref(false)
+const showDebugModal = ref(false)
 
 // Estado para el gráfico
 const chartCanvas = ref(null)
@@ -409,6 +444,28 @@ function handleClickOutside(event) {
 
 const metaTargets = ref({ day: 16667, month: 49996 })
 const pts100m2 = ref({ day: 0, month: 0 })
+const indigoData = ref({ 
+  day: { metros: 0, rot103: 0, meta: 0 }, 
+  month: { metros: 0, rot103: 0, metaAcumulada: 0 } 
+})
+// Metas para INDIGO (valores por defecto para rot103 y estopaAzul)
+const indigoMetas = ref({ rot103: 1.0, estopaAzul: 1.8 })
+// Datos de Estopa Azul
+const estopaAzulData = ref({
+  day: { porcentaje: 0 },
+  month: { porcentaje: 0 }
+})
+// Datos de TECELAGEM
+const tecelagemData = ref({
+  day: { metros: 0, eficiencia: 0, rotTra105: 0, rotUrd105: 0, estopaAzulPct: 0, meta: 0, metaEfi: 0, metaRt105: 0, metaRu105: 0, metaEstopaAzul: 0 },
+  month: { metros: 0, eficiencia: 0, rotTra105: 0, rotUrd105: 0, estopaAzulPct: 0, metaAcumulada: 0, metaEfi: 0, metaRt105: 0, metaRu105: 0, metaEstopaAzul: 0 }
+})
+
+// Datos de ACABAMENTO (Integrada - MAQUINA 165001)
+const acabamentoData = ref({
+  day: { metros: 0, encUrdPct: 0, meta: 0, metaEncUrd: -1.5 },
+  month: { metros: 0, encUrdPct: 0, metaAcumulada: 0, metaEncUrd: -1.5 }
+})
 
 // Watch para recargar el gráfico cuando cambie la trama seleccionada (solo si no se está cargando)
 watch(selectedTrama, (newTrama, oldTrama) => {
@@ -480,6 +537,7 @@ const excelCells = computed(() => {
   // Formatear números
   const fmt = (num) => formatNumber(num, 0)
   const fmtPct = (num) => formatPercent(num)
+  const fmtPct1 = (num) => formatPercent(num)  // 1 decimal
   const fmtPct2 = (num) => formatPercent2(num)
   
   return [
@@ -572,7 +630,7 @@ const excelCells = computed(() => {
   { id: 'B14', rowIndex: 10, colIndex: 1, colSpan: 3, rowSpan: 1, text: 'Meta' },
   { id: 'E14', rowIndex: 10, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmt(metaTargets.value.day) },
   { id: 'H14', rowIndex: 10, colIndex: 7, colSpan: 4, rowSpan: 1, text: fmt(metaTargets.value.month) },
-  { id: 'L14', rowIndex: 10, colIndex: 11, colSpan: 2, rowSpan: 2, text: 'Pts 100²' },
+  { id: 'L14', rowIndex: 10, colIndex: 11, colSpan: 2, rowSpan: 2, text: 'Pts 100²', wrapText: true },
   { id: 'N14', rowIndex: 10, colIndex: 13, colSpan: 2, rowSpan: 1, text: 'Dia' },
   { id: 'O14', rowIndex: 10, colIndex: 15, colSpan: 2, rowSpan: 1, text: 'Mes' },
 
@@ -596,38 +654,390 @@ const excelCells = computed(() => {
     text: (differences.value.month >= 0 ? '+' : '') + fmt(differences.value.month),
     color: differences.value.month >= 0 ? '#3C7D22' : '#FF0000'
   },
-  { id: 'N15', rowIndex: 11, colIndex: 13, colSpan: 2, rowSpan: 1, text: fmtPct(pts100m2.value.day) },
-  { id: 'O15', rowIndex: 11, colIndex: 15, colSpan: 2, rowSpan: 1, text: fmtPct(pts100m2.value.month) },
+  { id: 'N15', rowIndex: 11, colIndex: 13, colSpan: 2, rowSpan: 1, text: fmtPct2(pts100m2.value.day) },
+  { id: 'O15', rowIndex: 11, colIndex: 15, colSpan: 2, rowSpan: 1, text: fmtPct2(pts100m2.value.month) },
 
   // Fila 16 (rowIndex 12) - Headers para nueva sección INDIGO
-  { id: 'B16', rowIndex: 12, colIndex: 1, colSpan: 2, rowSpan: 1, text: 'Sec' },
-  { id: 'D16', rowIndex: 12, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Variable' },
-  { id: 'G16', rowIndex: 12, colIndex: 6, colSpan: 3, rowSpan: 1, text: 'Meta Día' },
-  { id: 'J16', rowIndex: 12, colIndex: 9, colSpan: 3, rowSpan: 1, text: 'Prod. Día' },
-  { id: 'M16', rowIndex: 12, colIndex: 12, colSpan: 3, rowSpan: 1, text: 'Acumulado' },
-  { id: 'P16', rowIndex: 12, colIndex: 15, colSpan: 2, rowSpan: 1, text: 'Sob./Fal. Mes' },
+  { id: 'B16', rowIndex: 12, colIndex: 1, colSpan: 1, rowSpan: 1, text: 'Sec', smallFont: true, thickTopBorder: true, thickBottomBorder: true, bgColor: '#A6C9EC' },
+  { id: 'C16', rowIndex: 12, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Variable', smallFont: true, thickTopBorder: true, thickBottomBorder: true, bgColor: '#A6C9EC' },
+  { id: 'G16', rowIndex: 12, colIndex: 4, colSpan: 3, rowSpan: 1, text: 'Meta Día', smallFont: true, thickTopBorder: true, thickBottomBorder: true, bgColor: '#A6C9EC', wrapText: true },
+  { id: 'J16', rowIndex: 12, colIndex: 7, colSpan: 3, rowSpan: 1, text: 'Prod. Día', smallFont: true, thickTopBorder: true, thickBottomBorder: true, bgColor: '#A6C9EC', wrapText: true },
+  { id: 'M16', rowIndex: 12, colIndex: 10, colSpan: 4, rowSpan: 1, text: 'Acumulado', smallFont: true, thickTopBorder: true, thickBottomBorder: true, bgColor: '#A6C9EC' },
+  { id: 'P16', rowIndex: 12, colIndex: 14, colSpan: 3, rowSpan: 1, text: 'Sob./Fal. Mes', smallFont: true, thickTopBorder: true, thickBottomBorder: true, bgColor: '#A6C9EC', wrapText: true },
 
   // Fila 17 (rowIndex 13) - INDIGO / Metros
-  { id: 'B17', rowIndex: 13, colIndex: 1, colSpan: 2, rowSpan: 3, text: 'INDIGO' },
-  { id: 'D17', rowIndex: 13, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Metros' },
-  { id: 'G17', rowIndex: 13, colIndex: 6, colSpan: 3, rowSpan: 1, text: '43.654' },
-  { id: 'J17', rowIndex: 13, colIndex: 9, colSpan: 3, rowSpan: 1, text: '31.511', color: '#FF0000' },
-  { id: 'M17', rowIndex: 13, colIndex: 12, colSpan: 3, rowSpan: 1, text: '189.695', color: '#FF0000' },
-  { id: 'P17', rowIndex: 13, colIndex: 15, colSpan: 2, rowSpan: 1, text: '-17.611', color: '#FF0000' },
+  { id: 'B17', rowIndex: 13, colIndex: 1, colSpan: 1, rowSpan: 3, text: 'INDIGO', vertical: true, bgColor: '#DAE9F8' },
+  { id: 'C17', rowIndex: 13, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Metros', smallFont: true, bgColor: '#DAE9F8', wrapText: true },
+  { id: 'G17', rowIndex: 13, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmt(indigoData.value.day.meta), bgColor: '#DAE9F8' },
+  { 
+    id: 'J17', 
+    rowIndex: 13, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmt(indigoData.value.day.metros),
+    color: indigoData.value.day.metros >= indigoData.value.day.meta ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8'
+  },
+  { 
+    id: 'M17', 
+    rowIndex: 13, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmt(indigoData.value.month.metros),
+    color: indigoData.value.month.metros >= indigoData.value.month.metaAcumulada ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8'
+  },
+  { 
+    id: 'P17', 
+    rowIndex: 13, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = indigoData.value.month.metros - indigoData.value.month.metaAcumulada
+      return (diff >= 0 ? '+' : '') + fmt(diff)
+    })(),
+    color: (indigoData.value.month.metros - indigoData.value.month.metaAcumulada) >= 0 ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8'
+  },
 
   // Fila 18 (rowIndex 14) - INDIGO / Roturas 10³
-  { id: 'D18', rowIndex: 14, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Roturas 10³' },
-  { id: 'G18', rowIndex: 14, colIndex: 6, colSpan: 3, rowSpan: 1, text: '1,0' },
-  { id: 'J18', rowIndex: 14, colIndex: 9, colSpan: 3, rowSpan: 1, text: '1,94', color: '#FF0000' },
-  { id: 'M18', rowIndex: 14, colIndex: 12, colSpan: 3, rowSpan: 1, text: '1,58', color: '#FF0000' },
-  { id: 'P18', rowIndex: 14, colIndex: 15, colSpan: 2, rowSpan: 1, text: '+0,58', color: '#FF0000' },
+  { id: 'C18', rowIndex: 14, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Roturas 10³', smallFont: true, bgColor: '#DAE9F8', wrapText: true },
+  { id: 'G18', rowIndex: 14, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmtPct(indigoMetas.value.rot103), bgColor: '#DAE9F8' },
+  { 
+    id: 'J18', 
+    rowIndex: 14, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct2(indigoData.value.day.rot103),
+    color: indigoData.value.day.rot103 <= indigoMetas.value.rot103 ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8'
+  },
+  { 
+    id: 'M18', 
+    rowIndex: 14, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct2(indigoData.value.month.rot103),
+    color: indigoData.value.month.rot103 <= indigoMetas.value.rot103 ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8'
+  },
+  { 
+    id: 'P18', 
+    rowIndex: 14, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = indigoMetas.value.rot103 - indigoData.value.month.rot103
+      return (diff >= 0 ? '+' : '') + fmtPct2(diff)
+    })(),
+    color: (indigoMetas.value.rot103 - indigoData.value.month.rot103) >= 0 ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8'
+  },
 
   // Fila 19 (rowIndex 15) - INDIGO / Est. Azul %
-  { id: 'D19', rowIndex: 15, colIndex: 3, colSpan: 3, rowSpan: 1, text: 'Est. Azul %' },
-  { id: 'G19', rowIndex: 15, colIndex: 6, colSpan: 3, rowSpan: 1, text: '1,8' },
-  { id: 'J19', rowIndex: 15, colIndex: 9, colSpan: 3, rowSpan: 1, text: '5,12', color: '#FF0000' },
-  { id: 'M19', rowIndex: 15, colIndex: 12, colSpan: 3, rowSpan: 1, text: '7,33', color: '#FF0000' },
-  { id: 'P19', rowIndex: 15, colIndex: 15, colSpan: 2, rowSpan: 1, text: '+5,5', color: '#FF0000' }
+  { id: 'C19', rowIndex: 15, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Est. Azul %', smallFont: true, bgColor: '#DAE9F8', thickBottomBorder: true, wrapText: true },
+  { id: 'G19', rowIndex: 15, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmtPct(indigoMetas.value.estopaAzul), bgColor: '#DAE9F8', thickBottomBorder: true },
+  { 
+    id: 'J19', 
+    rowIndex: 15, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct2(estopaAzulData.value.day.porcentaje),
+    color: estopaAzulData.value.day.porcentaje <= indigoMetas.value.estopaAzul ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8',
+    thickBottomBorder: true
+  },
+  { 
+    id: 'M19', 
+    rowIndex: 15, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct2(estopaAzulData.value.month.porcentaje),
+    color: estopaAzulData.value.month.porcentaje <= indigoMetas.value.estopaAzul ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8',
+    thickBottomBorder: true
+  },
+  { 
+    id: 'P19', 
+    rowIndex: 15, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = indigoMetas.value.estopaAzul - estopaAzulData.value.month.porcentaje
+      return (diff >= 0 ? '+' : '') + fmtPct2(diff)
+    })(),
+    color: (indigoMetas.value.estopaAzul - estopaAzulData.value.month.porcentaje) >= 0 ? '#3C7D22' : '#FF0000',
+    bgColor: '#DAE9F8',
+    thickBottomBorder: true
+  },
+
+  // =====================================================================
+  // SECCIÓN TECELAGEM - Filas 20-24 (rowIndex 16-20)
+  // =====================================================================
+
+  // Fila 20 (rowIndex 16) - TECELAGEM / Metros
+  { id: 'B20', rowIndex: 16, colIndex: 1, colSpan: 1, rowSpan: 5, text: 'TECELAGEM', vertical: true, thinBorders: true },
+  { id: 'C20', rowIndex: 16, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Metros', smallFont: true, wrapText: true },
+  { id: 'G20', rowIndex: 16, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmt(tecelagemData.value.day.meta) },
+  { 
+    id: 'J20', 
+    rowIndex: 16, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmt(tecelagemData.value.day.metros),
+    color: tecelagemData.value.day.metros >= tecelagemData.value.day.meta ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'M20', 
+    rowIndex: 16, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmt(tecelagemData.value.month.metros),
+    color: tecelagemData.value.month.metros >= tecelagemData.value.month.metaAcumulada ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'P20', 
+    rowIndex: 16, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = tecelagemData.value.month.metros - tecelagemData.value.month.metaAcumulada
+      return (diff >= 0 ? '+' : '') + fmt(diff)
+    })(),
+    color: (tecelagemData.value.month.metros - tecelagemData.value.month.metaAcumulada) >= 0 ? '#3C7D22' : '#FF0000'
+  },
+
+  // Fila 21 (rowIndex 17) - TECELAGEM / Eficiencia %
+  { id: 'C21', rowIndex: 17, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Eficiencia %', smallFont: true, wrapText: true },
+  { id: 'G21', rowIndex: 17, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmt(tecelagemData.value.day.metaEfi) },
+  { 
+    id: 'J21', 
+    rowIndex: 17, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.day.eficiencia),
+    color: tecelagemData.value.day.eficiencia >= tecelagemData.value.day.metaEfi ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'M21', 
+    rowIndex: 17, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.month.eficiencia),
+    color: tecelagemData.value.month.eficiencia >= tecelagemData.value.month.metaEfi ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'P21', 
+    rowIndex: 17, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = tecelagemData.value.month.eficiencia - tecelagemData.value.month.metaEfi
+      return (diff >= 0 ? '+' : '') + fmtPct1(diff)
+    })(),
+    color: (tecelagemData.value.month.eficiencia - tecelagemData.value.month.metaEfi) >= 0 ? '#3C7D22' : '#FF0000'
+  },
+
+  // Fila 22 (rowIndex 18) - TECELAGEM / Rot. TRA 10⁵
+  { id: 'C22', rowIndex: 18, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Rot. TRA 10⁵', smallFont: true, wrapText: true },
+  { id: 'G22', rowIndex: 18, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmtPct1(tecelagemData.value.day.metaRt105) },
+  { 
+    id: 'J22', 
+    rowIndex: 18, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.day.rotTra105),
+    color: tecelagemData.value.day.rotTra105 <= tecelagemData.value.day.metaRt105 ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'M22', 
+    rowIndex: 18, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.month.rotTra105),
+    color: tecelagemData.value.month.rotTra105 <= tecelagemData.value.month.metaRt105 ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'P22', 
+    rowIndex: 18, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = tecelagemData.value.month.rotTra105 - tecelagemData.value.month.metaRt105
+      return (diff >= 0 ? '+' : '') + fmtPct1(diff)
+    })(),
+    color: (tecelagemData.value.month.metaRt105 - tecelagemData.value.month.rotTra105) >= 0 ? '#3C7D22' : '#FF0000'
+  },
+
+  // Fila 23 (rowIndex 19) - TECELAGEM / Rot. URD 10⁵
+  { id: 'C23', rowIndex: 19, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Rot. URD 10⁵', smallFont: true, wrapText: true },
+  { id: 'G23', rowIndex: 19, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmtPct1(tecelagemData.value.day.metaRu105) },
+  { 
+    id: 'J23', 
+    rowIndex: 19, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.day.rotUrd105),
+    color: tecelagemData.value.day.rotUrd105 <= tecelagemData.value.day.metaRu105 ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'M23', 
+    rowIndex: 19, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.month.rotUrd105),
+    color: tecelagemData.value.month.rotUrd105 <= tecelagemData.value.month.metaRu105 ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'P23', 
+    rowIndex: 19, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = tecelagemData.value.month.rotUrd105 - tecelagemData.value.month.metaRu105
+      return (diff >= 0 ? '+' : '') + fmtPct1(diff)
+    })(),
+    color: (tecelagemData.value.month.metaRu105 - tecelagemData.value.month.rotUrd105) >= 0 ? '#3C7D22' : '#FF0000'
+  },
+
+  // Fila 24 (rowIndex 20) - TECELAGEM / Est. Azul %
+  { id: 'C24', rowIndex: 20, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Est. Azul %', smallFont: true, wrapText: true },
+  { id: 'G24', rowIndex: 20, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmtPct1(tecelagemData.value.day.metaEstopaAzul) },
+  { 
+    id: 'J24', 
+    rowIndex: 20, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.day.estopaAzulPct),
+    color: tecelagemData.value.day.estopaAzulPct <= tecelagemData.value.day.metaEstopaAzul ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'M24', 
+    rowIndex: 20, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct1(tecelagemData.value.month.estopaAzulPct),
+    color: tecelagemData.value.month.estopaAzulPct <= tecelagemData.value.month.metaEstopaAzul ? '#3C7D22' : '#FF0000'
+  },
+  { 
+    id: 'P24', 
+    rowIndex: 20, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = tecelagemData.value.month.metaEstopaAzul - tecelagemData.value.month.estopaAzulPct
+      return (diff >= 0 ? '+' : '') + fmtPct1(diff)
+    })(),
+    color: (tecelagemData.value.month.metaEstopaAzul - tecelagemData.value.month.estopaAzulPct) >= 0 ? '#3C7D22' : '#FF0000'
+  },
+
+  // =====================================================================
+  // SECCIÓN ACABAMENTO (INTEGRADA) - Filas 25-26 (rowIndex 21-22)
+  // MAQUINA = '165001'
+  // =====================================================================
+
+  // Fila 25 (rowIndex 21) - ACAB / Metros
+  { id: 'B25', rowIndex: 21, colIndex: 1, colSpan: 1, rowSpan: 2, text: 'ACAB', vertical: true, bgColor: '#E8D5F0', thinBorders: true },
+  { id: 'C25', rowIndex: 21, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Metros', smallFont: true, bgColor: '#E8D5F0', wrapText: true },
+  { id: 'G25', rowIndex: 21, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmt(acabamentoData.value.day.meta), bgColor: '#E8D5F0' },
+  { 
+    id: 'J25', 
+    rowIndex: 21, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmt(acabamentoData.value.day.metros),
+    color: acabamentoData.value.day.metros >= acabamentoData.value.day.meta ? '#3C7D22' : '#FF0000',
+    bgColor: '#E8D5F0'
+  },
+  { 
+    id: 'M25', 
+    rowIndex: 21, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmt(acabamentoData.value.month.metros),
+    color: acabamentoData.value.month.metros >= acabamentoData.value.month.metaAcumulada ? '#3C7D22' : '#FF0000',
+    bgColor: '#E8D5F0'
+  },
+  { 
+    id: 'P25', 
+    rowIndex: 21, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      const diff = acabamentoData.value.month.metros - acabamentoData.value.month.metaAcumulada
+      return (diff >= 0 ? '+' : '') + fmt(diff)
+    })(),
+    color: (acabamentoData.value.month.metros - acabamentoData.value.month.metaAcumulada) >= 0 ? '#3C7D22' : '#FF0000',
+    bgColor: '#E8D5F0'
+  },
+
+  // Fila 26 (rowIndex 22) - ACAB / ENC URD %
+  { id: 'C26', rowIndex: 22, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'ENC URD %', smallFont: true, bgColor: '#E8D5F0', thickBottomBorder: true, wrapText: true },
+  { id: 'G26', rowIndex: 22, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmtPct2(acabamentoData.value.day.metaEncUrd), bgColor: '#E8D5F0', thickBottomBorder: true },
+  { 
+    id: 'J26', 
+    rowIndex: 22, 
+    colIndex: 7, 
+    colSpan: 3, 
+    rowSpan: 1, 
+    text: fmtPct2(acabamentoData.value.day.encUrdPct),
+    color: acabamentoData.value.day.encUrdPct >= acabamentoData.value.day.metaEncUrd ? '#3C7D22' : '#FF0000',
+    bgColor: '#E8D5F0',
+    thickBottomBorder: true
+  },
+  { 
+    id: 'M26', 
+    rowIndex: 22, 
+    colIndex: 10, 
+    colSpan: 4, 
+    rowSpan: 1, 
+    text: fmtPct2(acabamentoData.value.month.encUrdPct),
+    color: acabamentoData.value.month.encUrdPct >= acabamentoData.value.month.metaEncUrd ? '#3C7D22' : '#FF0000',
+    bgColor: '#E8D5F0',
+    thickBottomBorder: true
+  },
+  { 
+    id: 'P26', 
+    rowIndex: 22, 
+    colIndex: 14, 
+    colSpan: 3, 
+    rowSpan: 1,
+    text: (() => {
+      // Para ENC URD %, la diferencia positiva es buena (menos encogimiento negativo)
+      const diff = acabamentoData.value.month.encUrdPct - acabamentoData.value.month.metaEncUrd
+      return (diff >= 0 ? '+' : '') + fmtPct2(diff)
+    })(),
+    color: (acabamentoData.value.month.encUrdPct - acabamentoData.value.month.metaEncUrd) >= 0 ? '#3C7D22' : '#FF0000',
+    bgColor: '#E8D5F0',
+    thickBottomBorder: true
+  }
 ]})
 
 
@@ -658,6 +1068,13 @@ const differences = computed(() => {
   }
 })
 
+// Función para calcular días transcurridos del mes hasta la fecha seleccionada
+function diasDelMes() {
+  if (!selectedDate.value) return 1
+  const [year, month, day] = selectedDate.value.split('-').map(Number)
+  return day || 1
+}
+
 const formattedDate = computed(() => formatDate(selectedDate.value))
 
 const chartMonthYear = computed(() => {
@@ -675,6 +1092,53 @@ function gridPlacement(cell) {
     gridColumn: `${cell.colIndex} / span ${colSpan}`
   }
 }
+
+function debugPlacement(cell) {
+  const rowSpan = cell.debugRowSpan || 1
+  const colSpan = cell.debugColSpan || 1
+  return {
+    gridRow: `${cell.debugRowIndex} / span ${rowSpan}`,
+    gridColumn: `${cell.debugColIndex} / span ${colSpan}`
+  }
+}
+
+function getCellStyle(cell, placement) {
+  return {
+    ...placement,
+    ...(cell.color && { color: cell.color }),
+    ...(cell.vertical && { writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }),
+    ...(cell.smallFont && { fontSize: '8pt' }),
+    ...(cell.bgColor && { background: cell.bgColor }),
+    ...(cell.thinBorders && { borderLeft: '1px solid #0C769E', borderBottom: '1px solid #0C769E', borderTop: '1px solid #0C769E' }),
+    ...(cell.thickTopBorder && { borderTop: '2px solid #0C769E' }),
+    ...(cell.thickBottomBorder && { borderBottom: '2px solid #0C769E' }),
+    ...(cell.noTopBorder && { borderTop: '0' }),
+    ...(cell.noBottomBorder && { borderBottom: '0' }),
+    ...(cell.wrapText && { whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.1' })
+  }
+}
+
+const debugCells = computed(() => {
+  const ids = ['B17', 'C17', 'G17', 'J17']
+  const byId = new Map(excelCells.value.map((cell) => [cell.id, cell]))
+  return ids
+    .map((id, index) => {
+      const cell = byId.get(id)
+      if (!cell) return null
+      const row = 1
+      const col = index + 1
+      // Eliminar propiedades de bordes gruesos para que B17 tenga los mismos bordes que C17/G17/J17
+      const { thickTopBorder, thickBottomBorder, thickLeftBorder, thickRightBorder, ...cellWithoutThickBorders } = cell
+      return {
+        ...cellWithoutThickBorders,
+        debugRowIndex: row,
+        debugColIndex: col,
+        debugRowSpan: 1,
+        debugColSpan: 1
+      }
+    })
+    .filter(Boolean)
+})
 
 function formatDate(value) {
   if (!value) return ''
@@ -787,6 +1251,134 @@ async function loadData(useLastAvailable = false) {
     } else {
       console.warn('⚠️ No se pudieron calcular Pts 100m²')
       pts100m2.value = { day: 0, month: 0 }
+    }
+    
+    // Cargar datos de INDIGO (Metros y Roturas 10³)
+    const resIndigo = await fetch(
+      `${API_URL}/produccion/indigo-resumen?date=${dateToUse}&monthStart=${monthStart}&monthEnd=${monthEnd}`
+    )
+    
+    if (resIndigo.ok) {
+      const dataIndigo = await resIndigo.json()
+      indigoData.value = {
+        day: {
+          metros: Number(dataIndigo.day?.metros || 0),
+          rot103: Number(dataIndigo.day?.rot103 || 0),
+          meta: Number(dataIndigo.day?.meta || 0)
+        },
+        month: {
+          metros: Number(dataIndigo.month?.metros || 0),
+          rot103: Number(dataIndigo.month?.rot103 || 0),
+          metaAcumulada: Number(dataIndigo.month?.metaAcumulada || 0)
+        }
+      }
+      console.log(`🔵 INDIGO cargados - Día: ${indigoData.value.day.metros} m, Meta: ${indigoData.value.day.meta}, Rot: ${indigoData.value.day.rot103.toFixed(2)}`)
+      console.log(`🔵 INDIGO cargados - Mes: ${indigoData.value.month.metros} m, Meta Acum: ${indigoData.value.month.metaAcumulada}, Rot: ${indigoData.value.month.rot103.toFixed(2)}`)
+    } else {
+      console.warn('⚠️ No se pudieron cargar datos de INDIGO')
+      indigoData.value = { 
+        day: { metros: 0, rot103: 0, meta: 0 }, 
+        month: { metros: 0, rot103: 0, metaAcumulada: 0 } 
+      }
+    }
+    
+    // Cargar datos de Estopa Azul %
+    const resEstopa = await fetch(
+      `${API_URL}/produccion/estopa-azul?date=${dateToUse}&monthStart=${monthStart}&monthEnd=${monthEnd}`
+    )
+    
+    if (resEstopa.ok) {
+      const dataEstopa = await resEstopa.json()
+      estopaAzulData.value = {
+        day: {
+          porcentaje: Number(dataEstopa.day?.porcentaje || 0)
+        },
+        month: {
+          porcentaje: Number(dataEstopa.month?.porcentaje || 0)
+        }
+      }
+      console.log(`🔷 Estopa Azul cargados - Día: ${estopaAzulData.value.day.porcentaje.toFixed(2)}%, Mes: ${estopaAzulData.value.month.porcentaje.toFixed(2)}%`)
+    } else {
+      console.warn('⚠️ No se pudieron cargar datos de Estopa Azul')
+      estopaAzulData.value = { 
+        day: { porcentaje: 0 }, 
+        month: { porcentaje: 0 } 
+      }
+    }
+    
+    // Cargar datos de TECELAGEM (Metros, Eficiencia, Roturas, Estopa Azul)
+    const resTecelagem = await fetch(
+      `${API_URL}/produccion/tecelagem-resumen?date=${dateToUse}&monthStart=${monthStart}&monthEnd=${monthEnd}`
+    )
+    
+    if (resTecelagem.ok) {
+      const dataTecelagem = await resTecelagem.json()
+      tecelagemData.value = {
+        day: {
+          metros: Number(dataTecelagem.day?.metros || 0),
+          eficiencia: Number(dataTecelagem.day?.eficiencia || 0),
+          rotTra105: Number(dataTecelagem.day?.rotTra105 || 0),
+          rotUrd105: Number(dataTecelagem.day?.rotUrd105 || 0),
+          estopaAzulPct: Number(dataTecelagem.day?.estopaAzulPct || 0),
+          meta: Number(dataTecelagem.day?.meta || 0),
+          metaEfi: Number(dataTecelagem.day?.metaEfi || 0),
+          metaRt105: Number(dataTecelagem.day?.metaRt105 || 0),
+          metaRu105: Number(dataTecelagem.day?.metaRu105 || 0),
+          metaEstopaAzul: Number(dataTecelagem.day?.metaEstopaAzul || 0)
+        },
+        month: {
+          metros: Number(dataTecelagem.month?.metros || 0),
+          eficiencia: Number(dataTecelagem.month?.eficiencia || 0),
+          rotTra105: Number(dataTecelagem.month?.rotTra105 || 0),
+          rotUrd105: Number(dataTecelagem.month?.rotUrd105 || 0),
+          estopaAzulPct: Number(dataTecelagem.month?.estopaAzulPct || 0),
+          metaAcumulada: Number(dataTecelagem.month?.metaAcumulada || 0),
+          metaEfi: Number(dataTecelagem.month?.metaEfi || 0),
+          metaRt105: Number(dataTecelagem.month?.metaRt105 || 0),
+          metaRu105: Number(dataTecelagem.month?.metaRu105 || 0),
+          metaEstopaAzul: Number(dataTecelagem.month?.metaEstopaAzul || 0)
+        }
+      }
+      console.log(`🟢 TECELAGEM cargados - Día: ${tecelagemData.value.day.metros} m, Efi: ${tecelagemData.value.day.eficiencia.toFixed(1)}%`)
+      console.log(`🟢 TECELAGEM cargados - Mes: ${tecelagemData.value.month.metros} m, Efi: ${tecelagemData.value.month.eficiencia.toFixed(1)}%`)
+      console.log(`🟢 TECELAGEM Est. Azul - Día: ${tecelagemData.value.day.estopaAzulPct}, Mes: ${tecelagemData.value.month.estopaAzulPct}`)
+    } else {
+      console.warn('⚠️ No se pudieron cargar datos de TECELAGEM')
+      tecelagemData.value = {
+        day: { metros: 0, eficiencia: 0, rotTra105: 0, rotUrd105: 0, estopaAzulPct: 0, meta: 0, metaEfi: 0, metaRt105: 0, metaRu105: 0, metaEstopaAzul: 0 },
+        month: { metros: 0, eficiencia: 0, rotTra105: 0, rotUrd105: 0, estopaAzulPct: 0, metaAcumulada: 0, metaEfi: 0, metaRt105: 0, metaRu105: 0, metaEstopaAzul: 0 }
+      }
+    }
+    
+    // Cargar datos de ACABAMENTO (Integrada - MAQUINA 165001)
+    const resAcabamento = await fetch(
+      `${API_URL}/produccion/acabamento-resumen?date=${dateToUse}&monthStart=${monthStart}&monthEnd=${monthEnd}`
+    )
+    
+    if (resAcabamento.ok) {
+      const dataAcabamento = await resAcabamento.json()
+      acabamentoData.value = {
+        day: {
+          metros: Number(dataAcabamento.day?.metros || 0),
+          encUrdPct: Number(dataAcabamento.day?.encUrdPct || 0),
+          meta: Number(dataAcabamento.day?.meta || 0),
+          metaEncUrd: Number(dataAcabamento.day?.metaEncUrd || -1.5)
+        },
+        month: {
+          metros: Number(dataAcabamento.month?.metros || 0),
+          encUrdPct: Number(dataAcabamento.month?.encUrdPct || 0),
+          metaAcumulada: Number(dataAcabamento.month?.metaAcumulada || 0),
+          metaEncUrd: Number(dataAcabamento.month?.metaEncUrd || -1.5)
+        }
+      }
+      console.log(`🟣 ACABAMENTO cargados - Día: ${acabamentoData.value.day.metros} m, ENC URD: ${acabamentoData.value.day.encUrdPct.toFixed(2)}%`)
+      console.log(`🟣 ACABAMENTO cargados - Mes: ${acabamentoData.value.month.metros} m, ENC URD: ${acabamentoData.value.month.encUrdPct.toFixed(2)}%`)
+    } else {
+      console.warn('⚠️ No se pudieron cargar datos de ACABAMENTO')
+      acabamentoData.value = {
+        day: { metros: 0, encUrdPct: 0, meta: 0, metaEncUrd: -1.5 },
+        month: { metros: 0, encUrdPct: 0, metaAcumulada: 0, metaEncUrd: -1.5 }
+      }
     }
     
     if (Array.isArray(dataCalidad)) {
@@ -1291,7 +1883,19 @@ function renderChart() {
   grid-template-columns:
     32px 22px 42px 22px 21px 21px 21px 21px 21px 21px 22px 22px 22px 22px 22px 22px;
   grid-template-rows:
-    32px 32px 31px 31px 31px 31px 31px 31px 33px 31px 33px 31px 31px 31px 31px;
+    32px 32px 31px 31px 31px 31px 31px 31px 33px 31px 33px 31px 31px 31px 31px 31px 31px 31px 31px 31px 31px 31px;
+  width: max-content;
+  font-family: Verdana, sans-serif;
+  font-size: 10pt;
+  line-height: 1.1;
+  border-top: 1px solid #0C769E;
+  border-left: 1px solid #0C769E;
+}
+
+.excel-grid-debug {
+  display: grid;
+  grid-template-columns: 40px 80px 80px 80px;
+  grid-template-rows: 26px;
   width: max-content;
   font-family: Verdana, sans-serif;
   font-size: 10pt;
@@ -1311,6 +1915,16 @@ function renderChart() {
   text-align: center;
   color: #000000;
   background: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Clase para celdas que permiten quiebre de texto */
+.excel-cell.wrap-text {
+  white-space: normal !important;
+  word-break: break-word;
+  line-height: 1.0;
+  overflow: visible;
 }
 
 .quality-card ::-webkit-scrollbar {
@@ -1754,5 +2368,52 @@ function renderChart() {
 
 .cell-H15 {
   border-right: 2px solid #0C769E !important;
+}
+
+/* Borde grueso entre Sec/INDIGO y Variable */
+.cell-B16 {
+  border-right: 1.5px solid #0C769E !important;
+}
+
+.cell-C16,
+.cell-C17,
+.cell-C18,
+.cell-C19 {
+  border-left: 1.5px solid #0C769E !important;
+}
+
+/* Borde grueso izquierdo en Sob./Fal. Mes */
+.cell-P16,
+.cell-P17,
+.cell-P18,
+.cell-P19 {
+  border-left: 1.5px solid #0C769E !important;
+}
+
+
+/* Borde grueso entre TECELAGEM y Variable */
+.cell-C20,
+.cell-C21,
+.cell-C22,
+.cell-C23,
+.cell-C24 {
+  border-left: 1.5px solid #0C769E !important;
+}
+
+/* Borde grueso izquierdo en Sob./Fal. Mes (TECELAGEM) */
+.cell-P20,
+.cell-P21,
+.cell-P22,
+.cell-P23,
+.cell-P24 {
+  border-left: 1.5px solid #0C769E !important;
+}
+
+/* Evitar quiebre de línea en celdas Variable de TECELAGEM */
+.cell-C21,
+.cell-C22,
+.cell-C23,
+.cell-C24 {
+  white-space: nowrap !important;
 }
 </style>
