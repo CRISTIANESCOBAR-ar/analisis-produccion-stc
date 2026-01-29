@@ -368,7 +368,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 14, colIndex: 10, colSpan: 4, rowSpan: 1, text: fmtPct2(indigoData.month.rot103), bgColor: '#DAE9F8',
       color: indigoData.month.rot103 <= indigoMetas.rot103 ? COLORS.green : COLORS.red },
     { rowIndex: 14, colIndex: 14, colSpan: 3, rowSpan: 1, 
-      text: fmtSign(indigoMetas.rot103 - indigoData.month.rot103), bgColor: '#DAE9F8',
+      text: fmtSign(indigoData.month.rot103 - indigoMetas.rot103, 2), bgColor: '#DAE9F8',
       color: (indigoMetas.rot103 - indigoData.month.rot103) >= 0 ? COLORS.green : COLORS.red },
 
     { rowIndex: 15, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Est. Azul %', bgColor: '#DAE9F8' },
@@ -378,7 +378,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 15, colIndex: 10, colSpan: 4, rowSpan: 1, text: fmtPct2(estopaAzulData.month.porcentaje), bgColor: '#DAE9F8',
       color: estopaAzulData.month.porcentaje <= indigoMetas.estopaAzul ? COLORS.green : COLORS.red },
     { rowIndex: 15, colIndex: 14, colSpan: 3, rowSpan: 1, 
-      text: fmtSign(indigoMetas.estopaAzul - estopaAzulData.month.porcentaje), bgColor: '#DAE9F8',
+      text: fmtSign(estopaAzulData.month.porcentaje - indigoMetas.estopaAzul, 2), bgColor: '#DAE9F8',
       color: (indigoMetas.estopaAzul - estopaAzulData.month.porcentaje) >= 0 ? COLORS.green : COLORS.red },
 
     // TECELAGEM (filas 16-20)
@@ -400,7 +400,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 17, colIndex: 10, colSpan: 4, rowSpan: 1, text: fmtPct1(tecelagemData.month.eficiencia),
       color: tecelagemData.month.eficiencia >= tecelagemData.month.metaEfi ? COLORS.green : COLORS.red },
     { rowIndex: 17, colIndex: 14, colSpan: 3, rowSpan: 1, 
-      text: fmtSign(tecelagemData.month.eficiencia - tecelagemData.month.metaEfi),
+      text: fmtSign(tecelagemData.month.eficiencia - tecelagemData.month.metaEfi, 1),
       color: (tecelagemData.month.eficiencia - tecelagemData.month.metaEfi) >= 0 ? COLORS.green : COLORS.red },
 
     { rowIndex: 18, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Rot. TRA 10⁵' },
@@ -410,7 +410,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 18, colIndex: 10, colSpan: 4, rowSpan: 1, text: fmtPct1(tecelagemData.month.rotTra105),
       color: tecelagemData.month.rotTra105 <= tecelagemData.month.metaRt105 ? COLORS.green : COLORS.red },
     { rowIndex: 18, colIndex: 14, colSpan: 3, rowSpan: 1, 
-      text: fmtSign(tecelagemData.month.rotTra105 - tecelagemData.month.metaRt105),
+      text: fmtSign(tecelagemData.month.rotTra105 - tecelagemData.month.metaRt105, 1),
       color: (tecelagemData.month.metaRt105 - tecelagemData.month.rotTra105) >= 0 ? COLORS.green : COLORS.red },
 
     { rowIndex: 19, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Rot. URD 10⁵' },
@@ -420,7 +420,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 19, colIndex: 10, colSpan: 4, rowSpan: 1, text: fmtPct1(tecelagemData.month.rotUrd105),
       color: tecelagemData.month.rotUrd105 <= tecelagemData.month.metaRu105 ? COLORS.green : COLORS.red },
     { rowIndex: 19, colIndex: 14, colSpan: 3, rowSpan: 1, 
-      text: fmtSign(tecelagemData.month.rotUrd105 - tecelagemData.month.metaRu105),
+      text: fmtSign(tecelagemData.month.rotUrd105 - tecelagemData.month.metaRu105, 1),
       color: (tecelagemData.month.metaRu105 - tecelagemData.month.rotUrd105) >= 0 ? COLORS.green : COLORS.red },
 
     { rowIndex: 20, colIndex: 2, colSpan: 2, rowSpan: 1, text: 'Est. Azul %' },
@@ -430,7 +430,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 20, colIndex: 10, colSpan: 4, rowSpan: 1, text: fmtPct1(tecelagemData.month.estopaAzulPct),
       color: tecelagemData.month.estopaAzulPct <= tecelagemData.month.metaEstopaAzul ? COLORS.green : COLORS.red },
     { rowIndex: 20, colIndex: 14, colSpan: 3, rowSpan: 1, 
-      text: fmtSign(tecelagemData.month.metaEstopaAzul - tecelagemData.month.estopaAzulPct),
+      text: fmtSign(tecelagemData.month.metaEstopaAzul - tecelagemData.month.estopaAzulPct, 1),
       color: (tecelagemData.month.metaEstopaAzul - tecelagemData.month.estopaAzulPct) >= 0 ? COLORS.green : COLORS.red },
 
     // ACABAMENTO (filas 21-22)
@@ -627,6 +627,26 @@ function renderCell(ctx, cell) {
       ctx.lineTo(x + width, y + height)
       ctx.stroke()
     }
+  }
+  
+  // Borde superior de 3px en la primera fila de TECELAGEM (fila 16)
+  if (cell.rowIndex === 16) {
+    ctx.strokeStyle = COLORS.borderColor
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + width, y)
+    ctx.stroke()
+  }
+  
+  // Borde inferior de 3px en la última fila de TECELAGEM (fila 20)
+  if (cell.rowIndex === 20) {
+    ctx.strokeStyle = COLORS.borderColor
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(x, y + height)
+    ctx.lineTo(x + width, y + height)
+    ctx.stroke()
   }
 }
 

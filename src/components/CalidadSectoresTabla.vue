@@ -1,126 +1,10 @@
 <template>
-  <div class="w-full h-full px-2 md:px-4 py-3">
-    <div class="flex flex-col gap-2 h-full">
-      <!-- Header con fecha y botón -->
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="space-y-0.5">
-          <h1 class="text-xl font-bold text-slate-800">Metros revisados por sector</h1>
-          <p class="text-xs text-slate-500">Datos en tiempo real desde la base de datos</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold uppercase text-slate-500">Fecha</label>
-          <div class="custom-datepicker" ref="datepickerRef">
-            <input 
-              type="text" 
-              :value="displayDate" 
-              class="datepicker-input"
-              placeholder="Selecciona una fecha"
-              @click="toggleCalendar"
-              @keydown.left.prevent="cambiarFecha(-1)"
-              @keydown.right.prevent="cambiarFecha(1)"
-              @blur="handleBlur"
-              readonly
-            />
-            <span class="calendar-icon" @click="toggleCalendar">📅</span>
-            <div v-if="showCalendar" class="calendar-dropdown">
-              <div class="calendar-header">
-                <button class="calendar-nav-btn" @click.stop="changeMonth(-1)">&lt;</button>
-                <div class="calendar-selects">
-                  <select 
-                    :value="calendarMonth" 
-                    @change="updateMonth" 
-                    @click.stop
-                    class="calendar-select"
-                  >
-                    <option v-for="(month, index) in monthNames" :key="index" :value="index">
-                      {{ month }}
-                    </option>
-                  </select>
-                  <select 
-                    :value="calendarYear" 
-                    @change="updateYear" 
-                    @click.stop
-                    class="calendar-select"
-                  >
-                    <option v-for="year in years" :key="year" :value="year">
-                      {{ year }}
-                    </option>
-                  </select>
-                </div>
-                <button class="calendar-nav-btn" @click.stop="changeMonth(1)">&gt;</button>
-              </div>
-              <div class="calendar-weekdays">
-                <span v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">{{ day }}</span>
-              </div>
-              <div class="calendar-days">
-                <button 
-                  v-for="day in calendarDays" 
-                  :key="day.key"
-                  :class="['calendar-day', {
-                    'other-month': day.otherMonth,
-                    'selected': day.selected,
-                    'today': day.today
-                  }]"
-                  @click.stop="selectDate(day)"
-                  :disabled="day.otherMonth"
-                >
-                  {{ day.day }}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="flex gap-1.5">
-            <button 
-              ref="prevMonthBtnRef"
-              class="inline-flex items-center justify-center px-2.5 py-1 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded-md text-sm font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150 shadow-sm" 
-              @click="saltarMes(-1)" 
-              @mousedown.prevent
-              tabindex="-1"
-              :disabled="loading"
-            >&lt;&lt;</button>
-            <button 
-              class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm" 
-              @click="cambiarFecha(-1)" 
-              @mousedown.prevent
-              tabindex="-1"
-              :disabled="loading"
-            >&lt;</button>
-            <button 
-              class="inline-flex items-center justify-center px-2 py-1 border border-slate-200 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors duration-150 shadow-sm" 
-              @click="cambiarFecha(1)" 
-              @mousedown.prevent
-              tabindex="-1"
-              :disabled="loading"
-            >&gt;</button>
-            <button 
-              ref="nextMonthBtnRef"
-              class="inline-flex items-center justify-center px-2.5 py-1 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded-md text-sm font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150 shadow-sm" 
-              @click="saltarMes(1)" 
-              @mousedown.prevent
-              tabindex="-1"
-              :disabled="loading"
-            >&gt;&gt;</button>
-          </div>
-          <button
-            class="px-2 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60"
-            :disabled="loading"
-            @click="loadData"
-          >
-            {{ loading ? '⟳' : '↻' }}
-          </button>
-          <button
-            class="px-2 py-1 bg-slate-600 text-white rounded text-xs font-semibold hover:bg-slate-700 transition-colors"
-            @click="showDebugModal = true"
-          >
-            Ver celda
-          </button>
-        </div>
-      </div>
-
+  <div class="w-full h-screen px-2 md:px-4 py-3 flex flex-col">
+    <div class="flex flex-col gap-2 flex-1 min-h-0">
       <!-- Layout con Tabla y Gráfico -->
       <div class="flex gap-3 flex-1 min-h-0">
         <!-- Tabla fija estilo Excel -->
-        <div class="quality-card flex-1 min-h-0 shadow border border-slate-200 rounded overflow-hidden flex flex-col relative" style="max-width: 500px;">
+        <div class="quality-card shadow border border-slate-200 rounded overflow-hidden flex flex-col relative" style="width: fit-content; flex: 0 0 auto;">
         <!-- Overlay de carga -->
         <div v-if="loading" class="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center z-50 rounded transition-all duration-300">
           <div class="flex flex-col items-center gap-4 bg-white/90 px-10 py-8 rounded-2xl shadow-2xl border border-blue-100">
@@ -137,32 +21,111 @@
           </div>
         </div>
         
-        <div class="flex items-center justify-between bg-sky-900 text-white px-2 py-1.5 text-xs font-semibold">
-          <span>{{ formattedDate }}</span>
-          <div class="flex items-center gap-2">
-            <span>Exportar:</span>
+        <div class="flex items-center justify-between bg-gray-100 text-slate-800 px-2 py-1.5 text-xs font-semibold border-b border-slate-200">
+          <div class="flex items-center gap-1.5">
+            <div class="custom-datepicker" ref="datepickerRef">
+              <input
+                ref="datepickerInputRef" 
+                type="text" 
+                :value="displayDate" 
+                class="datepicker-input-compact"
+                placeholder="Selecciona una fecha"
+                @click="toggleCalendar"
+                @keydown.left.prevent="cambiarFecha(-1)"
+                @keydown.right.prevent="cambiarFecha(1)"
+                @blur="handleBlur"
+                readonly
+              />
+              <span class="calendar-icon" @click="toggleCalendar">📅</span>
+              <div v-if="showCalendar" class="calendar-dropdown">
+                <div class="calendar-header">
+                  <button class="calendar-nav-btn" @click.stop="changeMonth(-1)">&lt;</button>
+                  <div class="calendar-selects">
+                    <select 
+                      :value="calendarMonth" 
+                      @change="updateMonth" 
+                      @click.stop
+                      class="calendar-select"
+                    >
+                      <option v-for="(month, index) in monthNames" :key="index" :value="index">
+                        {{ month }}
+                      </option>
+                    </select>
+                    <select 
+                      :value="calendarYear" 
+                      @change="updateYear" 
+                      @click.stop
+                      class="calendar-select"
+                    >
+                      <option v-for="year in years" :key="year" :value="year">
+                        {{ year }}
+                      </option>
+                    </select>
+                  </div>
+                  <button class="calendar-nav-btn" @click.stop="changeMonth(1)">&gt;</button>
+                </div>
+                <div class="calendar-weekdays">
+                  <span v-for="day in ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']" :key="day">{{ day }}</span>
+                </div>
+                <div class="calendar-days">
+                  <button 
+                    v-for="day in calendarDays" 
+                    :key="day.key"
+                    :class="['calendar-day', {
+                      'other-month': day.otherMonth,
+                      'selected': day.selected,
+                      'today': day.today
+                    }]"
+                    @click.stop="selectDate(day)"
+                    :disabled="day.otherMonth"
+                  >
+                    {{ day.day }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button 
+              ref="prevMonthBtnRef"
+              class="inline-flex items-center justify-center px-1.5 py-1.5 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded text-xs font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150" 
+              @click="saltarMes(-1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              :disabled="loading"
+            >&lt;&lt;</button>
             <button
-              class="px-2 py-0.5 bg-sky-700 hover:bg-sky-600 text-white rounded text-[10px] font-medium transition-colors flex items-center gap-1"
-              @click="copyTableToClipboard"
-              title="Copiar tabla como texto para pegar en Excel"
-            >
-              📋 Texto
-            </button>
+              ref="prevDayBtnRef" 
+              class="inline-flex items-center justify-center px-1.5 py-1.5 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded text-xs font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150" 
+              @click="cambiarFecha(-1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              :disabled="loading"
+            >&lt;</button>
             <button
-              class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium transition-colors flex items-center gap-1"
-              @click="copyTableAsImage"
-              title="Copiar tabla como imagen al portapapeles"
-            >
-              📷 Imagen
-            </button>
-            <button
-              class="px-2 py-0.5 bg-green-700 hover:bg-green-600 text-white rounded text-[10px] font-medium transition-colors flex items-center gap-1"
-              @click="downloadExcelFormatted"
-              title="Descargar archivo Excel formateado"
-            >
-              📊 Excel
-            </button>
+              ref="nextDayBtnRef" 
+              class="inline-flex items-center justify-center px-1.5 py-1.5 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded text-xs font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150" 
+              @click="cambiarFecha(1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              :disabled="loading"
+            >&gt;</button>
+            <button 
+              ref="nextMonthBtnRef"
+              class="inline-flex items-center justify-center px-1.5 py-1.5 border border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-700 rounded text-xs font-bold hover:from-slate-100 hover:to-slate-200 transition-all duration-150" 
+              @click="saltarMes(1)" 
+              @mousedown.prevent
+              tabindex="-1"
+              :disabled="loading"
+            >&gt;&gt;</button>
           </div>
+          <button
+            ref="copyTableBtnRef" 
+            @click="copyTableAsImage"
+            class="inline-flex items-center justify-center w-8 h-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors duration-150"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
         </div>
         <div ref="excelTableRef" class="overflow-auto flex-1 min-h-0 excel-wrapper">
           <div class="excel-grid">
@@ -177,22 +140,25 @@
             </div>
           </div>
         </div>
-        <div v-if="fetchError" class="px-2 py-1 text-xs text-amber-700 bg-amber-50 border-t border-amber-200">
-          ⚠️ {{ fetchError }}
-        </div>
         </div>
 
         <!-- Gráfico de Eficiencias y Roturas -->
-        <div ref="chartContainerRef" class="flex-1 min-h-0 shadow border border-slate-200 rounded bg-white flex flex-col">
-          <div class="flex items-center justify-between bg-gray-100 text-slate-800 px-2 py-2.5 text-xs font-semibold border-b border-slate-200 chart-header">
-            <span>Eficiencias y Roturas de Trama 105 - Tejeduría</span>
-            <div class="flex items-center gap-2">
-              <span>{{ chartMonthYear }}</span>
-              <span>-</span>
-              <span>Trama:</span>
-              <select 
+        <div ref="chartContainerRef" class="flex-1 min-h-0 shadow border border-slate-200 rounded bg-white flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between bg-gray-100 text-slate-800 px-2 py-1.5 text-xs font-semibold border-b border-slate-200 chart-header flex-shrink-0">
+            <!-- Título completo para pantallas grandes -->
+            <span class="whitespace-nowrap hidden xl:block">Eficiencias y Roturas de Trama 105 - Tejeduría</span>
+            <!-- Título medio para pantallas medianas -->
+            <span class="whitespace-nowrap hidden lg:block xl:hidden">Efic. y RT105 - Tejeduría</span>
+            <!-- Título compacto con mes para pantallas pequeñas -->
+            <span class="whitespace-nowrap text-xs lg:hidden">Efic. y RT105 - {{ chartMonthYear }}</span>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <!-- Mostrar mes solo en pantallas grandes y medianas -->
+              <span class="hidden lg:inline">{{ chartMonthYear }}</span>
+              <span class="hidden lg:inline">-</span>
+              <select
+                ref="tramaSelectRef" 
                 v-model="selectedTrama" 
-                class="px-2 py-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="px-2 py-1 text-xs border border-slate-300 rounded bg-white text-slate-800 font-normal hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option v-for="trama in availableTramas" :key="trama" :value="trama">
                   {{ trama }}
@@ -288,7 +254,12 @@ const excelTableRef = ref(null)
 // Refs para tooltips
 const prevMonthBtnRef = ref(null)
 const nextMonthBtnRef = ref(null)
+const prevDayBtnRef = ref(null)
+const nextDayBtnRef = ref(null)
 const copyBtnRef = ref(null)
+const copyTableBtnRef = ref(null)
+const tramaSelectRef = ref(null)
+const datepickerInputRef = ref(null)
 
 // Datepicker state
 const showCalendar = ref(false)
@@ -332,7 +303,13 @@ const calendarDays = computed(() => {
   const lastDay = new Date(calendarYear.value, calendarMonth.value + 1, 0)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const selectedDate_val = selectedDate.value ? new Date(selectedDate.value) : null
+  
+  // Parsear fecha seleccionada manualmente para evitar problemas de zona horaria
+  let selectedDate_val = null
+  if (selectedDate.value) {
+    const [year, month, day] = selectedDate.value.split('-').map(Number)
+    selectedDate_val = new Date(year, month - 1, day)
+  }
   
   // Add days from previous month
   for (let i = 0; i < firstDay.getDay(); i++) {
@@ -518,6 +495,22 @@ onMounted(() => {
         arrow: true
       })
     }
+    if (prevDayBtnRef.value) {
+      tippy(prevDayBtnRef.value, {
+        content: 'Día anterior',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
+    if (nextDayBtnRef.value) {
+      tippy(nextDayBtnRef.value, {
+        content: 'Día siguiente',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
     if (nextMonthBtnRef.value) {
       tippy(nextMonthBtnRef.value, {
         content: 'Mes siguiente (último día)',
@@ -532,6 +525,31 @@ onMounted(() => {
         placement: 'bottom',
         theme: 'light-border',
         arrow: true
+      })
+    }
+    if (copyTableBtnRef.value) {
+      tippy(copyTableBtnRef.value, {
+        content: 'Copiar tabla como imagen al portapapeles',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
+    if (tramaSelectRef.value) {
+      tippy(tramaSelectRef.value, {
+        content: 'Seleccione una trama para filtrar el gráfico',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true
+      })
+    }
+    if (datepickerInputRef.value) {
+      tippy(datepickerInputRef.value, {
+        content: 'Seleccione una fecha: la tabla se calculará desde el inicio del mes hasta la fecha elegida. El gráfico se actualizará con el mismo período.',
+        placement: 'bottom',
+        theme: 'light-border',
+        arrow: true,
+        maxWidth: 280
       })
     }
   })
@@ -762,7 +780,7 @@ const excelCells = computed(() => {
     colSpan: 3, 
     rowSpan: 1,
     text: (() => {
-      const diff = indigoMetas.value.rot103 - indigoData.value.month.rot103
+      const diff = indigoData.value.month.rot103 - indigoMetas.value.rot103
       return (diff >= 0 ? '+' : '') + fmtPct2(diff)
     })(),
     color: (indigoMetas.value.rot103 - indigoData.value.month.rot103) >= 0 ? '#3C7D22' : '#FF0000',
@@ -801,7 +819,7 @@ const excelCells = computed(() => {
     colSpan: 3, 
     rowSpan: 1,
     text: (() => {
-      const diff = indigoMetas.value.estopaAzul - estopaAzulData.value.month.porcentaje
+      const diff = estopaAzulData.value.month.porcentaje - indigoMetas.value.estopaAzul
       return (diff >= 0 ? '+' : '') + fmtPct2(diff)
     })(),
     color: (indigoMetas.value.estopaAzul - estopaAzulData.value.month.porcentaje) >= 0 ? '#3C7D22' : '#FF0000',
@@ -1829,7 +1847,7 @@ async function copyChartToClipboard() {
       return
     }
 
-    console.log('📸 Capturando gráfico con header...')
+    console.log('📸 Capturando gráfico con header optimizado para WhatsApp...')
     
     const sourceCanvas = chartCanvas.value
     
@@ -1839,14 +1857,23 @@ async function copyChartToClipboard() {
     const borderWidth = 1
     const scale = 3  // Mayor escala para mejor nitidez
     
-    // Obtener dimensiones reales del canvas del gráfico
-    const chartWidth = sourceCanvas.width
-    const chartHeight = sourceCanvas.height
+    // Dimensiones optimizadas para WhatsApp/celulares modernos (relación ~1:2)
+    // Ancho más angosto y altura proporcionalmente mayor
+    const targetWidth = 600  // Ancho reducido para WhatsApp
+    const targetHeight = 1200  // Altura aumentada (relación 1:2)
+    
+    // Calcular espacio disponible para el gráfico
+    const availableWidth = targetWidth * scale - (padding * 2 * scale) - (borderWidth * 2 * scale)
+    const availableHeight = targetHeight * scale - (headerHeight * scale) - (padding * scale) - (borderWidth * 2 * scale)
+    
+    // Escalar el gráfico para llenar todo el espacio disponible (sin mantener aspecto)
+    const scaledChartWidth = availableWidth
+    const scaledChartHeight = availableHeight
     
     // Crear canvas final (con espacio para el borde)
     const tempCanvas = document.createElement('canvas')
-    tempCanvas.width = chartWidth + (padding * 2 * scale) + (borderWidth * 2 * scale)
-    tempCanvas.height = (headerHeight * scale) + chartHeight + (padding * scale) + (borderWidth * 2 * scale)
+    tempCanvas.width = targetWidth * scale
+    tempCanvas.height = targetHeight * scale
     
     const ctx = tempCanvas.getContext('2d')
     
@@ -1871,22 +1898,26 @@ async function copyChartToClipboard() {
     ctx.lineTo(tempCanvas.width - borderOffset, borderOffset + (headerHeight * scale))
     ctx.stroke()
     
-    // Textos del header
-    const fontSize = 13 * scale
+    // Textos del header (más compactos)
+    const fontSize = 11 * scale
     ctx.font = `600 ${fontSize}px Verdana, sans-serif`
     ctx.fillStyle = '#1e293b'
     ctx.textBaseline = 'middle'
     
-    // Título izquierdo
-    ctx.fillText('Eficiencias y Roturas de Trama 105 - Tejeduría', borderOffset + (padding * scale), borderOffset + (headerHeight * scale) / 2)
+    // Título (versión compacta para ancho reducido)
+    ctx.fillText('Efic. y RT105 - Tejeduría', borderOffset + (padding * scale), borderOffset + (headerHeight * scale) / 2)
     
     // Texto derecho (mes y trama)
-    const rightText = `${chartMonthYear.value} - Trama: ${selectedTrama.value}`
+    const rightText = `${chartMonthYear.value.substring(0, 3)}-${chartMonthYear.value.split(' ')[1]} | ${selectedTrama.value}`
     const rightTextWidth = ctx.measureText(rightText).width
     ctx.fillText(rightText, tempCanvas.width - rightTextWidth - borderOffset - (padding * scale), borderOffset + (headerHeight * scale) / 2)
     
-    // Dibujar el gráfico
-    ctx.drawImage(sourceCanvas, borderOffset + (padding * scale), borderOffset + (headerHeight * scale), chartWidth, chartHeight)
+    // Dibujar el gráfico ocupando todo el espacio disponible
+    const chartX = borderOffset + (padding * scale)
+    const chartY = borderOffset + (headerHeight * scale)
+    
+    // Dibujar el gráfico escalado para llenar todo el espacio
+    ctx.drawImage(sourceCanvas, chartX, chartY, scaledChartWidth, scaledChartHeight)
     
     // Mostrar toast de "copiando..."
     Toast.fire({
@@ -1901,11 +1932,11 @@ async function copyChartToClipboard() {
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': blob })
         ])
-        console.log('✅ Gráfico copiado al portapapeles')
+        console.log('✅ Gráfico copiado al portapapeles (optimizado para WhatsApp)')
         Toast.fire({
           icon: 'success',
           title: 'Gráfico copiado!',
-          text: 'Puedes pegarlo en WhatsApp, email, etc.'
+          text: 'Optimizado para WhatsApp en celulares'
         })
       } catch (err) {
         console.error('❌ Error copiando al portapapeles:', err)
@@ -2178,6 +2209,9 @@ function renderChart() {
 /* Cuadrícula estilo Excel (ancho B-O, filas 5-15 en esta primera fase) */
 .excel-wrapper {
   padding: 8px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .excel-grid {
@@ -2185,8 +2219,9 @@ function renderChart() {
   grid-template-columns:
     32px 22px 42px 22px 21px 21px 21px 21px 21px 21px 22px 22px 22px 22px 22px 22px;
   grid-template-rows:
-    32px 32px 31px 31px 31px 31px 31px 31px 33px 31px 33px 31px 31px 31px 31px 31px 31px 31px 31px 31px 31px 31px;
+    28px 27px 27px 27px 27px 27px 27px 28px 27px 28px 27px 27px 27px 27px 27px 27px 27px 27px 27px 27px 27px 27px;
   width: max-content;
+  height: max-content;
   font-family: Verdana, sans-serif;
   font-size: 10pt;
   line-height: 1.1;
@@ -2229,41 +2264,44 @@ function renderChart() {
   overflow: visible;
 }
 
+/* Scrollbar moderno y minimalista */
 .quality-card ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 .quality-card ::-webkit-scrollbar-track {
-  background: #f0f4f8;
+  background: transparent;
 }
 
 .quality-card ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
 .quality-card ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: rgba(100, 116, 139, 0.6);
 }
 
-/* Scrollbar personalizado */
-.quality-card ::-webkit-scrollbar {
+/* Scrollbar para todo el componente */
+::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.quality-card ::-webkit-scrollbar-track {
-  background: #f0f4f8;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.quality-card ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 3px;
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
-.quality-card ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
 }
 
 /* Datepicker styles */
@@ -2284,7 +2322,20 @@ function renderChart() {
   text-align: center;
 }
 
-.datepicker-input:focus {
+.datepicker-input-compact {
+  padding: 8px 28px 8px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 150px;
+  cursor: pointer;
+  background: white;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+.datepicker-input:focus,
+.datepicker-input-compact:focus {
   outline: none;
   border-color: #0078d4;
 }

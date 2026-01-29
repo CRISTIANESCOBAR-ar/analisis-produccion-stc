@@ -3308,27 +3308,25 @@ app.get('/api/calidad/sectores-resumen', async (req, res) => {
 // GET /api/produccion/eficiencia-roturas - Eficiencias y Roturas de Trama (similar al gráfico Excel)
 app.get('/api/produccion/eficiencia-roturas', async (req, res) => {
   try {
-    const params = validateQueryParams(req, ['date', 'trama']);
-    const { date, trama } = params;
+    const params = validateQueryParams(req, ['date', 'trama', 'monthStart', 'monthEnd']);
+    const { date, trama, monthStart, monthEnd } = params;
 
     if (!date) {
       return res.status(400).json({ error: 'Se requiere parámetro "date" (formato YYYY-MM-DD)' });
     }
 
-    // Calcular inicio y fin del mes de la fecha seleccionada
+    // Usar monthStart y monthEnd si están presentes, sino usar el mes completo
     const [year, month, day] = date.split('-');
-    const monthStart = `01/${month}/${year}`;  // DD/MM/YYYY
-    // Para obtener el último día: usar mes+1 con día 0 (mes debe ser number)
-    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-    const monthEnd = `${String(lastDay).padStart(2, '0')}/${month}/${year}`;  // DD/MM/YYYY
+    const startDate = monthStart || `${year}-${month}-01`;
+    const endDate = monthEnd || date;
 
-    console.log(`🔍 Consultando eficiencias y roturas para mes: ${monthStart} a ${monthEnd}, trama: ${trama || 'todas'}`);
+    console.log(`🔍 Consultando eficiencias y roturas desde ${startDate} hasta ${endDate}, trama: ${trama || 'todas'}`);
 
     // Construir filtro de trama si se especifica
     const tramaFilter = trama ? `AND "TRAMA REDUZIDA 1" = ?` : '';
     const queryParams = trama 
-      ? [month, year, trama] 
-      : [month, year];
+      ? [startDate, endDate, trama] 
+      : [startDate, endDate];
 
     // DT_BASE_PRODUCAO está en formato DD/MM/YYYY
     const sql = `
@@ -3347,15 +3345,23 @@ app.get('/api/produccion/eficiencia-roturas', async (req, res) => {
       FROM tb_PRODUCCION
       WHERE FILIAL = '05'
         AND SELETOR = 'TECELAGEM'
-        AND substr(DT_BASE_PRODUCAO, 4, 2) = ?  -- mes (MM)
-        AND substr(DT_BASE_PRODUCAO, 7, 4) = ?  -- año (YYYY)
+        AND (
+          substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          substr(DT_BASE_PRODUCAO, 1, 2)
+        ) >= ?
+        AND (
+          substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+          substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+          substr(DT_BASE_PRODUCAO, 1, 2)
+        ) <= ?
         ${tramaFilter}
       GROUP BY fecha, "TRAMA REDUZIDA 1"
       ORDER BY fecha ASC
     `;
 
     const rows = await dbAll(sql, queryParams);
-    console.log(`📊 Resultados encontrados: ${rows.length} días`);
+    console.log(`📊 Resultados encontrados: ${rows.length} días (desde ${startDate} hasta ${endDate})`);
     res.json(rows);
 
   } catch (error) {
