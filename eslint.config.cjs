@@ -44,7 +44,12 @@ module.exports = [
     },
     languageOptions: {
       ecmaVersion: 2021,
-      sourceType: 'module'
+      sourceType: 'module',
+      parser: require('vue-eslint-parser'),
+      parserOptions: {
+        ecmaVersion: 2021,
+        sourceType: 'module'
+      }
     },
     rules: {
       'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',

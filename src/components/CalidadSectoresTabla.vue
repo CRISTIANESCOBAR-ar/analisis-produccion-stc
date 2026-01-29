@@ -2555,6 +2555,7 @@ function renderChart() {
 .cell-B11,
 .cell-E11,
 .cell-H11,
+.cell-K11,
 .cell-L11,
 .cell-N11,
 .cell-P11 {
@@ -2657,11 +2658,18 @@ function renderChart() {
 .cell-B15,
 .cell-E15,
 .cell-H15,
+.cell-L15,
 .cell-N15,
 .cell-O15 {
   border-right: 1px solid #0C769E !important;
   border-bottom: 1px solid #0C769E !important;
   font-weight: 700 !important;
+}
+
+.cell-L15 {
+  background: #B5E6A2 !important;
+  color: #000000 !important;
+  font-weight: 400 !important;
 }
 
 .cell-B15 {

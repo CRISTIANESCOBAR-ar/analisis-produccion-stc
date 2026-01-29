@@ -142,13 +142,22 @@ function drawCellText(ctx, text, x, y, width, height, options = {}) {
     align = 'center',
     color = COLORS.black,
     bold = false,
-    fontSize = CONFIG.fontSize
+    fontSize = CONFIG.fontSize,
+    valign = 'middle'
   } = options
 
   ctx.save()
   ctx.fillStyle = color
   ctx.font = `${bold ? 'bold ' : ''}${fontSize}px ${CONFIG.fontFamily}`
-  ctx.textBaseline = 'middle'
+  
+  // Configurar alineación vertical
+  if (valign === 'bottom') {
+    ctx.textBaseline = 'bottom'
+  } else if (valign === 'top') {
+    ctx.textBaseline = 'top'
+  } else {
+    ctx.textBaseline = 'middle'
+  }
 
   let textX
   if (align === 'left') {
@@ -167,12 +176,27 @@ function drawCellText(ctx, text, x, y, width, height, options = {}) {
   if (lines.length > 1) {
     const lineHeight = fontSize * 1.2
     const totalHeight = lineHeight * lines.length
-    const startY = y + (height - totalHeight) / 2 + lineHeight / 2
+    let startY
+    if (valign === 'bottom') {
+      startY = y + height - totalHeight + lineHeight / 2
+    } else if (valign === 'top') {
+      startY = y + lineHeight / 2
+    } else {
+      startY = y + (height - totalHeight) / 2 + lineHeight / 2
+    }
     lines.forEach((line, i) => {
       ctx.fillText(line, textX, startY + i * lineHeight)
     })
   } else {
-    ctx.fillText(text, textX, y + height / 2)
+    let textY
+    if (valign === 'bottom') {
+      textY = y + height - CONFIG.cellPadding
+    } else if (valign === 'top') {
+      textY = y + CONFIG.cellPadding
+    } else {
+      textY = y + height / 2
+    }
+    ctx.fillText(text, textX, textY)
   }
   ctx.restore()
 }
@@ -303,7 +327,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 10, colIndex: 1, colSpan: 3, rowSpan: 1, text: 'Meta', bgColor: COLORS.white },
     { rowIndex: 10, colIndex: 4, colSpan: 3, rowSpan: 1, text: fmt(metaTargets.day), bgColor: COLORS.white },
     { rowIndex: 10, colIndex: 7, colSpan: 4, rowSpan: 1, text: fmt(metaTargets.month), bgColor: COLORS.white },
-    { rowIndex: 10, colIndex: 11, colSpan: 2, rowSpan: 2, text: 'Pts\n100m²', bgColor: '#B5E6A2' },
+    { rowIndex: 10, colIndex: 11, colSpan: 2, rowSpan: 1, text: 'Pts', bgColor: '#B5E6A2', valign: 'bottom' },
     { rowIndex: 10, colIndex: 13, colSpan: 2, rowSpan: 1, text: 'Dia', bgColor: '#B5E6A2' },
     { rowIndex: 10, colIndex: 15, colSpan: 2, rowSpan: 1, text: 'Mes', bgColor: '#B5E6A2' },
 
@@ -313,6 +337,7 @@ function buildCellDefinitions(data) {
       color: differences.day >= 0 ? COLORS.green : COLORS.red },
     { rowIndex: 11, colIndex: 7, colSpan: 4, rowSpan: 1, text: fmtSign(differences.month), bold: true, bgColor: COLORS.white,
       color: differences.month >= 0 ? COLORS.green : COLORS.red },
+    { rowIndex: 11, colIndex: 11, colSpan: 2, rowSpan: 1, text: '100m²', bgColor: '#B5E6A2', valign: 'top' },
     { rowIndex: 11, colIndex: 13, colSpan: 2, rowSpan: 1, text: fmtPct2(pts100m2.day), bold: true, bgColor: COLORS.white },
     { rowIndex: 11, colIndex: 15, colSpan: 2, rowSpan: 1, text: fmtPct2(pts100m2.month), bold: true, bgColor: COLORS.white },
 
@@ -322,7 +347,7 @@ function buildCellDefinitions(data) {
     { rowIndex: 12, colIndex: 4, colSpan: 3, rowSpan: 1, text: 'Meta Día', bold: true, bgColor: '#A6C9EC' },
     { rowIndex: 12, colIndex: 7, colSpan: 3, rowSpan: 1, text: 'Prod. Día', bold: true, bgColor: '#A6C9EC' },
     { rowIndex: 12, colIndex: 10, colSpan: 4, rowSpan: 1, text: 'Acumulado', bold: true, bgColor: '#A6C9EC' },
-    { rowIndex: 12, colIndex: 14, colSpan: 3, rowSpan: 1, text: 'Sob./Fal. Mes', bold: true, bgColor: '#A6C9EC' },
+    { rowIndex: 12, colIndex: 14, colSpan: 3, rowSpan: 1, text: 'Sob./Fal.\nMes', bold: true, bgColor: '#A6C9EC' },
 
     // INDIGO (filas 13-15)
     { rowIndex: 13, colIndex: 1, colSpan: 1, rowSpan: 3, text: 'INDIGO', vertical: true, bgColor: '#DAE9F8' },
@@ -452,7 +477,8 @@ function renderCell(ctx, cell) {
       align: cell.align || 'center',
       color: cell.color || COLORS.black,
       bold: cell.bold || false,
-      fontSize: CONFIG.fontSize
+      fontSize: CONFIG.fontSize,
+      valign: cell.valign || 'middle'
     }
     
     if (cell.vertical) {
@@ -465,7 +491,38 @@ function renderCell(ctx, cell) {
   // Bordes básicos
   ctx.strokeStyle = COLORS.borderColor
   ctx.lineWidth = 1
-  ctx.strokeRect(x, y, width, height)
+  
+  // Para las celdas de Pts (fila 10, col 11-12) y 100m² (fila 11, col 11-12), 
+  // dibujar bordes personalizados sin línea entre ellas
+  if (cell.rowIndex === 10 && cell.colIndex === 11) {
+    // Celda "Pts": dibujar solo bordes superior, izquierdo y derecho
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + width, y) // superior
+    ctx.moveTo(x, y)
+    ctx.lineTo(x, y + height) // izquierdo
+    ctx.moveTo(x + width, y)
+    ctx.lineTo(x + width, y + height) // derecho
+    ctx.stroke()
+  } else if (cell.rowIndex === 11 && cell.colIndex === 11) {
+    // Celda "100m²": dibujar solo bordes inferior, izquierdo y derecho (derecho más grueso)
+    ctx.beginPath()
+    ctx.moveTo(x, y + height)
+    ctx.lineTo(x + width, y + height) // inferior
+    ctx.moveTo(x, y)
+    ctx.lineTo(x, y + height) // izquierdo
+    ctx.stroke()
+    // Borde derecho más grueso
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(x + width, y)
+    ctx.lineTo(x + width, y + height) // derecho
+    ctx.stroke()
+    ctx.lineWidth = 1 // Restaurar grosor
+  } else {
+    // Para el resto de celdas, dibujar borde completo
+    ctx.strokeRect(x, y, width, height)
+  }
   
   // Borde inferior más grueso para la fila 2 (encabezados)
   if (cell.rowIndex === 2) {
@@ -529,8 +586,8 @@ function renderCell(ctx, cell) {
     }
   }
   
-  // Borde inferior negro de 3px para fila 10, columnas 1-10
-  if (cell.rowIndex === 10 && cell.colIndex >= 1 && cell.colIndex <= 10) {
+  // Borde inferior negro de 4px para toda la fila 10 (Meta) excepto columnas 11-12
+  if (cell.rowIndex === 10 && !(cell.colIndex >= 11 && cell.colIndex <= 12)) {
     ctx.strokeStyle = COLORS.black
     ctx.lineWidth = 4
     ctx.beginPath()
@@ -541,6 +598,16 @@ function renderCell(ctx, cell) {
   
   // Borde superior 3px para fila 10, columnas 11-16
   if (cell.rowIndex === 10 && cell.colIndex >= 11 && cell.colIndex <= 16) {
+    ctx.strokeStyle = COLORS.borderColor
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + width, y)
+    ctx.stroke()
+  }
+  
+  // Borde superior 2px para fila 11, columnas 13-16
+  if (cell.rowIndex === 11 && cell.colIndex >= 13 && cell.colIndex <= 16) {
     ctx.strokeStyle = COLORS.borderColor
     ctx.lineWidth = 2
     ctx.beginPath()
