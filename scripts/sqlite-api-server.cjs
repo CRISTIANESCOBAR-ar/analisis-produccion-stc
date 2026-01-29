@@ -2643,49 +2643,49 @@ app.get('/api/produccion/tecelagem-resumen', async (req, res) => {
 
     // =====================================================================
     // ESTOPA AZUL TEJEDURÍA - DÍA
-    // Usa producción INDIGO para peso, residuos de tb_RESIDUOS_INDIGO con SUBPRODUTO = 1746437
-    // Fórmula: ESTOPA_AZUL / (SUM(METROS * PESO_MANTA) / 1000 * 0.98) * 100
+    // Usa producción TECELAGEM con PESO_MANTA y ENC#TEC#URDUME de tb_FICHAS
+    // Fórmula: ESTOPA_AZUL / SUM(METRAGEM * ((100 + ENC_URD) / 100) * (PESO_MANTA / 1000)) * 100
+    // Residuos de tb_RESIDUOS_POR_SECTOR con SUBPRODUTO = 1785582
     // =====================================================================
     const sqlEstopaDiaPeso = `
-      WITH METROS_BASE AS (
+      WITH TEJ AS (
         SELECT
+          ARTIGO AS ARTICULO,
           [BASE URDUME] AS BASE,
-          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METRAGEM
         FROM tb_PRODUCCION
         WHERE (
           SUBSTR(DT_BASE_PRODUCAO, 7, 4) || '-' || 
           SUBSTR(DT_BASE_PRODUCAO, 4, 2) || '-' || 
           SUBSTR(DT_BASE_PRODUCAO, 1, 2)
         ) = ?
-          AND SELETOR = 'INDIGO'
-        GROUP BY [BASE URDUME]
+          AND SELETOR = 'TECELAGEM'
+        GROUP BY ARTIGO, [BASE URDUME]
       ),
-      BASES AS (
-        SELECT DISTINCT
-          URDUME AS ARTIGO,
-          CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL) AS PESO_MANTA
+      FIC AS (
+        SELECT
+          [ARTIGO CODIGO] AS ARTICULO,
+          CAST(REPLACE(REPLACE([CONS#URD/m], '.', ''), ',', '.') AS REAL) AS PESO_MANTA,
+          CAST(REPLACE(REPLACE([ENC#TEC#URDUME], '.', ''), ',', '.') AS REAL) AS ENC_URD
         FROM tb_FICHAS
-        WHERE URDUME != '' 
-          AND [CONS#URD/m] != '' 
-          AND [CONS#URD/m] != '0'
-          AND [CONS#URD/m] != '0,00'
+        WHERE [ARTIGO CODIGO] IS NOT NULL AND [ARTIGO CODIGO] != ''
       )
       SELECT
-        SUM(mb.METROS * COALESCE(b.PESO_MANTA, 0)) / 1000 * 0.98 AS SUMA_PRODUCTO
-      FROM METROS_BASE mb
-      LEFT JOIN BASES b ON mb.BASE = b.ARTIGO
+        SUM(TEJ.METRAGEM * ((100 + COALESCE(FIC.ENC_URD, 0)) / 100) * (COALESCE(FIC.PESO_MANTA, 0) / 1000)) AS PESO_URD
+      FROM TEJ
+      LEFT JOIN FIC ON TEJ.ARTICULO = FIC.ARTICULO
     `;
 
     const sqlEstopaDiaResiduo = `
       SELECT
         SUM(CAST(REPLACE(REPLACE([PESO LIQUIDO (KG)], '.', ''), ',', '.') AS REAL)) AS ESTOPA
-      FROM tb_RESIDUOS_INDIGO
+      FROM tb_RESIDUOS_POR_SECTOR
       WHERE (
         SUBSTR(DT_MOV, 7, 4) || '-' || 
         SUBSTR(DT_MOV, 4, 2) || '-' || 
         SUBSTR(DT_MOV, 1, 2)
       ) = ?
-        AND SUBPRODUTO = 1746437
+        AND SUBPRODUTO = 1785582
     `;
 
     // =====================================================================
@@ -2750,12 +2750,13 @@ app.get('/api/produccion/tecelagem-resumen', async (req, res) => {
     const resultEstopaMesPeso = await dbGet(sqlEstopaMesPeso, [mesInicio, mesFin]);
     const resultEstopaMesResiduo = await dbGet(sqlEstopaMesResiduo, [mesInicio, mesFin]);
 
-    // Calcular porcentaje de estopa azul
-    // NOTA: Para TECELAGEM, Est. Azul % del día está vacío en Excel - solo se calcula mensualmente
+    // Calcular porcentaje de estopa azul para día y mes
+    const pesoProductoDia = resultEstopaDiaPeso?.PESO_URD || 0;
     const pesoProductoMes = resultEstopaMesPeso?.PESO_URD || 0;
-    const estopaAzulPctDia = 0; // No se calcula para el día en TECELAGEM
+    const estopaAzulPctDia = pesoProductoDia > 0 ? ((resultEstopaDiaResiduo?.ESTOPA || 0) / pesoProductoDia) * 100 : 0;
     const estopaAzulPctMes = pesoProductoMes > 0 ? ((resultEstopaMesResiduo?.ESTOPA || 0) / pesoProductoMes) * 100 : 0;
 
+    console.log(`✅ TECELAGEM Estopa Azul - Día: Peso=${pesoProductoDia}, Estopa=${resultEstopaDiaResiduo?.ESTOPA || 0}, %=${estopaAzulPctDia.toFixed(2)}`);
     console.log(`✅ TECELAGEM Estopa Azul - Mes: Peso=${pesoProductoMes}, Estopa=${resultEstopaMesResiduo?.ESTOPA || 0}, %=${estopaAzulPctMes.toFixed(2)}`);
 
     console.log(`✅ TECELAGEM resumen - Día: ${resultDia?.METROS || 0} m, Efi: ${resultDia?.EFICIENCIA || 0}%`);

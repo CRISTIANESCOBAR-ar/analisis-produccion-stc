@@ -1,25 +1,26 @@
 <template>
-  <div class="w-full h-screen px-2 md:px-4 py-3 flex flex-col">
+  <div class="w-full h-screen px-2 md:px-4 py-3 flex flex-col relative">
+    <!-- Overlay de carga para toda la pantalla -->
+    <div v-if="loading" class="fixed inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] transition-all duration-300">
+      <div class="flex flex-col items-center gap-4 bg-white/90 px-10 py-8 rounded-2xl shadow-2xl border border-blue-100">
+        <div class="relative">
+          <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-50 border-t-blue-600"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="h-8 w-8 bg-blue-600 rounded-full animate-pulse opacity-10"></div>
+          </div>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <span class="text-slate-500 font-medium tracking-wider uppercase text-[10px]">Cargando datos de</span>
+          <span class="text-xl text-slate-800 font-bold">{{ displayDate }}</span>
+        </div>
+      </div>
+    </div>
+    
     <div class="flex flex-col gap-2 flex-1 min-h-0">
       <!-- Layout con Tabla y Gráfico -->
       <div class="flex gap-3 flex-1 min-h-0">
         <!-- Tabla fija estilo Excel -->
         <div class="quality-card shadow border border-slate-200 rounded overflow-hidden flex flex-col relative" style="width: fit-content; flex: 0 0 auto;">
-        <!-- Overlay de carga -->
-        <div v-if="loading" class="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center z-50 rounded transition-all duration-300">
-          <div class="flex flex-col items-center gap-4 bg-white/90 px-10 py-8 rounded-2xl shadow-2xl border border-blue-100">
-            <div class="relative">
-              <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-50 border-t-blue-600"></div>
-              <div class="absolute inset-0 flex items-center justify-center">
-                <div class="h-8 w-8 bg-blue-600 rounded-full animate-pulse opacity-10"></div>
-              </div>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-slate-500 font-medium tracking-wider uppercase text-[10px]">Cargando datos de</span>
-              <span class="text-xl text-slate-800 font-bold">{{ displayDate }}</span>
-            </div>
-          </div>
-        </div>
         
         <div class="flex items-center justify-between bg-gray-100 text-slate-800 px-2 py-1.5 text-xs font-semibold border-b border-slate-200">
           <div class="flex items-center gap-1.5">

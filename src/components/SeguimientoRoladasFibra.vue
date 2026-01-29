@@ -1,19 +1,22 @@
 <template>
-  <div class="w-full h-screen flex flex-col p-1">
-    <main ref="mainContentRef" class="w-full flex-1 min-h-0 bg-white rounded-xl shadow-sm px-4 py-3 border border-slate-200/60 flex flex-col relative">
-      <!-- Overlay de carga -->
-      <div v-if="cargando" class="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-50 rounded-xl">
-        <div class="flex flex-col items-center gap-3">
-          <div class="relative">
-            <div class="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-slate-600"></div>
-          </div>
-          <div class="flex flex-col items-center">
-            <span class="text-xs text-slate-400 uppercase tracking-wider">Cargando</span>
-            <span class="text-sm text-slate-600 font-medium mt-0.5">Roladas + Fibra HVI</span>
+  <div class="w-full h-screen flex flex-col p-1 relative">
+    <!-- Overlay de carga para toda la pantalla -->
+    <div v-if="cargando" class="fixed inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] transition-all duration-300">
+      <div class="flex flex-col items-center gap-4 bg-white/90 px-10 py-8 rounded-2xl shadow-2xl border border-blue-100">
+        <div class="relative">
+          <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-50 border-t-blue-600"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="h-8 w-8 bg-blue-600 rounded-full animate-pulse opacity-10"></div>
           </div>
         </div>
+        <div class="flex flex-col items-center gap-1">
+          <span class="text-slate-500 font-medium tracking-wider uppercase text-[10px]">Cargando</span>
+          <span class="text-xl text-slate-800 font-bold">Roladas + Fibra HVI</span>
+        </div>
       </div>
-
+    </div>
+    
+    <main ref="mainContentRef" class="w-full flex-1 min-h-0 bg-white rounded-xl shadow-sm px-4 py-3 border border-slate-200/60 flex flex-col relative">
       <!-- Header -->
       <div class="flex items-center justify-between gap-4 flex-shrink-0 mb-3 pb-3 border-b border-slate-100">
         <div class="flex items-center gap-5">
