@@ -1843,35 +1843,151 @@ async function downloadExcelFormatted() {
 // Copiar gráfico al portapapeles
 async function copyChartToClipboard() {
   try {
-    if (!chartCanvas.value || !chartContainerRef.value) {
+    if (!chartCanvas.value || !chartContainerRef.value || !chartData.value) {
       console.error('❌ Elementos del gráfico no disponibles')
       return
     }
 
-    console.log('📸 Capturando gráfico con header optimizado para WhatsApp...')
-    
-    const sourceCanvas = chartCanvas.value
+    console.log('📸 Generando gráfico optimizado con valores en la base...')
     
     // Configuración del header
-    const headerHeight = 40
+    const headerHeight = 100  // Aumentado para acomodar 2 líneas de texto
     const padding = 12
     const borderWidth = 1
-    const scale = 3  // Mayor escala para mejor nitidez
+    const scale = 3
     
-    // Dimensiones optimizadas para WhatsApp/celulares modernos (relación ~1:2)
-    // Ancho más angosto y altura proporcionalmente mayor
-    const targetWidth = 600  // Ancho reducido para WhatsApp
-    const targetHeight = 1200  // Altura aumentada (relación 1:2)
+    // Dimensiones optimizadas
+    const targetWidth = 600
+    const targetHeight = 1100  // Aumentado para más espacio del gráfico
     
-    // Calcular espacio disponible para el gráfico
-    const availableWidth = targetWidth * scale - (padding * 2 * scale) - (borderWidth * 2 * scale)
-    const availableHeight = targetHeight * scale - (headerHeight * scale) - (padding * scale) - (borderWidth * 2 * scale)
+    // Crear canvas temporal para el gráfico (sin header)
+    const chartTempCanvas = document.createElement('canvas')
+    const chartWidth = (targetWidth * scale) - (padding * 2 * scale) - (borderWidth * 2 * scale)
+    const chartHeight = (targetHeight * scale) - (headerHeight * scale) - (padding * scale) - (borderWidth * 2 * scale)
+    chartTempCanvas.width = chartWidth
+    chartTempCanvas.height = chartHeight
     
-    // Escalar el gráfico para llenar todo el espacio disponible (sin mantener aspecto)
-    const scaledChartWidth = availableWidth
-    const scaledChartHeight = availableHeight
+    // Preparar datos del gráfico (igual que renderChart)
+    const labels = chartData.value.map(d => {
+      const [year, month, day] = d.fecha.split('-')
+      return `${day}-${month}-${year.slice(-2)}`
+    })
+    const eficiencias = chartData.value.map(d => d.eficiencia || 0)
+    const rt105 = chartData.value.map(d => d.rt105 || 0)
+    const maxRT105 = Math.max(...rt105)
+    const scaleMaxY1 = maxRT105 * 1.15
     
-    // Crear canvas final (con espacio para el borde)
+    // Crear gráfico temporal con valores en la base
+    const chartCtx = chartTempCanvas.getContext('2d')
+    const tempChart = new Chart(chartCtx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Eficiencia %',
+            data: eficiencias,
+            backgroundColor: 'rgba(56, 189, 248, 0.85)',
+            borderColor: 'rgba(56, 189, 248, 1)',
+            borderWidth: 0,
+            borderRadius: 6,
+            maxBarThickness: 18,
+            yAxisID: 'y',
+            order: 2,
+            datalabels: {
+              display: true,
+              align: 'end',
+              anchor: 'start',
+              color: '#1e293b',
+              rotation: -90,
+              font: { family: 'Verdana', weight: 'bold', size: 43 },
+              formatter: (value) => value !== null && value !== 0 ? value.toFixed(1) : ''
+            }
+          },
+          {
+            type: 'line',
+            label: 'RT105',
+            data: rt105,
+            backgroundColor: 'rgba(249, 115, 22, 0.15)',
+            borderColor: '#f97316',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 4,
+            pointBackgroundColor: '#f97316',
+            pointBorderWidth: 0,
+            yAxisID: 'y1',
+            order: 1,
+            tension: 0,
+            datalabels: {
+              display: true,
+              align: 'top',
+              anchor: 'end',
+              offset: 12,
+              color: '#f97316',
+              clip: false,
+              font: { family: 'Verdana', weight: 'bold', size: 43 },
+              formatter: (value) => value !== null && value !== 0 ? value.toFixed(1) : ''
+            }
+          }
+        ]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: false,
+        devicePixelRatio: scale,
+        plugins: {
+          datalabels: { clip: false },
+          legend: { display: false },
+          title: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: '#64748b',
+              font: { family: 'Verdana', size: 35, weight: 'bold' },
+              autoSkip: false,
+              maxRotation: labels.length > 15 ? 90 : 0,
+              minRotation: labels.length > 15 ? 90 : 0
+            }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            grid: { color: '#f1f5f9', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { family: 'Verdana', size: 39, weight: 'bold' },
+              callback: (value) => value.toFixed(0)
+            },
+            min: 0,
+            max: 100
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: { drawOnChartArea: false, drawBorder: false },
+            ticks: {
+              color: '#f97316',
+              font: { family: 'Verdana', size: 39, weight: 'bold' },
+              callback: (value) => value.toFixed(1)
+            },
+            min: 0,
+            max: scaleMaxY1
+          }
+        }
+      }
+    })
+    
+    // Esperar a que el gráfico se renderice
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Crear canvas final con header
     const tempCanvas = document.createElement('canvas')
     tempCanvas.width = targetWidth * scale
     tempCanvas.height = targetHeight * scale
@@ -1899,26 +2015,32 @@ async function copyChartToClipboard() {
     ctx.lineTo(tempCanvas.width - borderOffset, borderOffset + (headerHeight * scale))
     ctx.stroke()
     
-    // Textos del header (más compactos)
-    const fontSize = 11 * scale
+    // Textos del header (en dos líneas)
+    const fontSize = 22 * scale
     ctx.font = `600 ${fontSize}px Verdana, sans-serif`
     ctx.fillStyle = '#1e293b'
-    ctx.textBaseline = 'middle'
+    ctx.textBaseline = 'top'
     
-    // Título (versión compacta para ancho reducido)
-    ctx.fillText('Efic. y RT105 - Tejeduría', borderOffset + (padding * scale), borderOffset + (headerHeight * scale) / 2)
+    // Línea 1: Título y periodo
+    const line1 = `Eficiencia y RT105 - ${chartMonthYear.value.substring(0, 3)}-${chartMonthYear.value.split(' ')[1]}`
+    const line1Y = borderOffset + (padding * scale)
+    ctx.fillText(line1, borderOffset + (padding * scale), line1Y)
     
-    // Texto derecho (mes y trama)
-    const rightText = `${chartMonthYear.value.substring(0, 3)}-${chartMonthYear.value.split(' ')[1]} | ${selectedTrama.value}`
-    const rightTextWidth = ctx.measureText(rightText).width
-    ctx.fillText(rightText, tempCanvas.width - rightTextWidth - borderOffset - (padding * scale), borderOffset + (headerHeight * scale) / 2)
+    // Línea 2: Trama
+    const line2 = `Trama: ${selectedTrama.value}`
+    const line2Y = line1Y + fontSize + (4 * scale)  // Separación entre líneas
+    ctx.fillText(line2, borderOffset + (padding * scale), line2Y)
     
-    // Dibujar el gráfico ocupando todo el espacio disponible
+    // Dibujar el gráfico temporal ocupando todo el espacio disponible
     const chartX = borderOffset + (padding * scale)
     const chartY = borderOffset + (headerHeight * scale)
+    const availableWidth = tempCanvas.width - (borderOffset * 2) - (padding * 2 * scale)
+    const availableHeight = tempCanvas.height - chartY - borderOffset - (padding * scale)
     
-    // Dibujar el gráfico escalado para llenar todo el espacio
-    ctx.drawImage(sourceCanvas, chartX, chartY, scaledChartWidth, scaledChartHeight)
+    ctx.drawImage(chartTempCanvas, chartX, chartY, availableWidth, availableHeight)
+    
+    // Destruir el gráfico temporal
+    tempChart.destroy()
     
     // Mostrar toast de "copiando..."
     Toast.fire({
@@ -1933,11 +2055,11 @@ async function copyChartToClipboard() {
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': blob })
         ])
-        console.log('✅ Gráfico copiado al portapapeles (optimizado para WhatsApp)')
+        console.log('✅ Gráfico copiado (valores en la base)')
         Toast.fire({
           icon: 'success',
           title: 'Gráfico copiado!',
-          text: 'Optimizado para WhatsApp en celulares'
+          text: 'Con valores optimizados'
         })
       } catch (err) {
         console.error('❌ Error copiando al portapapeles:', err)
@@ -2015,21 +2137,23 @@ function renderChart() {
           type: 'bar',
           label: 'Eficiencia %',
           data: eficiencias,
-          backgroundColor: '#46B1E1',
-          borderColor: '#46B1E1',
-          borderWidth: 1,
+          backgroundColor: 'rgba(56, 189, 248, 0.85)',
+          borderColor: 'rgba(56, 189, 248, 1)',
+          borderWidth: 0,
+          borderRadius: 6,
+          maxBarThickness: 18,
           yAxisID: 'y',
           order: 2,
           datalabels: {
             display: true,
             align: 'end',
-            anchor: 'start',
-            color: '#000000',
+            anchor: 'end',
+            color: '#64748b',
             rotation: -90,
             font: {
               family: 'Verdana',
-              weight: 'bold',
-              size: 11
+              weight: 'normal',
+              size: 12
             },
             formatter: function(value) {
               return value !== null && value !== 0 ? value.toFixed(1) : '';
@@ -2040,27 +2164,27 @@ function renderChart() {
           type: 'line',
           label: 'RT105',
           data: rt105,
-          backgroundColor: 'rgba(233, 113, 50, 0.2)',
-          borderColor: '#E97132',
+          backgroundColor: 'rgba(249, 115, 22, 0.15)',
+          borderColor: '#f97316',
           borderWidth: 2,
-          pointRadius: 5,
-          pointStyle: 'rectRot',
-          pointBackgroundColor: '#E97132',
-          pointBorderColor: '#E97132',
+          pointRadius: 3,
+          pointHoverRadius: 4,
+          pointBackgroundColor: '#f97316',
+          pointBorderWidth: 0,
           yAxisID: 'y1',
           order: 1,
-          tension: 0.3,
+          tension: 0,
           datalabels: {
             display: true,
             align: 'top',
             anchor: 'end',
-            offset: 10,
-            color: '#E97132',
+            offset: 6,
+            color: '#f97316',
             clip: false,
             font: {
               family: 'Verdana',
-              weight: 'bold',
-              size: 11
+              weight: 'normal',
+              size: 12
             },
             formatter: function(value) {
               return value !== null && value !== 0 ? value.toFixed(1) : '';
@@ -2069,123 +2193,124 @@ function renderChart() {
         }
       ]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      devicePixelRatio: 3,
-      interaction: {
-        mode: 'index',
-        intersect: false
-      },
-      plugins: {
-        datalabels: {
-          clip: false
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        devicePixelRatio: 3,
+        interaction: {
+          mode: 'index',
+          intersect: false
         },
-        legend: {
-          display: false
-        },
-        title: {
-          display: false
-        },
-        tooltip: {
-          enabled: true,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          titleColor: '#1e293b',
-          bodyColor: '#475569',
-          borderColor: '#e2e8f0',
-          borderWidth: 1,
-          cornerRadius: 8,
-          padding: 12,
-          boxPadding: 6,
-          usePointStyle: true,
-          titleFont: {
-            family: 'Verdana',
-            size: 12,
-            weight: '600'
+        plugins: {
+          datalabels: {
+            clip: false
           },
-          bodyFont: {
-            family: 'Verdana',
-            size: 11
-          },
-          callbacks: {
-            label: function(context) {
-              let label = context.dataset.label || ''
-              if (label) {
-                label += ': '
-              }
-              if (context.parsed.y !== null) {
-                label += context.parsed.y.toFixed(1)
-              }
-              return label
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: {
+          legend: {
             display: false
           },
-          ticks: {
-            font: {
+          title: {
+            display: false
+          },
+          tooltip: {
+            enabled: true,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            titleColor: '#1e293b',
+            bodyColor: '#475569',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            cornerRadius: 10,
+            padding: 10,
+            boxPadding: 4,
+            usePointStyle: true,
+            titleFont: {
+              family: 'Verdana',
+              size: 11,
+              weight: '600'
+            },
+            bodyFont: {
               family: 'Verdana',
               size: 10
             },
-            autoSkip: false,
-            maxRotation: labels.length > 15 ? 90 : 0,
-            minRotation: labels.length > 15 ? 90 : 0,
-            maxTicksLimit: undefined
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || ''
+                if (label) {
+                  label += ': '
+                }
+                if (context.parsed.y !== null) {
+                  label += context.parsed.y.toFixed(1)
+                }
+                return label
+              }
+            }
           }
         },
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: {
-            display: false
-          },
-          ticks: {
-            color: '#000000',
-            font: {
-              family: 'Verdana',
-              size: 10
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              color: '#64748b',
+              font: {
+                family: 'Verdana',
+                size: 9
+              },
+              autoSkip: false,
+              maxRotation: labels.length > 15 ? 90 : 0,
+              minRotation: labels.length > 15 ? 90 : 0,
+              maxTicksLimit: undefined
             }
           },
-          grid: {
+          y: {
+            type: 'linear',
             display: true,
-            color: 'rgba(0, 0, 0, 0.05)'
-          }
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          max: scaleMaxY1,
-          title: {
-            display: false
-          },
-          ticks: {
-            color: '#000000',
-            font: {
-              family: 'Verdana',
-              size: 10
+            position: 'left',
+            title: {
+              display: false
+            },
+            ticks: {
+              color: '#64748b',
+              font: {
+                family: 'Verdana',
+                size: 9
+              }
+            },
+            grid: {
+              display: true,
+              color: 'rgba(148, 163, 184, 0.25)'
             }
           },
-          grid: {
-            drawOnChartArea: false
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            max: scaleMaxY1,
+            title: {
+              display: false
+            },
+            ticks: {
+              color: '#64748b',
+              font: {
+                family: 'Verdana',
+                size: 9
+              }
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        },
+        layout: {
+          padding: {
+            top: 6,
+            bottom: 0,
+            left: 0,
+            right: 0
           }
         }
       }
-    },
-    layout: {
-      padding: {
-        top: 10,
-        bottom: 0,
-        left: 0,
-        right: 0
-      }
-    }
       })
     } catch (err) {
       console.error('❌ Error renderizando gráfico:', err)
