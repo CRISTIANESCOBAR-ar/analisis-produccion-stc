@@ -412,6 +412,35 @@ initCostosMensualesSchema().catch((err) => {
   console.error('❌ Error inicializando esquema de costos mensuales:', err);
 });
 
+// =====================================================================
+// Inicialización - Tabla de auditoría de cambios de esquema
+// =====================================================================
+
+const initSchemaChangesLog = async () => {
+  await dbRun(
+    `CREATE TABLE IF NOT EXISTS schema_changes_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT NOT NULL,
+      tabla_destino TEXT NOT NULL,
+      tipo_cambio TEXT NOT NULL,
+      columna_afectada TEXT NOT NULL,
+      tipo_dato TEXT,
+      origen TEXT NOT NULL,
+      usuario TEXT,
+      csv_path TEXT,
+      notas TEXT,
+      estado TEXT DEFAULT 'APLICADO'
+    );`
+  );
+
+  await dbRun(`CREATE INDEX IF NOT EXISTS idx_schema_changes_tabla ON schema_changes_log(tabla_destino);`);
+  await dbRun(`CREATE INDEX IF NOT EXISTS idx_schema_changes_timestamp ON schema_changes_log(timestamp);`);
+};
+
+initSchemaChangesLog().catch((err) => {
+  console.error('❌ Error inicializando tabla de auditoría de esquema:', err);
+});
+
 // Helper para rangos de fecha (agrega horas para cubrir todo el día)
 const getDateRangeParams = (startDate, endDate) => {
   if (!startDate || !endDate) return null;
@@ -836,6 +865,380 @@ app.post('/api/import/update-outdated', async (req, res) => {
       failed: errors.length
     }
   });
+});
+
+// GET /api/import/column-warnings - Obtener warnings de columnas recientes (solo pendientes)
+app.get('/api/import/column-warnings', async (req, res) => {
+  try {
+    // Verificar si la tabla existe
+    const tableExists = await dbGet(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='import_column_warnings'`
+    );
+    
+    if (!tableExists) {
+      return res.json({ warnings: [] });
+    }
+    
+    // Obtener los últimos 20 warnings, agrupados por tabla
+    const warnings = await dbAll(
+      `SELECT 
+        id,
+        tabla_destino,
+        timestamp,
+        csv_path,
+        extra_columns,
+        missing_columns,
+        total_csv_columns,
+        total_table_columns
+      FROM import_column_warnings
+      ORDER BY timestamp DESC
+      LIMIT 20`
+    );
+    
+    // Procesar y verificar estado actual de las columnas
+    const processed = [];
+    
+    for (const w of warnings) {
+      const extraCols = w.extra_columns ? w.extra_columns.split(', ') : [];
+      const missingCols = w.missing_columns ? w.missing_columns.split(', ') : [];
+      
+      // Obtener columnas actuales de la tabla en SQLite
+      let currentColumns = [];
+      try {
+        const tableInfo = await dbAll(`PRAGMA table_info(${w.tabla_destino})`);
+        currentColumns = tableInfo.map(col => col.name);
+      } catch (err) {
+        console.error(`Error obteniendo info de ${w.tabla_destino}:`, err);
+      }
+      
+      // Función para normalizar nombres (eliminar caracteres especiales corruptos)
+      const normalize = (name) => {
+        return name
+          .replace(/[^\x20-\x7E]/g, '') // Mantener solo caracteres ASCII imprimibles
+          .replace(/[^A-Z0-9_\s]/gi, '') // Mantener solo letras, números, guiones bajos y espacios
+          .replace(/\s+/g, '')           // Eliminar todos los espacios
+          .toUpperCase();
+      };
+      
+      const normalizedCurrentColumns = currentColumns.map(normalize);
+      
+      // Filtrar columnas EXTRA que ya NO están en SQLite (fueron sincronizadas)
+      // Usar comparación normalizada para detectar variantes con encoding corrupto
+      const stillExtraColumns = extraCols.filter(col => {
+        const normalizedCol = normalize(col);
+        return !normalizedCurrentColumns.includes(normalizedCol);
+      });
+      
+      // Solo agregar warning si todavía hay diferencias pendientes
+      const hasPendingDifferences = stillExtraColumns.length > 0;
+      
+      if (hasPendingDifferences) {
+        processed.push({
+          id: w.id,
+          table: w.tabla_destino,
+          timestamp: w.timestamp,
+          csvPath: w.csv_path,
+          extraColumns: stillExtraColumns, // Solo las que faltan sincronizar
+          missingColumns: missingCols,
+          totalCsvColumns: w.total_csv_columns,
+          totalTableColumns: currentColumns.length, // Usar conteo actual
+          hasDifferences: true
+        });
+      }
+    }
+    
+    // Solo enviar warnings de las últimas 24 horas
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentWarnings = processed.filter(w => {
+      const warnDate = new Date(w.timestamp);
+      return warnDate > oneDayAgo;
+    });
+    
+    res.json({ warnings: recentWarnings });
+  } catch (error) {
+    console.error('Error obteniendo column warnings:', error);
+    res.status(500).json({ error: error.message, warnings: [] });
+  }
+});
+
+// GET /api/import/warnings-history - Obtener historial completo de diferencias detectadas
+app.get('/api/import/warnings-history', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['table', 'limit']);
+    const table = params.table;
+    const limit = params.limit ? parseInt(params.limit) : 100;
+    
+    // Verificar si la tabla existe
+    const tableExists = await dbGet(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='import_column_warnings'`
+    );
+    
+    if (!tableExists) {
+      return res.json({ history: [] });
+    }
+    
+    let sql = `SELECT 
+      id,
+      tabla_destino as table_name,
+      timestamp as detected_at,
+      csv_path,
+      extra_columns,
+      missing_columns,
+      total_csv_columns,
+      total_table_columns
+    FROM import_column_warnings`;
+    
+    const sqlParams = [];
+    
+    if (table) {
+      sql += ` WHERE tabla_destino = ?`;
+      sqlParams.push(table);
+    }
+    
+    sql += ` ORDER BY timestamp DESC LIMIT ?`;
+    sqlParams.push(limit);
+    
+    const warnings = await dbAll(sql, sqlParams);
+    
+    // Procesar para enviar al frontend
+    const processed = warnings.map(w => ({
+      id: w.id,
+      table_name: w.table_name,
+      detected_at: w.detected_at,
+      csv_path: w.csv_path,
+      extra_columns: w.extra_columns ? w.extra_columns.split(', ') : [],
+      missing_columns: w.missing_columns ? w.missing_columns.split(', ') : [],
+      total_csv_columns: w.total_csv_columns,
+      total_table_columns: w.total_table_columns
+    }));
+    
+    res.json({ history: processed });
+  } catch (error) {
+    console.error('Error obteniendo historial de warnings:', error);
+    res.status(500).json({ error: error.message, history: [] });
+  }
+});
+
+// POST /api/schema/sync-columns - Sincronizar columnas de CSV a SQLite
+app.post('/api/schema/sync-columns', async (req, res) => {
+  const { table, csvPath, reimport } = req.body;
+  
+  if (!table || !csvPath) {
+    return res.status(400).json({ error: 'Debe especificar table y csvPath' });
+  }
+
+  console.log(`🔄 Sincronizando columnas para ${table} desde ${csvPath}...`);
+
+  try {
+    // 1. Leer columnas del CSV
+    let csvColumns = [];
+    try {
+      const firstLine = fs.readFileSync(csvPath, 'utf8').split('\n')[0];
+      const isTab = firstLine.includes('\t');
+      csvColumns = isTab 
+        ? firstLine.split('\t').map(c => c.trim())
+        : firstLine.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      csvColumns = csvColumns.filter(c => c !== '');
+    } catch (err) {
+      return res.status(400).json({ error: `Error leyendo CSV: ${err.message}` });
+    }
+
+    // 2. Leer columnas de SQLite
+    const sqliteColumnsRaw = await dbAll(`PRAGMA table_info(${table});`);
+    const sqliteColumns = sqliteColumnsRaw.map(col => col.name);
+
+    // 3. Comparar
+    const extraColumns = csvColumns.filter(c => !sqliteColumns.includes(c));
+    const missingColumns = sqliteColumns.filter(c => !csvColumns.includes(c));
+
+    if (extraColumns.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No hay columnas extra para sincronizar',
+        extraColumns: [],
+        missingColumns,
+        columnsAdded: 0
+      });
+    }
+
+    // 4. Agregar columnas extra a SQLite
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const addedColumns = [];
+    const errors = [];
+
+    for (const col of extraColumns) {
+      try {
+        // Evitar duplicados de columnas con el mismo nombre
+        if (addedColumns.includes(col)) {
+          console.warn(`⚠️ Columna duplicada ignorada: ${col}`);
+          continue;
+        }
+
+        const safeColName = col.replace(/'/g, "''");
+        await dbRun(`ALTER TABLE ${table} ADD COLUMN '${safeColName}' TEXT;`);
+        addedColumns.push(col);
+
+        // Registrar en auditoría
+        await dbRun(
+          `INSERT INTO schema_changes_log 
+           (timestamp, tabla_destino, tipo_cambio, columna_afectada, tipo_dato, origen, csv_path, notas, estado)
+           VALUES (?, ?, 'ADD_COLUMN', ?, 'TEXT', 'UI', ?, ?, 'APLICADO');`,
+          [
+            timestamp,
+            table,
+            col,
+            csvPath,
+            `Sincronización automática desde UI. Total columnas CSV: ${csvColumns.length}, SQLite antes: ${sqliteColumns.length}`
+          ]
+        );
+
+        console.log(`✅ Columna agregada: ${col}`);
+      } catch (err) {
+        console.error(`❌ Error agregando columna ${col}:`, err.message);
+        errors.push({ column: col, error: err.message });
+      }
+    }
+
+    // 5. Re-importar si se solicitó
+    let reimportResult = null;
+    if (reimport && addedColumns.length > 0) {
+      console.log(`🔄 Re-importando ${table}...`);
+      
+      const scriptMap = {
+        'tb_FICHAS': 'import-fichas-fast.ps1',
+        'tb_RESIDUOS_INDIGO': 'import-residuos-indig-fast.ps1',
+        'tb_RESIDUOS_POR_SECTOR': 'import-residuos-por-sector-fast.ps1',
+        'tb_TESTES': 'import-testes-fast.ps1',
+        'tb_PARADAS': 'import-paradas-fast.ps1',
+        'tb_PRODUCCION': 'import-produccion-fast.ps1',
+        'tb_CALIDAD': 'import-calidad-fast.ps1',
+        'tb_PROCESO': 'import-proceso-fast.ps1',
+        'tb_DEFECTOS': 'import-defectos-fast.ps1',
+        'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1'
+      };
+
+      const scriptFile = scriptMap[table];
+      if (scriptFile) {
+        const scriptPath = path.join(__dirname, scriptFile);
+        try {
+          const { stdout, stderr } = await new Promise((resolve, reject) => {
+            execFile('powershell',
+              ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath,
+               '-XlsxPath', csvPath, '-SqlitePath', DB_PATH],
+              { maxBuffer: 10 * 1024 * 1024, timeout: 90000 },
+              (error, stdout, stderr) => {
+                if (error) reject({ error, stderr });
+                else resolve({ stdout, stderr });
+              }
+            );
+          });
+          reimportResult = { success: true, output: stdout };
+          console.log(`✅ Re-importación completada`);
+        } catch (err) {
+          reimportResult = { success: false, error: err.error?.message || 'Error en re-importación' };
+          console.error(`❌ Error en re-importación:`, err);
+        }
+      }
+    }
+
+    // 6. Checkpoint SQLite
+    await new Promise((resolve) => {
+      db.run('PRAGMA wal_checkpoint(FULL);', () => resolve());
+    });
+
+    res.json({
+      success: true,
+      message: `${addedColumns.length} columna(s) agregada(s) correctamente`,
+      extraColumns,
+      missingColumns,
+      columnsAdded: addedColumns.length,
+      addedColumns,
+      errors,
+      reimportResult
+    });
+
+  } catch (error) {
+    console.error('❌ Error en sincronización:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/schema/changes-log - Obtener historial de cambios de esquema
+app.get('/api/schema/changes-log', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['table', 'limit']);
+    const table = params.table;
+    const limit = params.limit ? parseInt(params.limit) : 100;
+
+    // Verificar si la tabla existe
+    const tableExists = await dbGet(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='schema_changes_log'`
+    );
+    
+    if (!tableExists) {
+      return res.json({ changes: [] });
+    }
+
+    let sql = `SELECT 
+      id,
+      tabla_destino as table_name,
+      timestamp as applied_at,
+      tipo_cambio as change_type,
+      columna_afectada as column_name,
+      tipo_dato as data_type,
+      origen as source,
+      notas as notes,
+      estado as status
+    FROM schema_changes_log`;
+    const sqlParams = [];
+
+    if (table) {
+      sql += ` WHERE tabla_destino = ?`;
+      sqlParams.push(table);
+    }
+
+    sql += ` ORDER BY timestamp DESC LIMIT ?`;
+    sqlParams.push(limit);
+
+    const changes = await dbAll(sql, sqlParams);
+    
+    // Agrupar por sincronización (tabla + timestamp similar)
+    const grouped = [];
+    const processedSyncs = new Set();
+    
+    for (const change of changes) {
+      const syncKey = `${change.table_name}_${change.applied_at.substring(0, 16)}`; // Agrupar por minuto
+      
+      if (!processedSyncs.has(syncKey)) {
+        processedSyncs.add(syncKey);
+        
+        // Buscar todas las columnas de esta sincronización
+        const relatedChanges = changes.filter(c => 
+          c.table_name === change.table_name && 
+          c.applied_at.substring(0, 16) === change.applied_at.substring(0, 16)
+        );
+        
+        const columnsAdded = relatedChanges.map(c => c.column_name);
+        const reimported = relatedChanges.some(c => c.notes && c.notes.includes('Re-importación'));
+        
+        grouped.push({
+          id: change.id,
+          table_name: change.table_name,
+          applied_at: change.applied_at,
+          change_type: change.change_type,
+          columns_added: columnsAdded,
+          reimported: reimported,
+          source: change.source,
+          status: change.status
+        });
+      }
+    }
+
+    res.json({ changes: grouped });
+  } catch (error) {
+    console.error('Error obteniendo historial de cambios:', error);
+    res.status(500).json({ error: error.message, changes: [] });
+  }
 });
 
 // GET /api/status - Estado general de la base de datos
@@ -2954,6 +3357,119 @@ app.get('/api/produccion/acabamento-resumen', async (req, res) => {
 
   } catch (error) {
     console.error('Error en /api/produccion/acabamento-resumen:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/informe-diario - Informe STC Diario (iniciando solo con INDIGO)
+app.get('/api/informe-diario', async (req, res) => {
+  try {
+    const params = validateQueryParams(req, ['fecha']);
+    const fecha = params.fecha || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    // Extraer año y mes de la fecha
+    const [year, month] = fecha.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    // 1. Obtener METAS del mes para INDIGO
+    const metas = await dbAll(`
+      SELECT 
+        CAST(strftime('%d', Dia) AS INTEGER) as dia,
+        CAST(Indigo as REAL) as meta_indigo
+      FROM tb_METAS
+      WHERE strftime('%Y-%m', Dia) = ?
+      ORDER BY dia
+    `, [`${year}-${String(month).padStart(2, '0')}`]);
+    
+    // Organizar metas por día
+    const metasPorDia = {};
+    let metaMensualIndigo = 0;
+    
+    metas.forEach(m => {
+      metasPorDia[m.dia] = { INDIGO: m.meta_indigo || 0 };
+      metaMensualIndigo += m.meta_indigo || 0;
+    });
+    
+    // 2. Obtener datos de INDIGO (por día)
+    const indigoData = await dbAll(`
+      SELECT 
+        CAST(substr(DT_BASE_PRODUCAO, 1, 2) AS INTEGER) as dia,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS metragem,
+        SUM(CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) * CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS velocidad,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF((SUM(CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) * CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0)) * 1440, 0) * 100 AS eficiencia
+      FROM tb_PRODUCCION
+      WHERE substr(DT_BASE_PRODUCAO, 4, 2) = ? 
+        AND substr(DT_BASE_PRODUCAO, 7, 4) = ?
+        AND SELETOR = 'INDIGO'
+      GROUP BY dia
+      ORDER BY dia
+    `, [String(month).padStart(2, '0'), String(year)]);
+    
+    // Organizar datos por día
+    const indigoPorDia = {};
+    indigoData.forEach(d => { indigoPorDia[d.dia] = d; });
+    
+    // Construir array de días
+    const days = [];
+    const dayNames = ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sá'];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(year, month - 1, day);
+      const dayOfWeek = currentDate.getDay();
+      
+      const metaDiaIndigo = metasPorDia[day]?.INDIGO || 0;
+      const prodIndigo = indigoPorDia[day]?.metragem || 0;
+      const saldoIndigo = prodIndigo - metaDiaIndigo;
+      
+      // Calcular Meta Ajustada para este día específico
+      let metaAjustadaIndigo = null;
+      
+      // Calcular acumulado hasta el día ANTERIOR a este día
+      let acumHastaAyer = 0;
+      for (let i = 1; i < day; i++) {
+        acumHastaAyer += indigoPorDia[i]?.metragem || 0;
+      }
+      
+      // Contar días con meta desde este día en adelante
+      let diasRestantesDesdeHoy = 0;
+      for (let i = day; i <= daysInMonth; i++) {
+        if (metasPorDia[i]?.INDIGO && metasPorDia[i].INDIGO > 0) {
+          diasRestantesDesdeHoy++;
+        }
+      }
+      
+      // Calcular meta ajustada si hay días restantes
+      if (diasRestantesDesdeHoy > 0) {
+        metaAjustadaIndigo = (metaMensualIndigo - acumHastaAyer) / diasRestantesDesdeHoy;
+      }
+      
+      days.push({
+        dayNumber: day,
+        dayLabel: `${String(day).padStart(2, '0')}- ${dayNames[dayOfWeek]}`,
+        hasData: !!indigoPorDia[day],
+        indigo: {
+          eficiencia: indigoPorDia[day]?.eficiencia,
+          produccion: prodIndigo,
+          meta: metaDiaIndigo,
+          saldo: saldoIndigo,
+          metaAjustada: metaAjustadaIndigo,
+          velocidad: indigoPorDia[day]?.velocidad,
+          telares: null,
+          batidas: null
+        },
+        tecelagem: {},
+        acabamento: {},
+        calidad: {}
+      });
+    }
+    
+    res.json({ fecha, year, month, daysInMonth, days });
+    
+  } catch (error) {
+    console.error('Error en /api/informe-diario:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -6254,6 +6770,7 @@ app.get('/api/alerts/summary', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // GET /api/metrics/daily - Métricas diarias para dashboard
 app.get('/api/metrics/daily', async (req, res) => {
