@@ -168,6 +168,13 @@
         :collapsed="isCollapsed"
         @click="handleNavClick('/importaciones')"
       />
+      <SidebarItem 
+        icon="📊" 
+        label="Informe Diario" 
+        :active="isActive('/informe-diario')" 
+        :collapsed="isCollapsed"
+        @click="handleNavClick('/informe-diario')"
+      />
     </nav>
   </aside>
 

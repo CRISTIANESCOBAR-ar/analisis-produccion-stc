@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardGeneral from '../components/dashboards/DashboardGeneral.vue'
 import ImportControl from '../components/ImportControl.vue'
+import InformeDiario from '../components/InformeDiario.vue'
 import RevisionCQ from '../components/RevisionCQ.vue'
 import AnalisisHistoricoRevisores from '../components/AnalisisHistoricoRevisores.vue'
 import AnalisisMesaTest from '../components/AnalisisMesaTest.vue'
@@ -61,6 +62,12 @@ const routes = [
     name: 'ImportControl',
     component: ImportControl,
     meta: { title: 'Control de Importaciones - Análisis Producción STC' }
+  },
+  {
+    path: '/informe-diario',
+    name: 'InformeDiario',
+    component: InformeDiario,
+    meta: { title: 'Informe STC Diario - Análisis Producción STC' }
   },
   {
     path: '/residuos-indigo-tejeduria',

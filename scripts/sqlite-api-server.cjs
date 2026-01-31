@@ -593,7 +593,7 @@ app.post('/api/import/force-all', async (req, res) => {
     // Ejecutar script y esperar resultado
     const { stdout, stderr } = await new Promise((resolve, reject) => {
       execFile('powershell', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-CsvFolder', csvFolder], 
-        { maxBuffer: 10 * 1024 * 1024, timeout: 300000 }, 
+        { maxBuffer: 50 * 1024 * 1024, timeout: 600000 }, 
         (error, stdout, stderr) => {
           if (error) {
             reject({ error, stderr });
@@ -672,7 +672,7 @@ app.post('/api/import/force-table', async (req, res) => {
       execFile('powershell', 
         ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, 
          '-XlsxPath', config.xlsxPath, '-SqlitePath', DB_PATH, '-Sheet', config.sheet],
-        { maxBuffer: 10 * 1024 * 1024, timeout: 60000 }, 
+        { maxBuffer: 50 * 1024 * 1024, timeout: 300000 }, 
         (error, stdout, stderr) => {
           if (error) {
             reject({ error, stderr });
@@ -791,7 +791,7 @@ app.post('/api/import/update-outdated', async (req, res) => {
         execFile('powershell',
           ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath,
            '-XlsxPath', config.xlsxPath, '-SqlitePath', DB_PATH, '-Sheet', config.sheet],
-          { maxBuffer: 10 * 1024 * 1024, timeout: 60000 },
+          { maxBuffer: 50 * 1024 * 1024, timeout: 300000 },
           (error, stdout, stderr) => {
             if (error) {
               reject({ error, stderr });
@@ -1125,7 +1125,7 @@ app.post('/api/schema/sync-columns', async (req, res) => {
             execFile('powershell',
               ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath,
                '-XlsxPath', csvPath, '-SqlitePath', DB_PATH],
-              { maxBuffer: 10 * 1024 * 1024, timeout: 90000 },
+              { maxBuffer: 50 * 1024 * 1024, timeout: 300000 },
               (error, stdout, stderr) => {
                 if (error) reject({ error, stderr });
                 else resolve({ stdout, stderr });
@@ -3367,9 +3367,12 @@ app.get('/api/informe-diario', async (req, res) => {
     const params = validateQueryParams(req, ['fecha']);
     const fecha = params.fecha || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
-    // Extraer año y mes de la fecha
-    const [year, month] = fecha.split('-').map(Number);
+    // Extraer año, mes y día de la fecha
+    const [year, month, day] = fecha.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
+    
+    // Día hasta el cual mostrar datos (fecha solicitada)
+    const maxDay = Math.min(day, daysInMonth);
     
     // 1. Obtener METAS del mes para INDIGO
     const metas = await dbAll(`
@@ -3412,57 +3415,468 @@ app.get('/api/informe-diario', async (req, res) => {
     const indigoPorDia = {};
     indigoData.forEach(d => { indigoPorDia[d.dia] = d; });
     
-    // Construir array de días
+    // 3. Obtener datos de TECELAGEM (por día)
+    const tecelagemData = await dbAll(`
+      SELECT 
+        CAST(substr(DT_BASE_PRODUCAO, 1, 2) AS INTEGER) as dia,
+        SUM(CAST(REPLACE(REPLACE([TEMPO LEIT MIN], '.', ''), ',', '.') AS REAL)) / 1440.0 AS telares,
+        SUM(CAST(REPLACE(REPLACE([METRAGEM ENCOLH], '.', ''), ',', '.') AS REAL)) AS metragem,
+        (SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) / 
+         NULLIF(SUM(CAST(REPLACE(REPLACE([PONTOS_100%], '.', ''), ',', '.') AS REAL)), 0) * 100.0) AS eficiencia,
+        SUM(CAST(REPLACE(BATIDAS, ',', '.') AS REAL) * CAST(REPLACE(REPLACE([METRAGEM ENCOLH], '.', ''), ',', '.') AS REAL)) / 
+         NULLIF(SUM(CAST(REPLACE(REPLACE([METRAGEM ENCOLH], '.', ''), ',', '.') AS REAL)), 0) AS batidas,
+        SUM(CAST(REPLACE(REPLACE([RPM LEITURA], '.', ''), ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) / 
+         NULLIF(SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)), 0) AS rpm
+      FROM tb_PRODUCCION
+      WHERE substr(DT_BASE_PRODUCAO, 4, 2) = ? 
+        AND substr(DT_BASE_PRODUCAO, 7, 4) = ?
+        AND SELETOR = 'TECELAGEM'
+      GROUP BY dia
+      ORDER BY dia
+    `, [String(month).padStart(2, '0'), String(year)]);
+    
+    // Organizar datos de TECELAGEM por día
+    const tecelagemPorDia = {};
+    tecelagemData.forEach(d => { tecelagemPorDia[d.dia] = d; });
+    
+    // Obtener metas de TECELAGEM
+    const metasTecelagem = await dbAll(`
+      SELECT 
+        CAST(strftime('%d', Dia) AS INTEGER) as dia,
+        CAST(Tejeduria as REAL) as meta_tecelagem
+      FROM tb_METAS
+      WHERE strftime('%Y-%m', Dia) = ?
+      ORDER BY dia
+    `, [`${year}-${String(month).padStart(2, '0')}`]);
+    
+    // Organizar metas de TECELAGEM por día y calcular meta mensual
+    let metaMensualTecelagem = 0;
+    metasTecelagem.forEach(m => {
+      if (!metasPorDia[m.dia]) metasPorDia[m.dia] = {};
+      metasPorDia[m.dia].TECELAGEM = m.meta_tecelagem || 0;
+      metaMensualTecelagem += m.meta_tecelagem || 0;
+    });
+    
+    // 4. Obtener datos de ACABAMENTO (por día) - Máquina 165001
+    const acabamentoData = await dbAll(`
+      SELECT 
+        CAST(substr(DT_BASE_PRODUCAO, 1, 2) AS INTEGER) as dia,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS metragem,
+        SUM(CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) * CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS velocidad,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF((SUM(CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL) * CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) / 
+          NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0)) * 1440, 0) * 100 AS eficiencia
+      FROM tb_PRODUCCION
+      WHERE substr(DT_BASE_PRODUCAO, 4, 2) = ? 
+        AND substr(DT_BASE_PRODUCAO, 7, 4) = ?
+        AND MAQUINA = '165001'
+      GROUP BY dia
+      ORDER BY dia
+    `, [String(month).padStart(2, '0'), String(year)]);
+    
+    // Organizar datos de ACABAMENTO por día
+    const acabamentoPorDia = {};
+    acabamentoData.forEach(d => { acabamentoPorDia[d.dia] = d; });
+    
+    // Obtener metas de ACABAMENTO (Integrada)
+    const metasAcabamento = await dbAll(`
+      SELECT 
+        CAST(strftime('%d', Dia) AS INTEGER) as dia,
+        CAST(Integrada as REAL) as meta_acabamento
+      FROM tb_METAS
+      WHERE strftime('%Y-%m', Dia) = ?
+      ORDER BY dia
+    `, [`${year}-${String(month).padStart(2, '0')}`]);
+    
+    // Organizar metas de ACABAMENTO por día y calcular meta mensual
+    let metaMensualAcabamento = 0;
+    metasAcabamento.forEach(m => {
+      if (!metasPorDia[m.dia]) metasPorDia[m.dia] = {};
+      metasPorDia[m.dia].ACABAMENTO = m.meta_acabamento || 0;
+      metaMensualAcabamento += m.meta_acabamento || 0;
+    });
+    
+    // 5. Obtener datos de CALIDAD (por día)
+    // Total de metros por día
+    const calidadTotalData = await dbAll(`
+      SELECT 
+        CAST(substr(DAT_PROD, 9, 2) AS INTEGER) as dia,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS metragem_total
+      FROM tb_CALIDAD
+      WHERE substr(DAT_PROD, 6, 2) = ? 
+        AND substr(DAT_PROD, 1, 4) = ?
+        AND EMP = 'STC'
+      GROUP BY dia
+      ORDER BY dia
+    `, [String(month).padStart(2, '0'), String(year)]);
+    
+    // Metros de PRIMEIRA calidad por día
+    const calidadPrimeiraData = await dbAll(`
+      SELECT 
+        CAST(substr(DAT_PROD, 9, 2) AS INTEGER) as dia,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS metragem_primeira
+      FROM tb_CALIDAD
+      WHERE substr(DAT_PROD, 6, 2) = ? 
+        AND substr(DAT_PROD, 1, 4) = ?
+        AND EMP = 'STC'
+        AND QUALIDADE = 'PRIMEIRA '
+      GROUP BY dia
+      ORDER BY dia
+    `, [String(month).padStart(2, '0'), String(year)]);
+    
+    // Puntos/100m² para PRIMEIRA calidad - Usando la misma lógica que /api/calidad/pts100m2
+    // LARGURA está en cm (160), la fórmula compensa: (puntos * 100) / (metros * ancho_cm) * 100
+    const calidadPuntosData = await dbAll(`
+      WITH PTS AS (
+        SELECT 
+          CAST(strftime('%d', DAT_PROD) AS INTEGER) as dia,
+          SUM(PONTUACAO_AVG) AS PONTUACAO
+        FROM (
+          SELECT DISTINCT
+            EMP,
+            DATE(DAT_PROD) AS DAT_PROD,
+            QUALIDADE,
+            PEÇA,
+            AVG(CAST(REPLACE(REPLACE(PONTUACAO, '.', ''), ',', '.') AS REAL)) AS PONTUACAO_AVG
+          FROM tb_CALIDAD
+          WHERE strftime('%m', DAT_PROD) = ?
+            AND strftime('%Y', DAT_PROD) = ?
+            AND QUALIDADE = 'PRIMEIRA '
+            AND EMP = 'STC'
+          GROUP BY EMP, DATE(DAT_PROD), QUALIDADE, PEÇA
+        ) AS SUB
+        GROUP BY dia
+      ),
+      ANCHO AS (
+        SELECT
+          CAST(strftime('%d', DAT_PROD) AS INTEGER) as dia,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS,
+          SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * CAST(LARGURA AS REAL)) / 
+            NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0) AS ANCHO_POND
+        FROM tb_CALIDAD
+        WHERE strftime('%m', DAT_PROD) = ?
+          AND strftime('%Y', DAT_PROD) = ?
+          AND QUALIDADE = 'PRIMEIRA '
+          AND EMP = 'STC'
+        GROUP BY dia
+      )
+      SELECT
+        ANCHO.dia,
+        CASE 
+          WHEN ANCHO.METROS > 0 AND ANCHO.ANCHO_POND > 0 THEN
+            (PTS.PONTUACAO * 100) / (ANCHO.METROS * ANCHO.ANCHO_POND) * 100
+          ELSE 0
+        END AS pts100m2
+      FROM ANCHO
+      LEFT JOIN PTS ON ANCHO.dia = PTS.dia
+      ORDER BY ANCHO.dia
+    `, [String(month).padStart(2, '0'), String(year), String(month).padStart(2, '0'), String(year)]);
+    
+    // Organizar datos de CALIDAD por día
+    const calidadPorDia = {};
+    calidadTotalData.forEach(d => {
+      if (!calidadPorDia[d.dia]) calidadPorDia[d.dia] = {};
+      calidadPorDia[d.dia].metragem_total = d.metragem_total;
+    });
+    calidadPrimeiraData.forEach(d => {
+      if (!calidadPorDia[d.dia]) calidadPorDia[d.dia] = {};
+      calidadPorDia[d.dia].metragem_primeira = d.metragem_primeira;
+    });
+    calidadPuntosData.forEach(d => {
+      if (!calidadPorDia[d.dia]) calidadPorDia[d.dia] = {};
+      // Pts/100m² ya viene calculado del query
+      calidadPorDia[d.dia].puntos100m2 = d.pts100m2 || 0;
+    });
+    
+    // Obtener metas de CALIDAD (Revisión)
+    const metasCalidad = await dbAll(`
+      SELECT 
+        CAST(strftime('%d', Dia) AS INTEGER) as dia,
+        CAST(Revision as REAL) as meta_calidad
+      FROM tb_METAS
+      WHERE strftime('%Y-%m', Dia) = ?
+      ORDER BY dia
+    `, [`${year}-${String(month).padStart(2, '0')}`]);
+    
+    // Organizar metas de CALIDAD por día y calcular meta mensual
+    let metaMensualCalidad = 0;
+    metasCalidad.forEach(m => {
+      if (!metasPorDia[m.dia]) metasPorDia[m.dia] = {};
+      metasPorDia[m.dia].CALIDAD = m.meta_calidad || 0;
+      metaMensualCalidad += m.meta_calidad || 0;
+    });
+    
+    // Encontrar el primer día con meta > 0 (INDIGO, TECELAGEM, ACABAMENTO, CALIDAD)
+    let primerDiaConMeta = null;
+    let primerDiaConMetaTecelagem = null;
+    let primerDiaConMetaAcabamento = null;
+    let primerDiaConMetaCalidad = null;
+    for (let i = 1; i <= daysInMonth; i++) {
+      if (metasPorDia[i]?.INDIGO && metasPorDia[i].INDIGO > 0 && primerDiaConMeta === null) {
+        primerDiaConMeta = i;
+      }
+      if (metasPorDia[i]?.TECELAGEM && metasPorDia[i].TECELAGEM > 0 && primerDiaConMetaTecelagem === null) {
+        primerDiaConMetaTecelagem = i;
+      }
+      if (metasPorDia[i]?.ACABAMENTO && metasPorDia[i].ACABAMENTO > 0 && primerDiaConMetaAcabamento === null) {
+        primerDiaConMetaAcabamento = i;
+      }
+      if (metasPorDia[i]?.CALIDAD && metasPorDia[i].CALIDAD > 0 && primerDiaConMetaCalidad === null) {
+        primerDiaConMetaCalidad = i;
+      }
+      if (primerDiaConMeta !== null && primerDiaConMetaTecelagem !== null && primerDiaConMetaAcabamento !== null && primerDiaConMetaCalidad !== null) break;
+    }
+    
+    // Construir array de días (mostrar todo el mes para metas, datos solo hasta maxDay)
     const days = [];
     const dayNames = ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sá'];
+    
+    // Calcular producción acumulada real hasta maxDay una sola vez (INDIGO, TECELAGEM, ACABAMENTO, CALIDAD)
+    let prodAcumuladaTotal = 0;
+    let prodAcumuladaTotalTecelagem = 0;
+    let prodAcumuladaTotalAcabamento = 0;
+    let prodAcumuladaTotalCalidad = 0;
+    for (let i = primerDiaConMeta || 1; i <= maxDay; i++) {
+      prodAcumuladaTotal += indigoPorDia[i]?.metragem || 0;
+    }
+    for (let i = primerDiaConMetaTecelagem || 1; i <= maxDay; i++) {
+      prodAcumuladaTotalTecelagem += tecelagemPorDia[i]?.metragem || 0;
+    }
+    for (let i = primerDiaConMetaAcabamento || 1; i <= maxDay; i++) {
+      prodAcumuladaTotalAcabamento += acabamentoPorDia[i]?.metragem || 0;
+    }
+    for (let i = primerDiaConMetaCalidad || 1; i <= maxDay; i++) {
+      prodAcumuladaTotalCalidad += calidadPorDia[i]?.metragem_total || 0;
+    }
+    
+    // Variable para acumular metas ajustadas de días futuros
+    let metasAjustadasFuturas = 0;
+    let metasAjustadasFuturasTecelagem = 0;
+    let metasAjustadasFuturasAcabamento = 0;
+    let metasAjustadasFuturasCalidad = 0;
     
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = new Date(year, month - 1, day);
       const dayOfWeek = currentDate.getDay();
       
       const metaDiaIndigo = metasPorDia[day]?.INDIGO || 0;
-      const prodIndigo = indigoPorDia[day]?.metragem || 0;
-      const saldoIndigo = prodIndigo - metaDiaIndigo;
+      
+      // Solo usar datos de producción hasta maxDay
+      const prodIndigo = day <= maxDay ? (indigoPorDia[day]?.metragem || 0) : 0;
+      const saldoIndigo = day <= maxDay ? (prodIndigo - metaDiaIndigo) : null;
       
       // Calcular Meta Ajustada para este día específico
       let metaAjustadaIndigo = null;
       
-      // Calcular acumulado hasta el día ANTERIOR a este día
-      let acumHastaAyer = 0;
-      for (let i = 1; i < day; i++) {
-        acumHastaAyer += indigoPorDia[i]?.metragem || 0;
-      }
-      
-      // Contar días con meta desde este día en adelante
-      let diasRestantesDesdeHoy = 0;
-      for (let i = day; i <= daysInMonth; i++) {
-        if (metasPorDia[i]?.INDIGO && metasPorDia[i].INDIGO > 0) {
-          diasRestantesDesdeHoy++;
+      // Calcular si:
+      // 1. Ya pasó el primer día con meta
+      // 2. El día actual tiene meta > 0
+      if (primerDiaConMeta !== null && day >= primerDiaConMeta && metaDiaIndigo > 0) {
+        if (day <= maxDay) {
+          // Días con datos reales: calcular producción acumulada INCLUYENDO el día actual
+          let prodAcumuladaHasta = 0;
+          for (let i = primerDiaConMeta; i <= day; i++) {
+            prodAcumuladaHasta += indigoPorDia[i]?.metragem || 0;
+          }
+          
+          // Contar días con meta POSTERIORES a este día (del día+1 hasta fin de mes)
+          let diasPosterioresConMeta = 0;
+          for (let i = day + 1; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.INDIGO && metasPorDia[i].INDIGO > 0) {
+              diasPosterioresConMeta++;
+            }
+          }
+          
+          if (diasPosterioresConMeta > 0) {
+            metaAjustadaIndigo = (metaMensualIndigo - prodAcumuladaHasta) / diasPosterioresConMeta;
+          }
+        } else {
+          // Días futuros: usar producción acumulada total hasta maxDay + metas ajustadas futuras anteriores
+          let diasRestantesConMeta = 0;
+          for (let i = day; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.INDIGO && metasPorDia[i].INDIGO > 0) {
+              diasRestantesConMeta++;
+            }
+          }
+          
+          if (diasRestantesConMeta > 0) {
+            metaAjustadaIndigo = (metaMensualIndigo - prodAcumuladaTotal - metasAjustadasFuturas) / diasRestantesConMeta;
+            // Acumular esta meta ajustada para el siguiente día futuro
+            metasAjustadasFuturas += metaAjustadaIndigo;
+          }
         }
       }
       
-      // Calcular meta ajustada si hay días restantes
-      if (diasRestantesDesdeHoy > 0) {
-        metaAjustadaIndigo = (metaMensualIndigo - acumHastaAyer) / diasRestantesDesdeHoy;
+      // ===== TECELAGEM =====
+      const metaDiaTecelagem = metasPorDia[day]?.TECELAGEM || 0;
+      const prodTecelagem = day <= maxDay ? (tecelagemPorDia[day]?.metragem || 0) : 0;
+      const saldoTecelagem = day <= maxDay ? (prodTecelagem - metaDiaTecelagem) : null;
+      
+      let metaAjustadaTecelagem = null;
+      
+      if (primerDiaConMetaTecelagem !== null && day >= primerDiaConMetaTecelagem && metaDiaTecelagem > 0) {
+        if (day <= maxDay) {
+          // Días con datos reales
+          let prodAcumuladaHastaTecelagem = 0;
+          for (let i = primerDiaConMetaTecelagem; i <= day; i++) {
+            prodAcumuladaHastaTecelagem += tecelagemPorDia[i]?.metragem || 0;
+          }
+          
+          let diasPosterioresConMetaTecelagem = 0;
+          for (let i = day + 1; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.TECELAGEM && metasPorDia[i].TECELAGEM > 0) {
+              diasPosterioresConMetaTecelagem++;
+            }
+          }
+          
+          if (diasPosterioresConMetaTecelagem > 0) {
+            metaAjustadaTecelagem = (metaMensualTecelagem - prodAcumuladaHastaTecelagem) / diasPosterioresConMetaTecelagem;
+          }
+        } else {
+          // Días futuros
+          let diasRestantesConMetaTecelagem = 0;
+          for (let i = day; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.TECELAGEM && metasPorDia[i].TECELAGEM > 0) {
+              diasRestantesConMetaTecelagem++;
+            }
+          }
+          
+          if (diasRestantesConMetaTecelagem > 0) {
+            metaAjustadaTecelagem = (metaMensualTecelagem - prodAcumuladaTotalTecelagem - metasAjustadasFuturasTecelagem) / diasRestantesConMetaTecelagem;
+            metasAjustadasFuturasTecelagem += metaAjustadaTecelagem;
+          }
+        }
+      }
+      
+      // ===== ACABAMENTO =====
+      const metaDiaAcabamento = metasPorDia[day]?.ACABAMENTO || 0;
+      const prodAcabamento = day <= maxDay ? (acabamentoPorDia[day]?.metragem || 0) : 0;
+      const saldoAcabamento = day <= maxDay ? (prodAcabamento - metaDiaAcabamento) : null;
+      
+      let metaAjustadaAcabamento = null;
+      
+      if (primerDiaConMetaAcabamento !== null && day >= primerDiaConMetaAcabamento && metaDiaAcabamento > 0) {
+        if (day <= maxDay) {
+          // Días con datos reales
+          let prodAcumuladaHastaAcabamento = 0;
+          for (let i = primerDiaConMetaAcabamento; i <= day; i++) {
+            prodAcumuladaHastaAcabamento += acabamentoPorDia[i]?.metragem || 0;
+          }
+          
+          let diasPosterioresConMetaAcabamento = 0;
+          for (let i = day + 1; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.ACABAMENTO && metasPorDia[i].ACABAMENTO > 0) {
+              diasPosterioresConMetaAcabamento++;
+            }
+          }
+          
+          if (diasPosterioresConMetaAcabamento > 0) {
+            metaAjustadaAcabamento = (metaMensualAcabamento - prodAcumuladaHastaAcabamento) / diasPosterioresConMetaAcabamento;
+          }
+        } else {
+          // Días futuros
+          let diasRestantesConMetaAcabamento = 0;
+          for (let i = day; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.ACABAMENTO && metasPorDia[i].ACABAMENTO > 0) {
+              diasRestantesConMetaAcabamento++;
+            }
+          }
+          
+          if (diasRestantesConMetaAcabamento > 0) {
+            metaAjustadaAcabamento = (metaMensualAcabamento - prodAcumuladaTotalAcabamento - metasAjustadasFuturasAcabamento) / diasRestantesConMetaAcabamento;
+            metasAjustadasFuturasAcabamento += metaAjustadaAcabamento;
+          }
+        }
+      }
+      
+      // ===== CALIDAD =====
+      const metaDiaCalidad = metasPorDia[day]?.CALIDAD || 0;
+      const prodCalidad = day <= maxDay ? (calidadPorDia[day]?.metragem_total || 0) : 0;
+      const saldoCalidad = day <= maxDay ? (prodCalidad - metaDiaCalidad) : null;
+      
+      // Calcular % de Primera Calidad
+      let primeraCalidadPct = null;
+      if (day <= maxDay && calidadPorDia[day]?.metragem_total && calidadPorDia[day].metragem_total > 0) {
+        const metrosPrimeira = calidadPorDia[day]?.metragem_primeira || 0;
+        primeraCalidadPct = (metrosPrimeira / calidadPorDia[day].metragem_total) * 100;
+      }
+      
+      let metaAjustadaCalidad = null;
+      
+      if (primerDiaConMetaCalidad !== null && day >= primerDiaConMetaCalidad && metaDiaCalidad > 0) {
+        if (day <= maxDay) {
+          // Días con datos reales
+          let prodAcumuladaHastaCalidad = 0;
+          for (let i = primerDiaConMetaCalidad; i <= day; i++) {
+            prodAcumuladaHastaCalidad += calidadPorDia[i]?.metragem_total || 0;
+          }
+          
+          let diasPosterioresConMetaCalidad = 0;
+          for (let i = day + 1; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.CALIDAD && metasPorDia[i].CALIDAD > 0) {
+              diasPosterioresConMetaCalidad++;
+            }
+          }
+          
+          if (diasPosterioresConMetaCalidad > 0) {
+            metaAjustadaCalidad = (metaMensualCalidad - prodAcumuladaHastaCalidad) / diasPosterioresConMetaCalidad;
+          }
+        } else {
+          // Días futuros
+          let diasRestantesConMetaCalidad = 0;
+          for (let i = day; i <= daysInMonth; i++) {
+            if (metasPorDia[i]?.CALIDAD && metasPorDia[i].CALIDAD > 0) {
+              diasRestantesConMetaCalidad++;
+            }
+          }
+          
+          if (diasRestantesConMetaCalidad > 0) {
+            metaAjustadaCalidad = (metaMensualCalidad - prodAcumuladaTotalCalidad - metasAjustadasFuturasCalidad) / diasRestantesConMetaCalidad;
+            metasAjustadasFuturasCalidad += metaAjustadaCalidad;
+          }
+        }
       }
       
       days.push({
         dayNumber: day,
         dayLabel: `${String(day).padStart(2, '0')}- ${dayNames[dayOfWeek]}`,
-        hasData: !!indigoPorDia[day],
+        hasData: day <= maxDay ? !!indigoPorDia[day] : false,
         indigo: {
-          eficiencia: indigoPorDia[day]?.eficiencia,
+          eficiencia: day <= maxDay ? indigoPorDia[day]?.eficiencia : null,
           produccion: prodIndigo,
           meta: metaDiaIndigo,
           saldo: saldoIndigo,
           metaAjustada: metaAjustadaIndigo,
-          velocidad: indigoPorDia[day]?.velocidad,
+          velocidad: day <= maxDay ? indigoPorDia[day]?.velocidad : null,
           telares: null,
           batidas: null
         },
-        tecelagem: {},
-        acabamento: {},
-        calidad: {}
+        tecelagem: {
+          telares: day <= maxDay ? tecelagemPorDia[day]?.telares : null,
+          batidas: day <= maxDay ? tecelagemPorDia[day]?.batidas : null,
+          rpm: day <= maxDay ? tecelagemPorDia[day]?.rpm : null,
+          eficiencia: day <= maxDay ? tecelagemPorDia[day]?.eficiencia : null,
+          produccion: prodTecelagem,
+          meta: metaDiaTecelagem,
+          saldo: saldoTecelagem,
+          metaAjustada: metaAjustadaTecelagem
+        },
+        acabamento: {
+          eficiencia: day <= maxDay ? acabamentoPorDia[day]?.eficiencia : null,
+          produccion: prodAcabamento,
+          meta: metaDiaAcabamento,
+          saldo: saldoAcabamento,
+          metaAjustada: metaAjustadaAcabamento,
+          primeraCalidad: primeraCalidadPct
+        },
+        calidad: {
+          puntos100m2: day <= maxDay ? calidadPorDia[day]?.puntos100m2 : null,
+          produccion: prodCalidad,
+          meta: metaDiaCalidad,
+          saldo: saldoCalidad,
+          metaAjustada: metaAjustadaCalidad
+        }
       });
     }
     

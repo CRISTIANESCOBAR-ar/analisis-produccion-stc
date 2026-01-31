@@ -6,6 +6,82 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Funcion para comparar columnas CSV vs SQLite y registrar diferencias
+function Compare-CsvColumns {
+  param(
+    [string]$CsvPath,
+    [string]$SqlitePath,
+    [string]$TableName,
+    [bool]$IsTabDelimited
+  )
+  
+  try {
+    # 1. Obtener columnas del CSV
+    $csvFirstLine = Get-Content -Path $CsvPath -TotalCount 1
+    $csvColumns = if ($IsTabDelimited) {
+      $csvFirstLine -split "`t" | ForEach-Object { $_.Trim() }
+    } else {
+      $csvFirstLine -split "," | ForEach-Object { $_.Trim().Trim('"') }
+    }
+    
+    # 2. Obtener columnas de SQLite
+    $sqliteColumnsRaw = & sqlite3 $SqlitePath "PRAGMA table_info($TableName);"
+    $sqliteColumns = $sqliteColumnsRaw | ForEach-Object {
+      # PRAGMA table_info devuelve: cid|name|type|notnull|dflt_value|pk
+      ($_ -split '\|')[1]
+    }
+    
+    # 3. Comparar
+    $extraColumns = $csvColumns | Where-Object { $_ -notin $sqliteColumns -and $_.Trim() -ne '' }
+    $missingColumns = $sqliteColumns | Where-Object { $_ -notin $csvColumns }
+    
+    # 4. Si hay diferencias, crear registro en tabla de logs
+    if ($extraColumns.Count -gt 0 -or $missingColumns.Count -gt 0) {
+      # Crear tabla de logs si no existe
+      $createLogTable = "CREATE TABLE IF NOT EXISTS import_column_warnings (id INTEGER PRIMARY KEY AUTOINCREMENT, tabla_destino TEXT NOT NULL, timestamp TEXT NOT NULL, csv_path TEXT NOT NULL, extra_columns TEXT, missing_columns TEXT, total_csv_columns INTEGER, total_table_columns INTEGER);"
+      $createLogTable | & sqlite3 $SqlitePath
+      
+      # Preparar datos para el log
+      $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+      $safeCsvPath = $CsvPath.Replace("'", "''")
+      $extraColsJson = if ($extraColumns.Count -gt 0) { ($extraColumns -join ', ') } else { $null }
+      $missingColsJson = if ($missingColumns.Count -gt 0) { ($missingColumns -join ', ') } else { $null }
+      
+      # Insertar log
+      $extraVal = if ($extraColsJson) { "'$extraColsJson'" } else { 'NULL' }
+      $missingVal = if ($missingColsJson) { "'$missingColsJson'" } else { 'NULL' }
+      $insertLog = "INSERT INTO import_column_warnings (tabla_destino, timestamp, csv_path, extra_columns, missing_columns, total_csv_columns, total_table_columns) VALUES ('$TableName', '$timestamp', '$safeCsvPath', $extraVal, $missingVal, $($csvColumns.Count), $($sqliteColumns.Count));"
+      $insertLog | & sqlite3 $SqlitePath
+      
+      # Mostrar warning en consola
+      if ($extraColumns.Count -gt 0) {
+        Write-Host "ADVERTENCIA: El CSV contiene $($extraColumns.Count) columna(s) EXTRA que no estan en la tabla SQLite:" -ForegroundColor Yellow
+        $extraColumns | ForEach-Object { Write-Host "   - $_" -ForegroundColor Yellow }
+        Write-Host "   Estas columnas se IGNORARAN durante la importacion." -ForegroundColor Yellow
+      }
+      
+      if ($missingColumns.Count -gt 0) {
+        Write-Host "ADVERTENCIA: El CSV NO contiene $($missingColumns.Count) columna(s) que SI estan en la tabla SQLite:" -ForegroundColor Yellow
+        $missingColumns | ForEach-Object { Write-Host "   - $_" -ForegroundColor Yellow }
+        Write-Host "   Estas columnas se rellenaran con NULL durante la importacion." -ForegroundColor Yellow
+      }
+      
+      return @{
+        HasDifferences = $true
+        ExtraColumns = $extraColumns
+        MissingColumns = $missingColumns
+      }
+    }
+    
+    return @{ HasDifferences = $false }
+  }
+  catch {
+    # Si falla la validacion, continuar con la importacion normalmente
+    Write-Host "Error al validar columnas (continuando): $_" -ForegroundColor DarkYellow
+    return @{ HasDifferences = $false }
+  }
+}
+
 # CSV directo o XLSX
 $isCsv = [System.IO.Path]::GetExtension($XlsxPath).ToLower() -eq '.csv'
 $tmpCsv = $null
@@ -29,6 +105,13 @@ try {
   }
 
   if ($isTab) { $mode = 'tabs' } else { $mode = 'csv' }
+
+  # Validar diferencias de columnas ANTES de importar
+  Write-Host "Validando columnas del CSV vs tabla SQLite..." -ForegroundColor Cyan
+  $columnCheck = Compare-CsvColumns -CsvPath $csvPath -SqlitePath $SqlitePath -TableName 'tb_CALIDAD' -IsTabDelimited $isTab
+  if ($columnCheck.HasDifferences) {
+    Write-Host "" # Linea en blanco para separar warnings
+  }
 
   $cmds = @(
     "DROP TABLE IF EXISTS temp_calidad;",
