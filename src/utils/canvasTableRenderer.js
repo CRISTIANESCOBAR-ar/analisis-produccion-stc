@@ -2,6 +2,8 @@
  * Renderer de tabla usando Canvas 2D
  * Genera imagen que replica exactamente las dimensiones de la UI
  */
+// Nota: Los accesos dinámicos son seguros - datos controlados para rendering
+/* eslint-disable security/detect-object-injection */
 
 // Colores
 const COLORS = {

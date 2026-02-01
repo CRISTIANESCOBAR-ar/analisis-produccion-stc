@@ -44,12 +44,21 @@
         <span class="text-gray-600">Días del mes: {{ daysInMonth }}</span>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="flex-1 flex items-center justify-center">
-        <div class="text-center">
-          <div class="animate-spin text-4xl mb-2">↻</div>
-          <p class="text-gray-600">Cargando datos...</p>
-        </div>
+      <!-- Loading Skeleton -->
+      <div v-if="loading" class="flex-1 p-4">
+        <SkeletonLoader type="table" :rows="15" :columns="8" />
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="!loading && hasLoadedOnce && daysData.length === 0" class="flex-1">
+        <EmptyState 
+          icon="📊"
+          title="No hay datos para este período"
+          description="No se encontraron datos de producción para el mes seleccionado."
+          :show-action="true"
+          action-text="Actualizar"
+          @action="loadData"
+        />
       </div>
 
       <!-- Tabla de datos -->
@@ -227,22 +236,21 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import Swal from 'sweetalert2'
 import ExcelJS from 'exceljs'
+import { useErrorHandler } from '@/composables/useErrorHandler'
+import { useNotifications } from '@/composables/useNotifications'
+import { SkeletonLoader, EmptyState } from '@/components/ui'
 
 const API_URL = 'http://localhost:3002/api'
+
+// Composables
+const { handleError, tryCatch } = useErrorHandler()
+const notifications = useNotifications()
 
 const selectedDate = ref('')
 const loading = ref(false)
 const daysData = ref([])
-
-const toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true
-})
+const hasLoadedOnce = ref(false)
 
 // Computed properties
 const year = computed(() => {
@@ -368,19 +376,22 @@ function nextMonth() {
 // Cargar datos
 async function loadData() {
   loading.value = true
-  try {
+  
+  const result = await tryCatch(async () => {
     const res = await fetch(`${API_URL}/informe-diario?fecha=${selectedDate.value}`)
-    if (!res.ok) throw new Error('Error al cargar datos')
-    
-    const data = await res.json()
-    daysData.value = data.days
-    
-  } catch (err) {
-    console.error('Error cargando informe diario:', err)
-    toast.fire({ icon: 'error', title: 'Error al cargar datos del informe' })
-  } finally {
-    loading.value = false
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      throw new Error(errorData.error || `Error HTTP ${res.status}`)
+    }
+    return res.json()
+  }, 'Cargar Informe Diario')
+  
+  if (result) {
+    daysData.value = result.days || []
   }
+  
+  hasLoadedOnce.value = true
+  loading.value = false
 }
 
 // Formateo
@@ -441,7 +452,7 @@ function getSaldoClass(value) {
 // Exportar a Excel con estilos
 async function exportToExcel() {
   if (!daysData.value || daysData.value.length === 0) {
-    toast.fire({ icon: 'warning', title: 'No hay datos para exportar' })
+    notifications.warning('No hay datos para exportar')
     return
   }
 
@@ -898,10 +909,9 @@ async function exportToExcel() {
     link.click()
     window.URL.revokeObjectURL(url)
 
-    toast.fire({ icon: 'success', title: 'Excel exportado correctamente' })
+    notifications.success('Excel exportado correctamente')
   } catch (error) {
-    console.error('Error exportando a Excel:', error)
-    toast.fire({ icon: 'error', title: 'Error al exportar a Excel' })
+    handleError(error, 'Exportar Excel')
   }
 }
 

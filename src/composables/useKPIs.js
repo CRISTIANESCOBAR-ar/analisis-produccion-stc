@@ -3,6 +3,8 @@
 // =====================================================================
 // Uso: import { useKPIs } from '@/composables/useKPIs'
 // =====================================================================
+// Nota: Los accesos dinámicos son seguros - datos vienen del backend
+/* eslint-disable security/detect-object-injection */
 
 import { ref, computed } from 'vue'
 import { useDatabase } from './useDatabase'

@@ -399,8 +399,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDatabase } from '../composables/useDatabase'
+import { useErrorHandler } from '@/composables/useErrorHandler'
+import { useNotifications } from '@/composables/useNotifications'
 
 const db = useDatabase()
+const { handleError, tryCatch } = useErrorHandler()
+const notifications = useNotifications()
 
 const calidadData = ref([])
 const totals = ref({
@@ -703,20 +707,17 @@ async function loadData() {
   selectedPartida.value = null
   detallePartida.value = []
   
-  try {
+  const result = await tryCatch(async () => {
     const params = {
       startDate: filters.value.fecha,
       endDate: filters.value.fecha,
       tramas: filters.value.tramas
     }
-
-    const result = await db.getRevisionCQ(params)
-    calidadData.value = result || []
-    calculateTotals()
-  } catch (err) {
-    console.error('Error cargando reporte Revision CQ:', err)
-    calidadData.value = []
-  }
+    return await db.getRevisionCQ(params)
+  }, 'Cargar Revisión CQ')
+  
+  calidadData.value = result || []
+  calculateTotals()
 }
 
 function applyFilters() {
@@ -730,20 +731,17 @@ async function selectRevisor(revisor) {
   selectedPartida.value = null
   detallePartida.value = []
   
-  try {
+  const result = await tryCatch(async () => {
     const params = {
       startDate: filters.value.fecha,
       endDate: filters.value.fecha,
       revisor: revisor.Revisor,
       tramas: filters.value.tramas
     }
-    
-    const result = await db.getRevisorDetalle(params)
-    detalleRevisor.value = result || []
-  } catch (err) {
-    console.error('Error cargando detalle del revisor:', err)
-    detalleRevisor.value = []
-  }
+    return await db.getRevisorDetalle(params)
+  }, 'Cargar detalle revisor', { toast: true })
+  
+  detalleRevisor.value = result || []
 }
 
 // Función para seleccionar una partida y cargar su detalle
@@ -763,7 +761,7 @@ async function selectPartida(detalle) {
     console.log('📊 Número de registros:', result?.length || 0)
     detallePartida.value = result || []
   } catch (err) {
-    console.error('Error cargando detalle de la partida:', err)
+    handleError(err, 'Cargar detalle partida', { silent: true })
     detallePartida.value = []
   }
 }
@@ -785,22 +783,14 @@ async function showDefectosModal(pieza, index = -1) {
   // Agregar listener de teclado
   window.addEventListener('keydown', handleModalKeydown)
   
-  try {
+  const result = await tryCatch(async () => {
     console.log('🔍 [FRONTEND] Pieza completa:', pieza)
     console.log('🔍 [FRONTEND] Etiqueta:', pieza.ETIQUETA)
-    console.log('🔍 [FRONTEND] Tipo de etiqueta:', typeof pieza.ETIQUETA)
-    console.log('🔍 [FRONTEND] Longitud etiqueta:', pieza.ETIQUETA?.length)
-    console.log('🔍 [FRONTEND] Etiqueta con quote:', JSON.stringify(pieza.ETIQUETA))
-    
-    const result = await db.getDefectosDetalle(pieza.ETIQUETA)
-    console.log('📊 [FRONTEND] Defectos recibidos:', result?.length || 0, result)
-    defectosDetalle.value = result || []
-  } catch (err) {
-    console.error('❌ [FRONTEND] Error cargando defectos detallados:', err)
-    defectosDetalle.value = []
-  } finally {
-    loadingDefectos.value = false
-  }
+    return await db.getDefectosDetalle(pieza.ETIQUETA)
+  }, 'Cargar defectos', { silent: true })
+  
+  defectosDetalle.value = result || []
+  loadingDefectos.value = false
 }
 
 function closeDefectosModal() {

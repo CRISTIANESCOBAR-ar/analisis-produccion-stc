@@ -213,13 +213,22 @@
     </div>
 
     <!-- Loading y Error states -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="spinner"></div>
-      <p>Cargando datos...</p>
+    <div v-if="loading" class="loading-container p-6">
+      <SkeletonLoader type="stats" :count="4" :grid-cols="4" />
+      <div class="mt-6">
+        <SkeletonLoader type="table" :rows="6" :columns="6" />
+      </div>
     </div>
 
-    <div v-if="error" class="error-message">
-      ⚠️ Error: {{ error }}
+    <div v-if="error && !loading" class="p-6">
+      <EmptyState 
+        icon="⚠️"
+        title="Error al cargar datos"
+        :description="error"
+        :show-action="true"
+        action-text="Reintentar"
+        @action="retryLoad"
+      />
     </div>
   </div>
 </template>
@@ -228,8 +237,13 @@
 defineOptions({ name: 'DashboardView' })
 import { ref, onMounted, computed } from 'vue'
 import { useDatabase } from '../composables/useDatabase'
+import { useErrorHandler } from '@/composables/useErrorHandler'
+import { useNotifications } from '@/composables/useNotifications'
+import { SkeletonLoader, EmptyState } from '@/components/ui'
 
 const db = useDatabase()
+const { handleError, tryCatch } = useErrorHandler()
+const notifications = useNotifications()
 
 const systemStatus = ref(null)
 const topMotivos = ref([])
@@ -323,16 +337,28 @@ const totalesDetalle = computed(() => {
 
 // Cargar datos iniciales
 onMounted(async () => {
+  await loadAllData()
+})
+
+async function loadAllData() {
   await loadSystemStatus()
   await loadProduccionData()
   await loadTopMotivos()
-})
+}
+
+async function retryLoad() {
+  notifications.info('Reintentando cargar datos...')
+  await loadAllData()
+}
 
 async function loadSystemStatus() {
-  try {
-    systemStatus.value = await db.getStatus()
-  } catch (err) {
-    console.error('Error cargando estado:', err)
+  const result = await tryCatch(
+    () => db.getStatus(),
+    'Cargar estado del sistema',
+    { silent: true }
+  )
+  if (result) {
+    systemStatus.value = result
   }
 }
 
@@ -443,13 +469,13 @@ function selectRevisor(revisor) {
 }
 
 async function loadTopMotivos() {
-  try {
-    topMotivos.value = await db.getTopMotivosParada(
-      startDate.value,
-      endDate.value
-    )
-  } catch (err) {
-    console.error('Error cargando motivos de parada:', err)
+  const result = await tryCatch(
+    () => db.getTopMotivosParada(startDate.value, endDate.value),
+    'Cargar motivos de parada',
+    { silent: true }
+  )
+  if (result) {
+    topMotivos.value = result
   }
 }
 
