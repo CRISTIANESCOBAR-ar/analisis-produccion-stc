@@ -1,5 +1,12 @@
 <template>
-  <div class="w-full h-screen flex flex-col p-1">
+  <div class="w-full h-screen flex flex-col p-1 relative">
+    <!-- Loading Overlay - Banner visible mientras carga -->
+    <LoadingOverlay 
+      :show="loading" 
+      message="Generando informe..." 
+      sub-message="Consultando datos del mes"
+    />
+    
     <main class="w-full flex-1 min-h-0 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-200 flex flex-col">
       <!-- Header con navegación -->
       <div class="flex justify-between items-center mb-4 gap-4">
@@ -239,7 +246,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import ExcelJS from 'exceljs'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useNotifications } from '@/composables/useNotifications'
-import { SkeletonLoader, EmptyState } from '@/components/ui'
+import { SkeletonLoader, EmptyState, LoadingOverlay } from '@/components/ui'
 
 const API_URL = 'http://localhost:3002/api'
 
