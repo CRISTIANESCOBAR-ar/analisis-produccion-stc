@@ -7256,16 +7256,40 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
     // Query para métricas de fibra HVI por día (promedios ponderados por PESO)
     // PESO viene en formato europeo: "2.485,33" (punto=miles, coma=decimal)
     const sql = `
-      WITH FECHAS AS (
-        SELECT DISTINCT DATA_MOVIMENTO AS FECHA
+      WITH BASE AS (
+        SELECT
+          *,
+          CASE
+            WHEN HR_ENTRADA_PROD IS NULL OR HR_ENTRADA_PROD = '' THEN DT_ENTRADA_PROD
+            WHEN CAST(substr(HR_ENTRADA_PROD, 1, 2) AS INTEGER) >= 6 THEN DT_ENTRADA_PROD
+            ELSE (
+              -- Convertir fecha a ISO, restar 1 día, convertir de vuelta a DD/MM/YYYY
+              substr(date(substr(DT_ENTRADA_PROD, 7, 4) || '-' || substr(DT_ENTRADA_PROD, 4, 2) || '-' || substr(DT_ENTRADA_PROD, 1, 2), '-1 day'), 9, 2) || '/' ||
+              substr(date(substr(DT_ENTRADA_PROD, 7, 4) || '-' || substr(DT_ENTRADA_PROD, 4, 2) || '-' || substr(DT_ENTRADA_PROD, 1, 2), '-1 day'), 6, 2) || '/' ||
+              substr(date(substr(DT_ENTRADA_PROD, 7, 4) || '-' || substr(DT_ENTRADA_PROD, 4, 2) || '-' || substr(DT_ENTRADA_PROD, 1, 2), '-1 day'), 1, 4)
+            )
+          END AS FECHA_PRODUCTIVA_DB,
+          CASE
+            WHEN HR_ENTRADA_PROD IS NULL OR HR_ENTRADA_PROD = '' THEN
+              substr(DT_ENTRADA_PROD, 7, 4) || '-' || substr(DT_ENTRADA_PROD, 4, 2) || '-' || substr(DT_ENTRADA_PROD, 1, 2)
+            WHEN CAST(substr(HR_ENTRADA_PROD, 1, 2) AS INTEGER) >= 6 THEN
+              substr(DT_ENTRADA_PROD, 7, 4) || '-' || substr(DT_ENTRADA_PROD, 4, 2) || '-' || substr(DT_ENTRADA_PROD, 1, 2)
+            ELSE
+              date(
+                substr(DT_ENTRADA_PROD, 7, 4) || '-' || 
+                substr(DT_ENTRADA_PROD, 4, 2) || '-' || 
+                substr(DT_ENTRADA_PROD, 1, 2),
+                '-1 day'
+              )
+          END AS FECHA_PRODUCTIVA
         FROM tb_CALIDAD_FIBRA
         WHERE TIPO_MOV = 'MIST'
-          AND substr(DATA_MOVIMENTO, 7, 4) || '-' || 
-              substr(DATA_MOVIMENTO, 4, 2) || '-' || 
-              substr(DATA_MOVIMENTO, 1, 2) BETWEEN ? AND ?
-        ORDER BY substr(DATA_MOVIMENTO, 7, 4) || '-' || 
-                 substr(DATA_MOVIMENTO, 4, 2) || '-' || 
-                 substr(DATA_MOVIMENTO, 1, 2)
+      ),
+      FECHAS AS (
+        SELECT DISTINCT FECHA_PRODUCTIVA_DB AS FECHA
+        FROM BASE
+        WHERE FECHA_PRODUCTIVA BETWEEN ? AND ?
+        ORDER BY FECHA_PRODUCTIVA
       )
       SELECT 
         F.FECHA AS FECHA_DB,
@@ -7277,7 +7301,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(SCI, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(SCI, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS SCI,
         
         -- MIC (ponderado por peso)
@@ -7286,7 +7310,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(MIC, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(MIC, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS MIC,
         
         -- MAT (ponderado por peso)
@@ -7295,7 +7319,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(MAT, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(MAT, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS MAT,
         
         -- UHML (ponderado por peso)
@@ -7304,7 +7328,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(UHML, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(UHML, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS UHML,
         
         -- UI (ponderado por peso)
@@ -7313,7 +7337,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(UI, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(UI, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS UI,
         
         -- SF (ponderado por peso)
@@ -7322,7 +7346,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(SF, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(SF, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS SF,
         
         -- STR (ponderado por peso)
@@ -7331,7 +7355,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(STR, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(STR, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS STR,
         
         -- ELG (ponderado por peso)
@@ -7340,7 +7364,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(ELG, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(ELG, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS ELG,
         
         -- RD (ponderado por peso)
@@ -7349,7 +7373,7 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(RD, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(RD, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS RD,
         
         -- PLUS_B (+b, ponderado por peso)
@@ -7358,30 +7382,31 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
               THEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
           NULLIF(SUM(CASE WHEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) > 0 
               THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS PLUS_B,
         
         -- Total peso del día
         (SELECT ROUND(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)
-         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+         FROM BASE WHERE FECHA_PRODUCTIVA_DB = F.FECHA
         ) AS PESO_TOTAL
         
       FROM FECHAS F
     `;
     
     console.log('📊 Ejecutando query fibra...');
-    const datos = await dbAll(sql, [fechaInicio, fechaFin]);
-    console.log(`📊 Resultados: ${datos.length} días`);
+    try {
+      const datos = await dbAll(sql, [fechaInicio, fechaFin]);
+      console.log(`📊 Resultados: ${datos.length} días`);
     
-    // Calcular rangos para normalización
-    const rangos = {};
-    const metricas = ['SCI', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B'];
+      // Calcular rangos para normalización
+      const rangos = {};
+      const metricas = ['SCI', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B'];
     
-    metricas.forEach(m => {
-      const valores = datos.map(r => r[m]).filter(v => v !== null && v !== undefined && !isNaN(v));
-      if (valores.length > 0) {
-        rangos[m] = {
-          min: Math.min(...valores),
+      metricas.forEach(m => {
+        const valores = datos.map(r => r[m]).filter(v => v !== null && v !== undefined && !isNaN(v));
+        if (valores.length > 0) {
+          rangos[m] = {
+            min: Math.min(...valores),
           max: Math.max(...valores),
           avg: valores.reduce((a, b) => a + b, 0) / valores.length
         };
@@ -7393,6 +7418,10 @@ app.get('/api/metricas-diarias-fibra', async (req, res) => {
       rangos,
       totalDias: datos.length 
     });
+    } catch (innerError) {
+      console.error('❌ Error ejecutando query fibra:', innerError);
+      throw innerError;
+    }
 
   } catch (error) {
     console.error('Error en /api/metricas-diarias-fibra:', error);
