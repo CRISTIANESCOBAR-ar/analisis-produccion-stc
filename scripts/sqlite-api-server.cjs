@@ -7037,6 +7037,380 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ============================================================================
+// ENDPOINT: Métricas diarias de CALIDAD para gráficos
+// Solo tb_CALIDAD: Calidad% y Pts100m² por día
+// ============================================================================
+app.get('/api/metricas-diarias-calidad', async (req, res) => {
+  console.log('📊 [metricas-diarias-calidad] Endpoint llamado');
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    console.log(`📊 Parámetros: ${fechaInicio} - ${fechaFin}`);
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
+    }
+
+    // Query para obtener métricas de calidad por día
+    const sql = `
+      SELECT 
+        DATE(DAT_PROD) AS FECHA,
+        ROUND(
+          SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' 
+              THEN CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 / 
+          NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0), 1
+        ) AS CALIDAD_PERCENT,
+        ROUND(
+          SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' 
+              THEN CAST(REPLACE(REPLACE(PONTUACAO, '.', ''), ',', '.') AS REAL) ELSE 0 END) * 100.0 /
+          NULLIF(
+            SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' 
+                THEN CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+                     CAST(REPLACE(REPLACE(LARGURA, '.', ''), ',', '.') AS REAL) / 100.0 ELSE 0 END), 0
+          ), 2
+        ) AS PTS_100M2,
+        SUM(CASE WHEN QUALIDADE LIKE 'PRIMEIRA%' 
+            THEN CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) ELSE 0 END) AS METROS_1ERA,
+        SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)) AS METROS_TOTAL,
+        COUNT(*) AS ROLLOS
+      FROM tb_CALIDAD 
+      WHERE EMP = 'STC' 
+        AND DATE(DAT_PROD) BETWEEN DATE(?) AND DATE(?)
+        AND QUALIDADE NOT LIKE '%RETALHO%'
+      GROUP BY DATE(DAT_PROD)
+      ORDER BY FECHA
+    `;
+    
+    console.log('📊 Ejecutando query...');
+    const datos = await dbAll(sql, [fechaInicio, fechaFin]);
+    console.log(`📊 Resultados: ${datos.length} días`);
+    
+    // Calcular rangos para normalización
+    const rangos = {};
+    const metricas = ['CALIDAD_PERCENT', 'PTS_100M2', 'METROS_1ERA', 'METROS_TOTAL'];
+    
+    metricas.forEach(m => {
+      const valores = datos.map(r => r[m]).filter(v => v !== null && v !== undefined && !isNaN(v));
+      if (valores.length > 0) {
+        rangos[m] = {
+          min: Math.min(...valores),
+          max: Math.max(...valores),
+          avg: valores.reduce((a, b) => a + b, 0) / valores.length
+        };
+      }
+    });
+
+    res.json({ 
+      datos, 
+      rangos,
+      totalDias: datos.length 
+    });
+
+  } catch (error) {
+    console.error('Error en /api/metricas-diarias-calidad:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// ENDPOINT: Métricas diarias de PRODUCCION para gráficos
+// tb_PRODUCCION: Urdidora (RU103), Índigo (Metros, R103, Velocidad), Tejeduría (Eficiencia, RU105, RT105)
+// ============================================================================
+app.get('/api/metricas-diarias-produccion', async (req, res) => {
+  console.log('📊 [metricas-diarias-produccion] Endpoint llamado');
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    console.log(`📊 Parámetros: ${fechaInicio} - ${fechaFin}`);
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
+    }
+
+    // Convertir fechas YYYY-MM-DD a DD/MM/YYYY para comparar con DT_BASE_PRODUCAO
+    const fechaInicioArr = fechaInicio.split('-');
+    const fechaFinArr = fechaFin.split('-');
+    const fechaInicioDB = `${fechaInicioArr[2]}/${fechaInicioArr[1]}/${fechaInicioArr[0]}`;
+    const fechaFinDB = `${fechaFinArr[2]}/${fechaFinArr[1]}/${fechaFinArr[0]}`;
+
+    // Query para métricas de producción por día
+    const sql = `
+      WITH FECHAS AS (
+        SELECT DISTINCT DT_BASE_PRODUCAO AS FECHA
+        FROM tb_PRODUCCION
+        WHERE FILIAL = '05'
+          AND substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+              substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+              substr(DT_BASE_PRODUCAO, 1, 2) BETWEEN ? AND ?
+        ORDER BY substr(DT_BASE_PRODUCAO, 7, 4) || '-' || 
+                 substr(DT_BASE_PRODUCAO, 4, 2) || '-' || 
+                 substr(DT_BASE_PRODUCAO, 1, 2)
+      )
+      SELECT 
+        F.FECHA AS FECHA_DB,
+        substr(F.FECHA, 7, 4) || '-' || substr(F.FECHA, 4, 2) || '-' || substr(F.FECHA, 1, 2) AS FECHA,
+        
+        -- Urdidora: RU106 (rupturas por millón de metros-hilo)
+        -- Fórmula: (RUPTURAS * 1,000,000) / (METRAGEM * NUM_FIOS)
+        (SELECT ROUND(
+          (SUM(CAST(p.RUPTURAS AS INTEGER)) * 1000000.0) / 
+          NULLIF(
+            SUM(
+              CAST(REPLACE(REPLACE(p.METRAGEM, '.', ''), ',', '.') AS REAL) * 
+              CAST(REPLACE(REPLACE(p.NUM_FIOS, '.', ''), ',', '.') AS REAL)
+            ), 0
+          ), 2)
+         FROM tb_PRODUCCION p 
+         WHERE p.SELETOR = 'URDIDEIRA' AND p.FILIAL = '05' AND p.DT_BASE_PRODUCAO = F.FECHA
+           AND p.NUM_FIOS IS NOT NULL AND p.NUM_FIOS != ''
+        ) AS RU106_URDIDORA,
+        
+        -- Índigo: Metros
+        (SELECT ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0)
+         FROM tb_PRODUCCION WHERE SELETOR = 'INDIGO' AND FILIAL = '05' AND DT_BASE_PRODUCAO = F.FECHA
+        ) AS METROS_INDIGO,
+        
+        -- Índigo: R103 (rupturas por 1000m)
+        (SELECT ROUND((SUM(CAST(RUPTURAS AS INTEGER)) * 1000.0) / 
+                      NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0), 2)
+         FROM tb_PRODUCCION WHERE SELETOR = 'INDIGO' AND FILIAL = '05' AND DT_BASE_PRODUCAO = F.FECHA
+        ) AS R103_INDIGO,
+        
+        -- Índigo: Velocidad ponderada por metros
+        (SELECT ROUND(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL) * 
+                          CAST(REPLACE(REPLACE(VELOC, '.', ''), ',', '.') AS REAL)) / 
+                      NULLIF(SUM(CAST(REPLACE(REPLACE(METRAGEM, '.', ''), ',', '.') AS REAL)), 0), 0)
+         FROM tb_PRODUCCION WHERE SELETOR = 'INDIGO' AND FILIAL = '05' AND DT_BASE_PRODUCAO = F.FECHA
+        ) AS VELOCIDAD_INDIGO,
+        
+        -- Tejeduría: Eficiencia %
+        (SELECT ROUND((SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) / 
+                       NULLIF(SUM(CASE WHEN CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL) > 0 
+                                  THEN CAST(REPLACE(REPLACE("PONTOS_100%", '.', ''), ',', '.') AS REAL) ELSE 0 END), 0)) * 100.0, 1)
+         FROM tb_PRODUCCION WHERE SELETOR = 'TECELAGEM' AND FILIAL = '05' AND DT_BASE_PRODUCAO = F.FECHA
+        ) AS EFICIENCIA_TELAR,
+        
+        -- Tejeduría: RU105 (paradas urdumbre por 100k puntos)
+        (SELECT ROUND((SUM(CAST(REPLACE(REPLACE("PARADA TEC URDUME", '.', ''), ',', '.') AS REAL)) * 100000.0) / 
+                      NULLIF((SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 1000.0), 0), 2)
+         FROM tb_PRODUCCION WHERE SELETOR = 'TECELAGEM' AND FILIAL = '05' AND DT_BASE_PRODUCAO = F.FECHA
+        ) AS RU105_TELAR,
+        
+        -- Tejeduría: RT105 (paradas trama por 100k puntos)
+        (SELECT ROUND((SUM(CAST(REPLACE(REPLACE("PARADA TEC TRAMA", '.', ''), ',', '.') AS REAL)) * 100000.0) / 
+                      NULLIF((SUM(CAST(REPLACE(REPLACE(PONTOS_LIDOS, '.', ''), ',', '.') AS REAL)) * 1000.0), 0), 2)
+         FROM tb_PRODUCCION WHERE SELETOR = 'TECELAGEM' AND FILIAL = '05' AND DT_BASE_PRODUCAO = F.FECHA
+        ) AS RT105_TELAR
+        
+      FROM FECHAS F
+    `;
+    
+    console.log('📊 Ejecutando query producción...');
+    const datos = await dbAll(sql, [fechaInicio, fechaFin]);
+    console.log(`📊 Resultados: ${datos.length} días`);
+    
+    // Calcular rangos para normalización
+    const rangos = {};
+    const metricas = ['RU106_URDIDORA', 'METROS_INDIGO', 'R103_INDIGO', 'VELOCIDAD_INDIGO', 
+                      'EFICIENCIA_TELAR', 'RU105_TELAR', 'RT105_TELAR'];
+    
+    metricas.forEach(m => {
+      const valores = datos.map(r => r[m]).filter(v => v !== null && v !== undefined && !isNaN(v));
+      if (valores.length > 0) {
+        rangos[m] = {
+          min: Math.min(...valores),
+          max: Math.max(...valores),
+          avg: valores.reduce((a, b) => a + b, 0) / valores.length
+        };
+      }
+    });
+
+    res.json({ 
+      datos, 
+      rangos,
+      totalDias: datos.length 
+    });
+
+  } catch (error) {
+    console.error('Error en /api/metricas-diarias-produccion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// ENDPOINT: Métricas diarias de FIBRA HVI para gráficos
+// tb_CALIDAD_FIBRA: Promedios ponderados por peso de SCI, MIC, MAT, UHML, UI, SF, STR, ELG, RD, +b
+// ============================================================================
+app.get('/api/metricas-diarias-fibra', async (req, res) => {
+  console.log('📊 [metricas-diarias-fibra] Endpoint llamado');
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    console.log(`📊 Parámetros: ${fechaInicio} - ${fechaFin}`);
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ error: 'Parámetros fechaInicio y fechaFin requeridos (formato: YYYY-MM-DD)' });
+    }
+
+    // Query para métricas de fibra HVI por día (promedios ponderados por PESO)
+    // PESO viene en formato europeo: "2.485,33" (punto=miles, coma=decimal)
+    const sql = `
+      WITH FECHAS AS (
+        SELECT DISTINCT DATA_MOVIMENTO AS FECHA
+        FROM tb_CALIDAD_FIBRA
+        WHERE TIPO_MOV = 'MIST'
+          AND substr(DATA_MOVIMENTO, 7, 4) || '-' || 
+              substr(DATA_MOVIMENTO, 4, 2) || '-' || 
+              substr(DATA_MOVIMENTO, 1, 2) BETWEEN ? AND ?
+        ORDER BY substr(DATA_MOVIMENTO, 7, 4) || '-' || 
+                 substr(DATA_MOVIMENTO, 4, 2) || '-' || 
+                 substr(DATA_MOVIMENTO, 1, 2)
+      )
+      SELECT 
+        F.FECHA AS FECHA_DB,
+        substr(F.FECHA, 7, 4) || '-' || substr(F.FECHA, 4, 2) || '-' || substr(F.FECHA, 1, 2) AS FECHA,
+        
+        -- SCI (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(SCI, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(SCI, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(SCI, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS SCI,
+        
+        -- MIC (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(MIC, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(MIC, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(MIC, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS MIC,
+        
+        -- MAT (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(MAT, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(MAT, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(MAT, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS MAT,
+        
+        -- UHML (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(UHML, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(UHML, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(UHML, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS UHML,
+        
+        -- UI (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(UI, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(UI, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(UI, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS UI,
+        
+        -- SF (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(SF, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(SF, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(SF, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS SF,
+        
+        -- STR (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(STR, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(STR, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(STR, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS STR,
+        
+        -- ELG (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(ELG, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(ELG, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(ELG, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS ELG,
+        
+        -- RD (ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(RD, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(RD, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(RD, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS RD,
+        
+        -- PLUS_B (+b, ponderado por peso)
+        (SELECT ROUND(
+          SUM(CASE WHEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) * CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END) / 
+          NULLIF(SUM(CASE WHEN CAST(REPLACE(PLUS_B, ',', '.') AS REAL) > 0 
+              THEN CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL) ELSE 0 END), 0), 2)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS PLUS_B,
+        
+        -- Total peso del día
+        (SELECT ROUND(SUM(CAST(REPLACE(REPLACE(PESO, '.', ''), ',', '.') AS REAL)), 0)
+         FROM tb_CALIDAD_FIBRA WHERE TIPO_MOV = 'MIST' AND DATA_MOVIMENTO = F.FECHA
+        ) AS PESO_TOTAL
+        
+      FROM FECHAS F
+    `;
+    
+    console.log('📊 Ejecutando query fibra...');
+    const datos = await dbAll(sql, [fechaInicio, fechaFin]);
+    console.log(`📊 Resultados: ${datos.length} días`);
+    
+    // Calcular rangos para normalización
+    const rangos = {};
+    const metricas = ['SCI', 'MIC', 'MAT', 'UHML', 'UI', 'SF', 'STR', 'ELG', 'RD', 'PLUS_B'];
+    
+    metricas.forEach(m => {
+      const valores = datos.map(r => r[m]).filter(v => v !== null && v !== undefined && !isNaN(v));
+      if (valores.length > 0) {
+        rangos[m] = {
+          min: Math.min(...valores),
+          max: Math.max(...valores),
+          avg: valores.reduce((a, b) => a + b, 0) / valores.length
+        };
+      }
+    });
+
+    res.json({ 
+      datos, 
+      rangos,
+      totalDias: datos.length 
+    });
+
+  } catch (error) {
+    console.error('Error en /api/metricas-diarias-fibra:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// TEST: Endpoint simple para diagnosticar crashes
+app.get('/api/test-calidad-simple', async (req, res) => {
+  console.log('🧪 [test-calidad-simple] Iniciando...');
+  try {
+    console.log('🧪 Ejecutando query simple...');
+    const result = await dbAll(`SELECT COUNT(*) as total FROM tb_CALIDAD LIMIT 1`);
+    console.log('🧪 Query completada:', result);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('🧪 Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ✅ Catch-all para Vue Router (debe ir al final, después de todas las rutas API)
 // Express 5 usa use() en lugar de get() para catch-all
 app.use((req, res, next) => {
@@ -7249,4 +7623,3 @@ app.get('/api/metrics/daily', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-

@@ -20,7 +20,7 @@
           {{ loading ? '⏳ Cargando...' : '🔄 Actualizar' }}
         </button>
         <div class="last-update">
-          {{ kpisComposable.formatLastUpdate() }}
+          {{ formatLastUpdate() }}
         </div>
       </div>
     </div>
@@ -39,7 +39,7 @@
         <div class="kpi-grid">
           <KPICard
             label="Metros Producidos"
-            :value="kpisComposable.metrosHoy"
+            :value="metrosHoy"
             unit="m"
             icon="📏"
             status="success"
@@ -48,7 +48,7 @@
           
           <KPICard
             label="Calidad Promedio"
-            :value="kpisComposable.calidadPromedio"
+            :value="calidadPromedio"
             unit="%"
             icon="✅"
             status="normal"
@@ -57,27 +57,27 @@
           
           <KPICard
             label="Total Paradas"
-            :value="kpisComposable.totalParadas"
+            :value="totalParadas"
             icon="🛑"
-            :status="kpisComposable.totalParadas > 20 ? 'warning' : 'normal'"
+            :status="totalParadas > 20 ? 'warning' : 'normal'"
             size="large"
           />
           
           <KPICard
             label="Minutos en Parada"
-            :value="kpisComposable.minutosParada"
+            :value="minutosParada"
             unit="min"
             icon="⏱️"
-            :status="kpisComposable.minutosParada > 300 ? 'warning' : 'normal'"
+            :status="minutosParada > 300 ? 'warning' : 'normal'"
             size="large"
           />
           
           <KPICard
             label="Eficiencia Global"
-            :value="kpisComposable.eficiencia"
+            :value="eficiencia"
             unit="%"
             icon="⚡"
-            :status="kpisComposable.eficiencia < 75 ? 'warning' : 'success'"
+            :status="eficiencia < 75 ? 'warning' : 'success'"
             size="large"
           />
         </div>
@@ -150,6 +150,17 @@ import { useDatabase } from '@/composables/useDatabase'
 
 // Composables
 const kpisComposable = useKPIs()
+const { 
+  metrosHoy, 
+  calidadPromedio, 
+  totalParadas, 
+  minutosParada, 
+  eficiencia,
+  topMotivos,
+  topRevisores,
+  loadKPIs,
+  formatLastUpdate
+} = kpisComposable
 const { getStatus } = useDatabase()
 
 // Estado
@@ -164,7 +175,7 @@ const endDate = ref(today)
 
 // Computed data para gráficos
 const topMotivosData = computed(() => {
-  return kpisComposable.topMotivos.value.map(item => ({
+  return topMotivos.value.map(item => ({
     label: item.motivo,
     value: item.cantidad
   }))
@@ -177,7 +188,7 @@ const revisoresColumns = [
 ]
 
 const topRevisoresData = computed(() => {
-  return kpisComposable.topRevisores.value
+  return topRevisores.value
 })
 
 // Métodos
@@ -185,7 +196,7 @@ const loadDashboard = async () => {
   loading.value = true
   try {
     // Cargar KPIs
-    await kpisComposable.loadKPIs(startDate.value, endDate.value)
+    await loadKPIs(startDate.value, endDate.value)
     
     // Cargar información del sistema
     systemData.value = await getStatus()

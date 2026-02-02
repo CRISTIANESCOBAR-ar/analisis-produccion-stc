@@ -13,6 +13,7 @@ import ConsultaRoladaIndigo from '../components/ConsultaRoladaIndigo.vue'
 import InformeProduccionIndigo from '../components/InformeProduccionIndigo.vue'
 import SeguimientoRoladas from '../components/SeguimientoRoladas.vue'
 import SeguimientoRoladasFibra from '../components/SeguimientoRoladasFibra.vue'
+import GraficoMetricasDiarias from '../components/GraficoMetricasDiarias.vue'
 import CostosMensuales from '../components/CostosMensuales.vue'
 import MetasCarga from '../components/MetasCarga.vue'
 
@@ -103,6 +104,12 @@ const routes = [
     name: 'SeguimientoRoladasFibra',
     component: SeguimientoRoladasFibra,
     meta: { title: 'Seguimiento Roladas + Fibra HVI - Análisis Producción STC' }
+  },
+  {
+    path: '/grafico-metricas-diarias',
+    name: 'GraficoMetricasDiarias',
+    component: GraficoMetricasDiarias,
+    meta: { title: 'Gráfico Métricas Diarias - Análisis Producción STC' }
   },
   {    path: '/costos-mensuales',
     name: 'CostosMensuales',

@@ -143,6 +143,12 @@
             label: 'Roladas + Fibra HVI', 
             path: '/seguimiento-roladas-fibra',
             active: isActive('/seguimiento-roladas-fibra')
+          },
+          { 
+            icon: '📉', 
+            label: 'Gráfico Métricas Diarias', 
+            path: '/grafico-metricas-diarias',
+            active: isActive('/grafico-metricas-diarias')
           }
         ]"
         @navigate="handleNavClick"
