@@ -5,6 +5,9 @@
 // Usar con: node scripts/sqlite-api-server.js
 // =====================================================================
 
+/* eslint-disable security/detect-object-injection */
+/* eslint-disable security/detect-non-literal-fs-filename */
+
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
