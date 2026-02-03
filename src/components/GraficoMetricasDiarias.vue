@@ -40,9 +40,17 @@
     </div>
 
     <!-- Panel principal -->
-    <div class="flex-1 flex gap-3 min-h-0">
+    <div class="flex-1 flex gap-3 min-h-0 relative">
+      <!-- Botón toggle para panel -->
+      <button @click="panelVisible = !panelVisible" 
+        class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-slate-50 border border-slate-300 rounded-r-lg px-2 py-6 shadow-md transition-all duration-300"
+        :class="panelVisible ? 'left-[288px]' : 'left-0'"
+        :title="panelVisible ? 'Ocultar panel' : 'Mostrar panel'">
+        <span class="text-lg" :class="panelVisible ? 'rotate-0' : 'rotate-180'">◀</span>
+      </button>
+      
       <!-- Panel izquierdo: Selector de métricas -->
-      <div class="w-72 bg-white rounded-xl shadow-sm border border-slate-200 p-4 overflow-y-auto flex-shrink-0">
+      <div v-show="panelVisible" class="w-72 bg-white rounded-xl shadow-sm border border-slate-200 p-4 overflow-y-auto flex-shrink-0 transition-all duration-300">
         <h4 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
           <span class="text-lg">📊</span> Métricas a Graficar
         </h4>
@@ -152,6 +160,14 @@
       <!-- Panel derecho: Gráfico -->
       <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col min-h-0">
         <div class="flex items-center justify-between mb-3">
+          <!-- Botón toggle panel -->
+          <button @click="panelVisible = !panelVisible" 
+            class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded-md flex items-center gap-1.5 transition-colors"
+            :title="panelVisible ? 'Ocultar panel de métricas' : 'Mostrar panel de métricas'">
+            <span class="text-base">{{ panelVisible ? '◀' : '▶' }}</span>
+            <span>{{ panelVisible ? 'Ocultar Panel' : 'Mostrar Panel' }}</span>
+          </button>
+          
           <h4 class="text-sm font-semibold text-slate-700">
             {{ tipoNormalizacion === 'normalizada' ? 'Valores Normalizados (0-100%)' : 
                tipoNormalizacion === 'zscore' ? 'Z-Score (Desviaciones Estándar)' : 'Valores Originales' }}
@@ -203,6 +219,9 @@ const fechaInicio = ref(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOStr
 
 // Tipo de normalización
 const tipoNormalizacion = ref('normalizada')
+
+// Control de visibilidad del panel
+const panelVisible = ref(true)
 
 // Métricas seleccionadas
 const metricasSeleccionadas = ref(['SCI', 'MIC', 'EFICIENCIA_TELAR', 'CALIDAD_PERCENT'])
