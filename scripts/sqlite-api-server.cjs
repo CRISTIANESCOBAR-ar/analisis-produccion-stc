@@ -31,7 +31,8 @@ const TABLE_DEFINITIONS = [
   { table: 'tb_CALIDAD', filename: 'rptAcompDiarioPBI.csv', sheet: 'report5' },
   { table: 'tb_PROCESO', filename: 'rpsPosicaoEstoquePRD.csv', sheet: 'rptStock' },
   { table: 'tb_DEFECTOS', filename: 'rptDefPeca.csv', sheet: 'rptDefPeca' },
-  { table: 'tb_CALIDAD_FIBRA', filename: 'rptMovimMP.csv', sheet: 'rptMovimMP' }
+  { table: 'tb_CALIDAD_FIBRA', filename: 'rptMovimMP.csv', sheet: 'rptMovimMP' },
+  { table: 'tb_PRODUCCION_OE', filename: 'rptProducaoOE.csv', sheet: 'Sheet1' }
 ];
 
 // Helper para obtener configuración con ruta dinámica
@@ -661,7 +662,8 @@ app.post('/api/import/force-table', async (req, res) => {
     'tb_CALIDAD': 'import-calidad-fast.ps1',
     'tb_PROCESO': 'import-proceso-fast.ps1',
     'tb_DEFECTOS': 'import-defectos-fast.ps1',
-    'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1'
+    'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1',
+    'tb_PRODUCCION_OE': 'import-produccion-oe-fast.ps1'
   };
 
   const scriptFile = scriptMap[table] || 'import-calidad-fast.ps1';
@@ -771,7 +773,8 @@ app.post('/api/import/update-outdated', async (req, res) => {
     'tb_CALIDAD': 'import-calidad-fast.ps1',
     'tb_PROCESO': 'import-proceso-fast.ps1',
     'tb_DEFECTOS': 'import-defectos-fast.ps1',
-    'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1'
+    'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1',
+    'tb_PRODUCCION_OE': 'import-produccion-oe-fast.ps1'
   };
 
   // Importar cada tabla secuencialmente (SQLite no beneficia de paralelización)
@@ -1117,7 +1120,8 @@ app.post('/api/schema/sync-columns', async (req, res) => {
         'tb_CALIDAD': 'import-calidad-fast.ps1',
         'tb_PROCESO': 'import-proceso-fast.ps1',
         'tb_DEFECTOS': 'import-defectos-fast.ps1',
-        'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1'
+        'tb_CALIDAD_FIBRA': 'import-calidad-fibra-fast.ps1',
+        'tb_PRODUCCION_OE': 'import-produccion-oe-fast.ps1'
       };
 
       const scriptFile = scriptMap[table];
