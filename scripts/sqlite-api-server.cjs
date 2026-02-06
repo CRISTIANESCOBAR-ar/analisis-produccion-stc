@@ -690,9 +690,15 @@ app.post('/api/import/force-table', async (req, res) => {
       const scriptArgs = [
         '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', 
         '-File', scriptPath, 
-        '-XlsxPath', config.xlsxPath, 
-        '-DbPath', DB_PATH
+        '-XlsxPath', config.xlsxPath
       ];
+      
+      // tb_PRODUCCION_OE usa -DbPath, los demás usan -SqlitePath
+      if (table === 'tb_PRODUCCION_OE') {
+        scriptArgs.push('-DbPath', DB_PATH);
+      } else {
+        scriptArgs.push('-SqlitePath', DB_PATH);
+      }
       
       // Solo agregar -Sheet si la tabla no es tb_PRODUCCION_OE (no tiene ese parámetro)
       if (table !== 'tb_PRODUCCION_OE' && config.sheet) {
