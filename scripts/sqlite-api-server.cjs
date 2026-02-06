@@ -202,10 +202,17 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
   }
   console.log('✅ Conectado a SQLite:', DB_PATH);
   
-  // Configurar para leer datos frescos del WAL
-  db.run('PRAGMA journal_mode=WAL;');
-  db.run('PRAGMA wal_checkpoint(PASSIVE);');
-  db.run('PRAGMA query_only=0;');
+  // Configurar para leer datos frescos del WAL - con callbacks para evitar locks
+  db.run('PRAGMA journal_mode=WAL;', (err) => {
+    if (err) console.error('⚠️  Error configurando WAL:', err.message);
+  });
+  db.run('PRAGMA query_only=0;', (err) => {
+    if (err) console.error('⚠️  Error configurando query_only:', err.message);
+  });
+  // Ejecutar checkpoint después de asegurar que el modo WAL está activo
+  db.run('PRAGMA busy_timeout=5000;', (err) => {
+    if (err) console.error('⚠️  Error configurando busy_timeout:', err.message);
+  });
 });
 
 // Helper para ejecutar queries con promesas
@@ -412,9 +419,12 @@ const initCostosMensualesSchema = async () => {
   }
 };
 
-initCostosMensualesSchema().catch((err) => {
-  console.error('❌ Error inicializando esquema de costos mensuales:', err);
-});
+// Ejecutar inicialización después de un breve delay para asegurar que PRAGMA termine
+setTimeout(() => {
+  initCostosMensualesSchema().catch((err) => {
+    console.error('❌ Error inicializando esquema de costos mensuales:', err);
+  });
+}, 100);
 
 // =====================================================================
 // Inicialización - Tabla de auditoría de cambios de esquema
@@ -441,9 +451,12 @@ const initSchemaChangesLog = async () => {
   await dbRun(`CREATE INDEX IF NOT EXISTS idx_schema_changes_timestamp ON schema_changes_log(timestamp);`);
 };
 
-initSchemaChangesLog().catch((err) => {
-  console.error('❌ Error inicializando tabla de auditoría de esquema:', err);
-});
+// Ejecutar inicialización después de un breve delay para asegurar que PRAGMA termine
+setTimeout(() => {
+  initSchemaChangesLog().catch((err) => {
+    console.error('❌ Error inicializando tabla de auditoría de esquema:', err);
+  });
+}, 150);
 
 // Helper para rangos de fecha (agrega horas para cubrir todo el día)
 const getDateRangeParams = (startDate, endDate) => {
@@ -674,13 +687,25 @@ app.post('/api/import/force-table', async (req, res) => {
   try {
     // Convertir exec a Promise
     const { stdout, stderr } = await new Promise((resolve, reject) => {
-      execFile('powershell', 
-        ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, 
-         '-XlsxPath', config.xlsxPath, '-SqlitePath', DB_PATH, '-Sheet', config.sheet],
+      const scriptArgs = [
+        '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', 
+        '-File', scriptPath, 
+        '-XlsxPath', config.xlsxPath, 
+        '-DbPath', DB_PATH
+      ];
+      
+      // Solo agregar -Sheet si la tabla no es tb_PRODUCCION_OE (no tiene ese parámetro)
+      if (table !== 'tb_PRODUCCION_OE' && config.sheet) {
+        scriptArgs.push('-Sheet', config.sheet);
+      }
+      
+      console.log(`🔧 Ejecutando:`, 'powershell', scriptArgs.join(' '));
+      
+      execFile('powershell', scriptArgs,
         { maxBuffer: 50 * 1024 * 1024, timeout: 300000 }, 
         (error, stdout, stderr) => {
           if (error) {
-            reject({ error, stderr });
+            reject({ error, stderr, stdout });
           } else {
             resolve({ stdout, stderr });
           }
@@ -715,9 +740,21 @@ app.post('/api/import/force-table', async (req, res) => {
     res.json(response);
     
   } catch (err) {
-    console.error(`❌ Error ejecutando script para ${table}:`, err.error?.message || err);
-    console.error(`Stderr:`, err.stderr);
-    res.status(500).json({ error: err.error?.message || 'Error en importación', stderr: err.stderr });
+    console.error(`❌ Error ejecutando script para ${table}:`);
+    console.error(`  Error object:`, err.error || err);
+    console.error(`  Stderr:`, err.stderr || '(vacío)');
+    console.error(`  Stack:`, err.error?.stack || err.stack || '(no stack trace)');
+    
+    const errorMessage = err.error?.message || err.stderr || err.message || 'Error desconocido en importación';
+    const errorDetails = {
+      error: errorMessage,
+      table: table,
+      scriptPath: scriptPath,
+      stderr: err.stderr || null
+    };
+    
+    console.error(`📤 Respondiendo error al frontend:`, errorDetails);
+    res.status(500).json(errorDetails);
   }
 });
 

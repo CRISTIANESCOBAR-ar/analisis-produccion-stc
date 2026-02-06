@@ -36,13 +36,14 @@ $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 # Validar archivo de entrada
 if (-not (Test-Path $XlsxPath)) {
-    Write-Host "❌ ERROR: No se encontró el archivo $XlsxPath" -ForegroundColor Red
+    Write-Host "ERROR: No se encontro el archivo $XlsxPath" -ForegroundColor Red
     exit 1
 }
 
 $fileInfo = Get-Item $XlsxPath
-Write-Host "📁 Archivo: $($fileInfo.Name) ($([math]::Round($fileInfo.Length/1MB, 2)) MB)" -ForegroundColor White
-Write-Host "📅 Última modificación: $($fileInfo.LastWriteTime)" -ForegroundColor Gray
+$fileSizeMB = [math]::Round($fileInfo.Length/1MB, 2)
+Write-Host "Archivo: $($fileInfo.Name) ($fileSizeMB MB)" -ForegroundColor White
+Write-Host "Ultima modificacion: $($fileInfo.LastWriteTime)" -ForegroundColor Gray
 
 # Determinar si es CSV o XLSX
 $isCsv = $XlsxPath -like "*.csv"
@@ -51,7 +52,8 @@ $tempCsv = $null
 try {
     # Si es XLSX, convertir a CSV primero
     if (-not $isCsv) {
-        Write-Host "`n⏳ Convirtiendo XLSX a CSV..." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Convirtiendo XLSX a CSV..." -ForegroundColor Yellow
         $tempCsv = [System.IO.Path]::GetTempFileName() + ".csv"
         
         $pythonScript = @"
@@ -100,7 +102,7 @@ except Exception as e:
         }
         
         $recordCount = ($result -replace 'OK: (\d+) registros', '$1')
-        Write-Host "✅ CSV generado: $recordCount registros" -ForegroundColor Green
+        Write-Host "CSV generado: $recordCount registros" -ForegroundColor Green
         
         $csvPath = $tempCsv
     } else {
@@ -108,7 +110,8 @@ except Exception as e:
     }
     
     # Importar a SQLite
-    Write-Host "`n⏳ Importando a SQLite..." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Importando a SQLite..." -ForegroundColor Yellow
     
     # Crear tabla si no existe
     $createTableSql = @"
@@ -167,25 +170,61 @@ CREATE TABLE IF NOT EXISTS tb_PRODUCCION_OE (
     # Limpiar tabla antes de importar
     "DELETE FROM tb_PRODUCCION_OE;" | sqlite3 $DbPath
     
-    # Importar CSV
-    $importCmd = @"
+    # Importar CSV - usar tabla temporal para evitar problemas con encabezados
+    Write-Host "Ejecutando importacion..." -ForegroundColor Yellow
+    
+    # Estrategia: crear tabla temp, importar allí, copiar a tabla final
+    $importSql = @"
+/* Crear tabla temporal */
+DROP TABLE IF EXISTS tb_PRODUCCION_OE_TEMP;
+CREATE TABLE tb_PRODUCCION_OE_TEMP (
+    FILIAL TEXT, [LOC. FISICO] TEXT, MAQUINA TEXT, NOME_MAQUINA TEXT,
+    DATA_PRODUCAO TEXT, TURNO TEXT, LADO TEXT, ITEM TEXT, [DESC ITEM] TEXT,
+    [HORA INICIAL] TEXT, [HORA FINAL] TEXT, RPM TEXT, [NUM FUSOS] TEXT,
+    ALFA TEXT, [LOTE PRODUC] TEXT, [TÍTULO] TEXT, TEMPO TEXT,
+    [TORCAO P POLEG] TEXT, [TORCAO P METRO] TEXT, [PROD MT/MIN] TEXT,
+    [PROD KG/HR] TEXT, [PROD CALCULADA] TEXT, [PROD INFORMADA] TEXT,
+    [EFIC CALCULADA] TEXT, [EFIC INFORMADA] TEXT, OPERADOR TEXT,
+    [T.BOB.] TEXT, [RPM CARD] TEXT, N TEXT, S TEXT, L TEXT, T TEXT,
+    MO TEXT, [CP V+ SL+] TEXT, [CM V- SL-] TEXT, [CCp C+] TEXT,
+    [CCm C-] TEXT, [JP (P+)] TEXT, [JM (P-)] TEXT, CVP TEXT,
+    CVM TEXT, [CORT NAT] TEXT, [% ROB 01] TEXT, [% ROB 02] TEXT, [% ROB 03] TEXT
+);
+
+/* Importar CSV */
 .mode csv
-.import '$($csvPath.Replace('\', '/'))' tb_PRODUCCION_OE
+.import '$($csvPath.Replace('\', '/'))' tb_PRODUCCION_OE_TEMP
+
+/* Copiar solo datos excluyendo encabezado duplicado si existe */
+INSERT INTO tb_PRODUCCION_OE
+SELECT * FROM tb_PRODUCCION_OE_TEMP
+WHERE FILIAL != 'FILIAL';
+
+/* Limpiar tabla temporal */
+DROP TABLE tb_PRODUCCION_OE_TEMP;
 "@
     
-    $importCmd | sqlite3 $DbPath 2>&1 | Out-Null
+    $importOutput = $importSql | sqlite3 $DbPath 2>&1
     
     if ($LASTEXITCODE -ne 0) {
-        throw "Error al importar CSV a SQLite"
+        Write-Host "Error en importacion:" -ForegroundColor Red
+        Write-Host $importOutput -ForegroundColor Red
+        throw "Error al importar CSV a SQLite: $importOutput"
+    }
+    
+    if ($importOutput) {
+        Write-Host "Advertencias durante importacion:" -ForegroundColor Yellow
+        Write-Host $importOutput -ForegroundColor Gray
     }
     
     # Verificar registros importados
     $count = sqlite3 $DbPath "SELECT COUNT(*) FROM tb_PRODUCCION_OE;"
     
-    Write-Host "✅ Importación completada: $count registros" -ForegroundColor Green
+    Write-Host "Importacion completada: $count registros" -ForegroundColor Green
     
     # Crear índices
-    Write-Host "`n⏳ Creando índices..." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Creando indices..." -ForegroundColor Yellow
     
     $indexSql = @"
 CREATE INDEX IF NOT EXISTS idx_produccion_oe_fecha ON tb_PRODUCCION_OE(DATA_PRODUCAO);
@@ -196,7 +235,7 @@ CREATE INDEX IF NOT EXISTS idx_produccion_oe_turno ON tb_PRODUCCION_OE(TURNO);
     
     $indexSql | sqlite3 $DbPath
     
-    Write-Host "✅ Índices creados" -ForegroundColor Green
+    Write-Host "Indices creados" -ForegroundColor Green
     
     # Actualizar registro de importación
     $updateMetaSql = @"
@@ -210,15 +249,16 @@ VALUES ('tb_PRODUCCION_OE', '$($XlsxPath.Replace("'", "''"))', 'Sheet1', datetim
     $elapsed = $stopwatch.Elapsed
     
     Write-Host "`n========================================" -ForegroundColor Cyan
-    Write-Host "  ✅ IMPORTACIÓN EXITOSA" -ForegroundColor Green
+    Write-Host "  IMPORTACION EXITOSA" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "⏱️  Tiempo total: $($elapsed.TotalSeconds.ToString('F2'))s" -ForegroundColor White
-    Write-Host "📊 Registros: $count" -ForegroundColor White
-    Write-Host "🗄️  Base de datos: $DbPath" -ForegroundColor Gray
+    Write-Host "Tiempo total: $($elapsed.TotalSeconds.ToString('F2'))s" -ForegroundColor White
+    Write-Host "Registros: $count" -ForegroundColor White
+    Write-Host "Base de datos: $DbPath" -ForegroundColor Gray
     Write-Host ""
     
 } catch {
-    Write-Host "`n❌ ERROR: $_" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "ERROR: $_" -ForegroundColor Red
     Write-Host $_.ScriptStackTrace -ForegroundColor Gray
     exit 1
 } finally {
